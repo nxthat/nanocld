@@ -5,10 +5,9 @@ set -e -x
 # variables
 pkg_name="nanocld"
 arch=`dpkg --print-architecture`
-version=`cat ./nanocld/Cargo.toml | grep -m 1 "version = \"" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/'`
-release_path="../target/${pkg_name}_${version}_${arch}"
+version=`cat ./Cargo.toml | grep -m 1 "version = \"" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/'`
+release_path="./target/${pkg_name}_${version}_${arch}"
 
-cd nanocld
 # clean directory
 rm -fr ${release_path}
 # create directories structure for package
@@ -21,9 +20,9 @@ mkdir -p ${release_path}/etc
 
 # create and copy release binary
 cargo make release
-cp ../target/release/${pkg_name} ${release_path}/usr/local/bin
+cp ./target/release/${pkg_name} ${release_path}/usr/local/bin
 # copy config files
-cp -r ../fake_path/* ${release_path}/
+cp -r ./fake_path/* ${release_path}/
 
 # TODO generate man pages
 # mkdir -p ../target/man
@@ -58,5 +57,5 @@ EOM
 
 chmod 775 ${release_path}/DEBIAN/postrm
 
-mkdir -p ../target/debian
-dpkg-deb --build --root-owner-group ${release_path} ../target/debian/${pkg_name}_${version}_${arch}.deb
+mkdir -p ./target/debian
+dpkg-deb --build --root-owner-group ${release_path} ./target/debian/${pkg_name}_${version}_${arch}.deb
