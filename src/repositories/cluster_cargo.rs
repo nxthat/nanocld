@@ -52,8 +52,6 @@ pub async fn get_by_cluster_key(
   }
 }
 
-#[allow(dead_code)]
-/// This may be not needed.
 pub async fn delete_by_key(
   key: String,
   pool: &web::types::State<Pool>,
@@ -62,7 +60,8 @@ pub async fn delete_by_key(
 
   let conn = services::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
-    diesel::delete(dsl::cluster_cargoes.filter(dsl::key.eq(key))).execute(&conn)
+    diesel::delete(dsl::cluster_cargoes.filter(dsl::cluster_key.eq(key)))
+      .execute(&conn)
   })
   .await;
   match res {

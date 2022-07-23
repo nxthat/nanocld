@@ -30,12 +30,19 @@ mod services;
 mod controllers;
 mod repositories;
 
-fn parse_main_error(args: &cli::Cli, err: errors::DaemonError) -> i32 {
+fn parse_main_error(
+  #[allow(unused)] args: &cli::Cli,
+  config: &config::DaemonConfig,
+  err: errors::DaemonError,
+) -> i32 {
   match err {
     DaemonError::Docker(err) => match err {
       bollard::errors::Error::HyperResponseError { err } => {
         if err.is_connect() {
-          log::error!("unable to connect to docker host {}", &args.docker_host,);
+          log::error!(
+            "unable to connect to docker host {}",
+            &config.docker_host,
+          );
           return 1;
         }
         log::error!("{}", err);
@@ -82,9 +89,21 @@ async fn main() -> std::io::Result<()> {
     }
   }
 
+  let file_config = match config::read_config_file(&args.config_dir) {
+    Err(err) => {
+      log::error!("{}", err);
+      std::process::exit(1);
+    }
+    Ok(file_config) => file_config,
+  };
+
+  // Merge cli args and config file
+  let daemon_config: config::DaemonConfig =
+    config::merge_config(&args, &file_config);
+
   // Connect to docker daemon
   let docker_api = match bollard::Docker::connect_with_unix(
-    &args.docker_host,
+    &daemon_config.docker_host,
     120,
     bollard::API_DEFAULT_VERSION,
   ) {
@@ -95,24 +114,23 @@ async fn main() -> std::io::Result<()> {
     Ok(docker_api) => docker_api,
   };
 
-  let config: config::DaemonConfig = args.to_owned().into();
   // Download and configure and boot internal services
   if args.install_services {
     if let Err(err) = install::install_services(&docker_api).await {
-      let exit_code = parse_main_error(&args, err);
+      let exit_code = parse_main_error(&args, &daemon_config, err);
       std::process::exit(exit_code);
     }
-    if let Err(err) = boot::boot(&config, &docker_api).await {
-      let exit_code = parse_main_error(&args, err);
+    if let Err(err) = boot::boot(&daemon_config, &docker_api).await {
+      let exit_code = parse_main_error(&args, &daemon_config, err);
       std::process::exit(exit_code);
     };
     return Ok(());
   }
 
   // Start internal services
-  let boot_state = match boot::boot(&config, &docker_api).await {
+  let boot_state = match boot::boot(&daemon_config, &docker_api).await {
     Err(err) => {
-      let exit_code = parse_main_error(&args, err);
+      let exit_code = parse_main_error(&args, &daemon_config, err);
       std::process::exit(exit_code);
     }
     Ok(state) => state,
@@ -120,14 +138,14 @@ async fn main() -> std::io::Result<()> {
 
   // Start background event_system
   let event_system = events::system::start(
-    config.to_owned(),
+    daemon_config.to_owned(),
     docker_api.to_owned(),
     boot_state.pool.to_owned(),
   )
   .await;
 
   // start ntex http server
-  server::start(config, event_system, boot_state).await?;
+  server::start(daemon_config, event_system, boot_state).await?;
   log::info!("kill received exiting.");
   Ok(())
 }

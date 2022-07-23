@@ -14,6 +14,8 @@ use crate::models::{
 
 use crate::errors::HttpResponseError;
 
+use super::utils::gen_nsp_key_by_name;
+
 #[derive(Debug, Serialize, Deserialize)]
 struct ClusterQuery {
   pub(crate) namespace: Option<String>,
@@ -105,16 +107,14 @@ async fn delete_cluster_by_name(
   let item =
     repositories::cluster::find_by_key(gen_key.to_owned(), &pool).await?;
 
-  log::info!("deleting cluster cargo");
-  repositories::cluster_cargo::get_by_cluster_key(gen_key.to_owned(), &pool)
-    .await?;
-
   repositories::cluster_variable::delete_by_cluster_key(
     gen_key.to_owned(),
     &pool,
   )
   .await?;
+  repositories::cluster_cargo::delete_by_key(gen_key.to_owned(), &pool).await?;
   services::cluster::delete_networks(item, &docker_api, &pool).await?;
+  log::debug!("deleting cluster cargo");
   let res = repositories::cluster::delete_by_key(gen_key, &pool).await?;
   Ok(web::HttpResponse::Ok().json(&res))
 }
@@ -151,11 +151,19 @@ async fn inspect_cluster_by_name(
   let networks =
     repositories::cluster_network::list_for_cluster(item, &pool).await?;
 
+  let cargoes =
+    repositories::cluster::list_cargo(gen_key.to_owned(), &pool).await?;
+
+  let variables =
+    repositories::cluster::list_variable(gen_key.to_owned(), &pool).await?;
+
   let res = ClusterItemWithRelation {
     name,
     key: gen_key,
     namespace: nsp,
     proxy_templates,
+    variables,
+    cargoes: Some(cargoes),
     networks: Some(networks),
   };
 
@@ -291,6 +299,68 @@ async fn count_cluster(
   Ok(web::HttpResponse::Ok().json(&res))
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct ClusterTemplatePartial {
+  name: String,
+}
+
+/// Add nginx template to cluster
+#[web::post("/clusters/{name}/nginx_templates")]
+async fn add_cluster_template(
+  name: web::types::Path<String>,
+  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Json(payload): web::types::Json<ClusterTemplatePartial>,
+  pool: web::types::State<Pool>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let gen_id = gen_nsp_key_by_name(&qs.namespace, &name.into_inner());
+  repositories::nginx_template::get_by_name(payload.name.to_owned(), &pool)
+    .await?;
+
+  let cluster =
+    repositories::cluster::find_by_key(gen_id.to_owned(), &pool).await?;
+
+  let mut proxy_templates = cluster.proxy_templates.to_owned();
+
+  proxy_templates.push(payload.name);
+
+  repositories::cluster::patch_proxy_templates(gen_id, proxy_templates, &pool)
+    .await?;
+
+  Ok(web::HttpResponse::Created().into())
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DeleteClusterTemplatePath {
+  cl_name: String,
+  nt_name: String,
+}
+
+/// Delete nginx template to cluster
+#[web::delete("/clusters/{cl_name}/nginx_templates/{nt_name}")]
+async fn delete_cluster_template(
+  req_path: web::types::Path<DeleteClusterTemplatePath>,
+  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  pool: web::types::State<Pool>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let gen_id = gen_nsp_key_by_name(&qs.namespace, &req_path.cl_name);
+  repositories::nginx_template::get_by_name(req_path.nt_name.to_owned(), &pool)
+    .await?;
+
+  let cluster =
+    repositories::cluster::find_by_key(gen_id.to_owned(), &pool).await?;
+
+  let proxy_templates = cluster
+    .proxy_templates
+    .into_iter()
+    .filter(|name| name != &req_path.nt_name)
+    .collect::<Vec<String>>();
+
+  repositories::cluster::patch_proxy_templates(gen_id, proxy_templates, &pool)
+    .await?;
+
+  Ok(web::HttpResponse::Accepted().into())
+}
+
 /// # ntex config
 /// Bind namespace routes to ntex http server
 ///
@@ -312,6 +382,8 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(start_cluster_by_name);
   config.service(join_cargo_to_cluster);
   config.service(count_cluster);
+  config.service(add_cluster_template);
+  config.service(delete_cluster_template);
 }
 
 #[cfg(test)]

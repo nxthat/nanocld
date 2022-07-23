@@ -2,6 +2,7 @@ use ntex::web;
 use ntex::http::StatusCode;
 use url::Url;
 
+use crate::config::DaemonConfig;
 use crate::repositories;
 use crate::errors::HttpResponseError;
 use crate::models::{Pool, GitRepositoryItem, GitRepositoryBranchItem};
@@ -11,10 +12,12 @@ use super::{docker, github};
 pub async fn build(
   item: GitRepositoryItem,
   branch_name: &str,
+  config: &web::types::State<DaemonConfig>,
   docker_api: &web::types::State<bollard::Docker>,
   pool: &web::types::State<Pool>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let github_api = github::GithubApi::new();
+  let github_api =
+    github::GithubApi::new(&config.github_user, &config.github_token);
   // we find the repository by it's unique name
   let mut url = Url::parse(&item.url).map_err(|err| HttpResponseError {
     msg: format!("Unable to parse {} url {} {}", &item.name, &item.url, err),

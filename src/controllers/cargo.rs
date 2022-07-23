@@ -3,7 +3,10 @@ use ntex::web;
 use serde::{Deserialize, Serialize};
 
 use crate::{services, repositories};
-use crate::models::{Pool, CargoPartial, CargoEnvPartial};
+use crate::models::{
+  Pool, CargoPartial, CargoEnvPartial, CargoItemWithRelation,
+  ContainerFilterQuery,
+};
 
 use crate::errors::HttpResponseError;
 
@@ -169,7 +172,7 @@ async fn count_cargo(
   Ok(web::HttpResponse::Ok().json(&res))
 }
 
-/// Delete cargo by it's name
+/// Inspect cargo by it's name
 #[cfg_attr(feature = "openapi", utoipa::path(
   get,
   path = "/cargoes/{name}/inspect",
@@ -185,20 +188,41 @@ async fn count_cargo(
 ))]
 #[web::get("/cargoes/{name}/inspect")]
 async fn inspect_cargo_by_name(
-  pool: web::types::State<Pool>,
   name: web::types::Path<String>,
   web::types::Query(qs): web::types::Query<CargoQuery>,
+  pool: web::types::State<Pool>,
+  docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  log::info!("asking cargo deletion {}", &name);
-  let nsp = match qs.namespace {
+  let name = name.into_inner();
+  log::info!("asking cargo inspection {}", &name);
+  let nsp = match &qs.namespace {
     None => String::from("global"),
-    Some(nsp) => nsp,
+    Some(nsp) => nsp.to_owned(),
   };
-  let gen_key = nsp + "-" + &name.into_inner();
+  let gen_key = nsp + "-" + &name;
+  let res = repositories::cargo::find_by_key(gen_key.to_owned(), &pool).await?;
 
-  let res = repositories::cargo::find_by_key(gen_key.clone(), &pool).await?;
+  let qs = ContainerFilterQuery {
+    cargo: Some(name.to_owned()),
+    cluster: None,
+    namespace: qs.namespace.to_owned(),
+  };
 
-  Ok(web::HttpResponse::Ok().json(&res))
+  let containers = services::container::list_container(qs, &docker_api).await?;
+
+  let cargo = CargoItemWithRelation {
+    key: res.key,
+    name: res.name,
+    namespace_name: res.namespace_name,
+    binds: res.binds,
+    image_name: res.image_name,
+    domainname: res.domainname,
+    dns_entry: res.dns_entry,
+    hostname: res.hostname,
+    containers,
+  };
+
+  Ok(web::HttpResponse::Ok().json(&cargo))
 }
 
 pub fn ntex_config(config: &mut web::ServiceConfig) {

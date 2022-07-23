@@ -85,7 +85,7 @@ async fn create_cluster_network(
     };
   if network_existing {
     return Err(HttpResponseError {
-      status: StatusCode::BAD_REQUEST,
+      status: StatusCode::CONFLICT,
       msg: format!("Unable to create network with name {} a similar network have same name", name),
     });
   }

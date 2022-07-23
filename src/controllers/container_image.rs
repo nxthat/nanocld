@@ -23,6 +23,16 @@ async fn list_container_image(
   Ok(web::HttpResponse::Ok().json(&images))
 }
 
+#[web::get("/containers/images/{name}")]
+async fn inspect_container_image(
+  name: web::types::Path<String>,
+  docker_api: web::types::State<bollard::Docker>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let image = docker_api.inspect_image(&name.into_inner()).await?;
+
+  Ok(web::HttpResponse::Ok().json(&image))
+}
+
 #[web::post("/containers/images")]
 async fn create_container_image(
   docker_api: web::types::State<bollard::Docker>,
@@ -39,7 +49,6 @@ async fn create_container_image(
 
   let (tx, rx_body) = mpsc::channel();
 
-  log::info!("im called !");
   let from_image = image_info[0].to_string();
   let tag = image_info[1].to_string();
   rt::spawn(async move {
@@ -180,4 +189,5 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(create_container_image);
   config.service(delete_container_image_by_name);
   config.service(deploy_container_image);
+  config.service(inspect_container_image);
 }

@@ -3,6 +3,7 @@ use ntex::web;
 use ntex::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
+use crate::config::DaemonConfig;
 use crate::{services, repositories};
 use crate::models::{Pool, GitRepositoryPartial, GitRepositoryBranchPartial};
 
@@ -46,8 +47,10 @@ async fn list_git_repository(
 async fn create_git_repository(
   pool: web::types::State<Pool>,
   web::types::Json(payload): web::types::Json<GitRepositoryPartial>,
+  config: web::types::State<DaemonConfig>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let github_api = services::github::GithubApi::new();
+  let github_api =
+    services::github::GithubApi::new(&config.github_user, &config.github_token);
   let repo =
     github_api
       .sync_repo(&payload)
@@ -131,10 +134,11 @@ async fn delete_git_repository_by_name(
 ))]
 #[web::post("/git_repositories/{id}/build")]
 async fn build_git_repository_by_name(
-  pool: web::types::State<Pool>,
-  docker_api: web::types::State<bollard::Docker>,
   id: web::types::Path<String>,
   web::types::Query(qs): web::types::Query<GitRepositoryBuildQuery>,
+  pool: web::types::State<Pool>,
+  docker_api: web::types::State<bollard::Docker>,
+  config: web::types::State<DaemonConfig>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let id = id.into_inner();
   let git_repo = repositories::git_repository::find_by_name(id, &pool).await?;
@@ -144,8 +148,14 @@ async fn build_git_repository_by_name(
     Some(branch) => branch,
   };
 
-  services::git_repository::build(git_repo, &branch_name, &docker_api, &pool)
-    .await
+  services::git_repository::build(
+    git_repo,
+    &branch_name,
+    &config,
+    &docker_api,
+    &pool,
+  )
+  .await
 }
 
 /// Configure ntex to bind our routes

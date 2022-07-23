@@ -206,7 +206,9 @@ pub struct ClusterItemWithRelation {
   pub(crate) name: String,
   pub(crate) namespace: String,
   pub(crate) proxy_templates: Vec<String>,
+  pub(crate) variables: Vec<ClusterVariableItem>,
   pub(crate) networks: Option<Vec<ClusterNetworkItem>>,
+  pub(crate) cargoes: Option<Vec<(ClusterCargoItem, CargoItem)>>,
 }
 
 /// Cluster network partial
@@ -282,6 +284,28 @@ pub struct CargoItem {
   pub(crate) dns_entry: Option<String>,
   pub(crate) domainname: Option<String>,
   pub(crate) hostname: Option<String>,
+}
+
+/// Cargo item with his relation
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CargoItemWithRelation {
+  pub(crate) key: String,
+  pub(crate) namespace_name: String,
+  pub(crate) name: String,
+  pub(crate) image_name: String,
+  pub(crate) binds: Vec<String>,
+  pub(crate) dns_entry: Option<String>,
+  pub(crate) domainname: Option<String>,
+  pub(crate) hostname: Option<String>,
+  pub(crate) containers: Vec<bollard::models::ContainerSummary>,
+}
+
+/// Data use to filter containers by cluster cargo or namespace.
+#[derive(Serialize, Deserialize)]
+pub struct ContainerFilterQuery {
+  pub(crate) cluster: Option<String>,
+  pub(crate) cargo: Option<String>,
+  pub(crate) namespace: Option<String>,
 }
 
 /// Nginx template mode

@@ -8,26 +8,32 @@ use clap::{AppSettings, Parser};
   version,
   global_setting = AppSettings::DeriveDisplayOrder,
 )]
-pub(crate) struct Cli {
+pub struct Cli {
+  /// Only available if nanocld have been builded with feature openapi
   #[clap(long)]
   pub(crate) genopenapi: bool,
-  /// Only instally required services this have to be called before any boot
+  /// Only install required services this have to be called after fresh installation
   #[clap(long)]
   pub(crate) install_services: bool,
-  /// Daemon socket to connect to default to unix:///run/nanocl/nanocl.sock
-  #[clap(
-    short = 'H',
-    long = "--host",
-    default_value = "unix:///run/nanocl/nanocl.sock"
-  )]
-  pub(crate) hosts: Vec<String>,
-  /// Docker daemon socket to connect to
-  #[clap(long, default_value = "unix:///run/nanocl/docker.sock")]
-  pub(crate) docker_host: String,
-  /// Nanocld state dir
-  #[clap(long, default_value = "/var/lib/nanocl")]
-  pub(crate) state_dir: String,
-  /// Nanocld config dir
+  /// Daemon host to listen to you can use tcp:// and unix://
+  /// [default: unix:///run/nanocl/nanocl.sock]
+  #[clap(short = 'H', long = "--host")]
+  pub(crate) hosts: Option<Vec<String>>,
+  /// Docker daemon socket to connect
+  /// [default: unix:///run/nanocl/docker.sock]
+  #[clap(long)]
+  pub(crate) docker_host: Option<String>,
+  /// State directory
+  /// [default: /var/lib/nanocl]
+  #[clap(long)]
+  pub(crate) state_dir: Option<String>,
+  /// Config directory
   #[clap(long, default_value = "/etc/nanocl")]
   pub(crate) config_dir: String,
+  /// Github user used to make request with identity
+  #[clap(long)]
+  pub(crate) github_user: Option<String>,
+  /// Generated token for given github user
+  #[clap(long)]
+  pub(crate) github_token: Option<String>,
 }

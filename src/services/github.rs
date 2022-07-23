@@ -74,23 +74,11 @@ pub struct GithubApi {
 }
 
 impl GithubApi {
-  pub fn new() -> Self {
+  pub fn new(github_user: &str, github_token: &str) -> Self {
     log::info!("creating github api");
-    // Ensuring GITHUB_ACCOUNT value so we can unwrap safelly
-    let github_user = std::env::var("GITHUB_USER");
-    if let Err(ref _err) = github_user {
-      log::warn!(
-        "GITHUB_ACCOUNT env variable is missing you may face api rate limit"
-      );
-    }
-    // Ensuring GITHUB_TOKEN value so we can unwrap safelly
-    let github_token = std::env::var("GITHUB_TOKEN");
-    if let Err(ref _err) = github_token {
-      log::warn!("GITHUB_TOKEN is missing env variable is missing you may face api rate limit");
-    }
     let credential = BasicCredential {
-      username: github_user.unwrap_or_else(|_| String::from("")),
-      password: github_token.unwrap_or_else(|_| String::from("")),
+      username: github_user.to_owned(),
+      password: github_token.to_owned(),
     };
     let client = Client::build()
       .basic_auth(&credential.username, Some(&credential.password))
@@ -183,7 +171,7 @@ mod test_github {
 
   #[ntex::test]
   async fn list_repository_branches() -> TestReturn {
-    let github_api = GithubApi::new();
+    let github_api = GithubApi::new("", "");
     let item = GitRepositoryPartial {
       name: String::from("express-test-deploy"),
       url: String::from("https://github.com/leon3s/express-test-deploy"),

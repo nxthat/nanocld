@@ -7,6 +7,7 @@ use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
 use crate::models::{
   Pool, ClusterItem, ClusterPartial, PgDeleteGeneric, PgGenericCount,
+  CargoItem, ClusterCargoItem, ClusterVariableItem,
 };
 
 /// # Create cluster for namespace
@@ -179,6 +180,66 @@ pub async fn delete_by_key(
     Err(err) => Err(db_blocking_error(err)),
     Ok(result) => Ok(PgDeleteGeneric { count: result }),
   }
+}
+
+pub async fn patch_proxy_templates(
+  key: String,
+  proxy_templates: Vec<String>,
+  pool: &web::types::State<Pool>,
+) -> Result<ClusterItem, HttpResponseError> {
+  use crate::schema::clusters::dsl;
+
+  let conn = services::postgresql::get_pool_conn(pool)?;
+
+  let cluster = web::block(move || {
+    diesel::update(dsl::clusters.filter(dsl::key.eq(key)))
+      .set(dsl::proxy_templates.eq(proxy_templates))
+      .get_result::<ClusterItem>(&conn)
+  })
+  .await
+  .map_err(db_blocking_error)?;
+
+  Ok(cluster)
+}
+
+pub async fn list_cargo(
+  key: String,
+  pool: &web::types::State<Pool>,
+) -> Result<Vec<(ClusterCargoItem, CargoItem)>, HttpResponseError> {
+  use crate::schema::cluster_cargoes::dsl;
+  use crate::schema::cargoes;
+  let conn = services::postgresql::get_pool_conn(pool)?;
+
+  let cargoes = web::block(move || {
+    let data: Vec<(ClusterCargoItem, CargoItem)> = dsl::cluster_cargoes
+      .filter(dsl::cluster_key.eq(key))
+      .inner_join(cargoes::table)
+      .load(&conn)?;
+    // let cargoes = data.into_iter().map(|d| d.1).collect::<Vec<CargoItem>>();
+    Ok(data)
+  })
+  .await
+  .map_err(db_blocking_error)?;
+  Ok(cargoes)
+}
+
+pub async fn list_variable(
+  key: String,
+  pool: &web::types::State<Pool>,
+) -> Result<Vec<ClusterVariableItem>, HttpResponseError> {
+  use crate::schema::cluster_variables::dsl;
+
+  let conn = services::postgresql::get_pool_conn(pool)?;
+
+  let res = web::block(move || {
+    dsl::cluster_variables
+      .filter(dsl::cluster_key.eq(key))
+      .get_results(&conn)
+  })
+  .await
+  .map_err(db_blocking_error)?;
+
+  Ok(res)
 }
 
 #[cfg(test)]

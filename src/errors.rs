@@ -63,6 +63,12 @@ pub struct ApiError {
 /// Generic Daemon error
 #[derive(Debug, Error)]
 pub enum DaemonError {
+  /// Generic system io error
+  #[error(transparent)]
+  Io(#[from] std::io::Error),
+  /// Yaml parsing error
+  #[error(transparent)]
+  Yaml(#[from] serde_yaml::Error),
   /// Docker api error
   #[error(transparent)]
   Docker(#[from] DockerError),

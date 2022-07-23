@@ -60,11 +60,23 @@ pub async fn start<'a>(
     let host = &hosts[count];
     if host.starts_with("unix://") {
       let addr = host.replace("unix://", "");
-      server = server.bind_uds(&addr)?;
+      server = match server.bind_uds(&addr) {
+        Err(err) => {
+          log::error!("unable to bind server on {} got error {}", &addr, &err);
+          std::process::exit(1);
+        }
+        Ok(server) => server,
+      };
       log::info!("listening on {}", &host);
     } else if host.starts_with("tcp://") {
       let addr = host.replace("tcp://", "");
-      server = server.bind(&addr)?;
+      server = match server.bind(&addr) {
+        Err(err) => {
+          log::error!("unable to bind server on {} got error {}", &addr, &err);
+          std::process::exit(1);
+        }
+        Ok(server) => server,
+      };
       log::info!("listening on {}", &host);
     } else {
       log::warn!("{} is not valid use tcp:// or unix:// as protocol", host);
