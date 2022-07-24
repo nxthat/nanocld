@@ -1,8 +1,7 @@
 use ntex::web;
 use ntex::http::StatusCode;
 use std::collections::HashMap;
-use futures::StreamExt;
-use futures::stream::FuturesUnordered;
+use futures::{StreamExt, stream};
 
 use crate::models::CargoItem;
 
@@ -41,7 +40,6 @@ pub async fn create_containers<'a>(
       status: StatusCode::BAD_REQUEST,
     });
   }
-  log::debug!("image name not empty {:?}", &image_name);
   let image = Some(image_name.to_owned());
   let mut labels: HashMap<String, String> = match opts.labels {
     None => HashMap::new(),
@@ -60,6 +58,7 @@ pub async fn create_containers<'a>(
     opts.cargo.namespace_name.to_owned(),
   );
   labels.insert(String::from("cargo"), opts.cargo.key.to_owned());
+  let options = bollard::container::CreateContainerOptions { name };
   let config = bollard::container::Config {
     image,
     hostname: opts.cargo.hostname.to_owned(),
@@ -71,20 +70,12 @@ pub async fn create_containers<'a>(
     attach_stderr: Some(true),
     host_config: Some(bollard::models::HostConfig {
       binds: Some(opts.cargo.binds.to_owned()),
-      // dns: Some(vec![String::from("142.0.0.1")]),
-      // This remove internet inside the container need to find a workarround
       network_mode: Some(opts.network_key.to_owned()),
-      // network_mode: Some(String::from("none")),
       ..Default::default()
     }),
     ..Default::default()
   };
-  let res = docker_api
-    .create_container(
-      None::<bollard::container::CreateContainerOptions<String>>,
-      config,
-    )
-    .await?;
+  let res = docker_api.create_container(Some(options), config).await?;
   container_ids.push(res.id);
   Ok(container_ids)
 }
@@ -111,25 +102,40 @@ pub async fn delete_container(
 ) -> Result<(), HttpResponseError> {
   let containers = list_containers(cargo_key, docker_api).await?;
 
-  containers
-    .into_iter()
-    .map(|container| async move {
-      let id = container.id.ok_or(HttpResponseError {
-        msg: String::from("unable to get container id"),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })?;
-      let options = Some(bollard::container::RemoveContainerOptions {
-        force: true,
-        ..Default::default()
-      });
-      docker_api.remove_container(&id, options).await?;
-      Ok::<_, HttpResponseError>(())
-    })
-    .collect::<FuturesUnordered<_>>()
-    .collect::<Vec<_>>()
-    .await
-    .into_iter()
-    .collect::<Result<Vec<()>, HttpResponseError>>()?;
+  let mut stream = stream::iter(containers);
+
+  while let Some(container) = stream.next().await {
+    let id = container.id.ok_or(HttpResponseError {
+      msg: String::from("unable to get container id"),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+    let options = Some(bollard::container::RemoveContainerOptions {
+      force: true,
+      ..Default::default()
+    });
+    docker_api.remove_container(&id, options).await?;
+  }
+
+  // TODO test perf against stream
+  // containers
+  //   .into_iter()
+  //   .map(|container| async move {
+  //     let id = container.id.ok_or(HttpResponseError {
+  //       msg: String::from("unable to get container id"),
+  //       status: StatusCode::INTERNAL_SERVER_ERROR,
+  //     })?;
+  //     let options = Some(bollard::container::RemoveContainerOptions {
+  //       force: true,
+  //       ..Default::default()
+  //     });
+  //     docker_api.remove_container(&id, options).await?;
+  //     Ok::<_, HttpResponseError>(())
+  //   })
+  //   .collect::<FuturesUnordered<_>>()
+  //   .collect::<Vec<_>>()
+  //   .await
+  //   .into_iter()
+  //   .collect::<Result<Vec<()>, HttpResponseError>>()?;
 
   Ok(())
 }

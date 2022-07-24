@@ -84,7 +84,6 @@ async fn create_container_image(
           };
           let result = tx.send(Ok::<_, web::error::Error>(Bytes::from(data)));
           if result.is_err() {
-            println!("stop build image");
             break;
           }
         }

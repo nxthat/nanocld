@@ -32,6 +32,7 @@ pub async fn reload_config(docker_api: &Docker) -> Result<(), DockerError> {
   let res = docker_api.create_exec(container_name, config).await?;
   let config = StartExecOptions { detach: false };
   docker_api.start_exec(&res.id, Some(config)).await?;
+
   Ok(())
 }
 
