@@ -1,8 +1,6 @@
 use bollard::container::LogOutput;
-use futures::{StreamExt, SinkExt};
-use futures::channel::mpsc::unbounded;
+use futures::StreamExt;
 use ntex::channel::mpsc;
-use ntex::http::StatusCode;
 use ntex::rt;
 use ntex::util::Bytes;
 use ntex::web;
@@ -95,35 +93,11 @@ async fn start_exec(
         while let Some(output) = output.next().await {
           match output {
             Err(_err) => {
-              todo!("catch error of stream.");
+              log::error!("Todo catch error of exec stream.");
+              break;
             }
             Ok(output) => match output {
-              LogOutput::StdErr { message } => {
-                let data = &LogOutputStream {
-                  types: LogOutputStreamTypes::StdOut,
-                  message: String::from_utf8(message.to_vec()).unwrap(),
-                };
-                let payload = serde_json::to_vec(&data).unwrap();
-
-                if tx
-                  .send(Ok::<_, web::error::Error>(Bytes::from(
-                    message.to_vec(),
-                  )))
-                  .is_err()
-                {
-                  break;
-                }
-              }
               LogOutput::StdOut { message } => {
-                let data = &LogOutputStream {
-                  types: LogOutputStreamTypes::StdOut,
-                  message: String::from_utf8(message.to_vec()).unwrap(),
-                };
-                // let payload = serde_json::to_string(&data).unwrap();
-                // println!("{}", serde_json::to_string_pretty(&data).unw);
-
-                let payload = serde_json::to_vec(&data).unwrap();
-
                 if tx
                   .send(Ok::<_, web::error::Error>(Bytes::from(
                     message.to_vec(),
@@ -133,41 +107,11 @@ async fn start_exec(
                   break;
                 }
               }
-              LogOutput::StdIn { message } => {
-                let data = &LogOutputStream {
-                  types: LogOutputStreamTypes::StdIn,
-                  message: String::from_utf8(message.to_vec()).unwrap(),
-                };
-                let payload = serde_json::to_vec(&data).unwrap();
-
-                if tx
-                  .send(Ok::<_, web::error::Error>(Bytes::from(
-                    message.to_vec(),
-                  )))
-                  .is_err()
-                {
-                  break;
-                }
-              }
-              LogOutput::Console { message } => {
-                let data = &LogOutputStream {
-                  types: LogOutputStreamTypes::StdIn,
-                  message: String::from_utf8(message.to_vec()).unwrap(),
-                };
-                let payload = serde_json::to_vec(&data).unwrap();
-
-                if tx
-                  .send(Ok::<_, web::error::Error>(Bytes::from(
-                    message.to_vec(),
-                  )))
-                  .is_err()
-                {
-                  break;
-                }
-              }
+              _ => log::debug!("todo exec command outputs"),
             },
           }
         }
+        tx.close();
       });
       Ok(web::HttpResponse::Ok().streaming(rx_body))
     }

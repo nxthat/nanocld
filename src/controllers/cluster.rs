@@ -1,9 +1,12 @@
 //! File to handle cluster routes
-use ntex::http::StatusCode;
 use ntex::web;
+use futures::stream;
+use futures::StreamExt;
+use ntex::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
 use crate::config::DaemonConfig;
+use crate::models::ContainerFilterQuery;
 use crate::services;
 use crate::repositories;
 
@@ -98,11 +101,12 @@ async fn delete_cluster_by_name(
   name: web::types::Path<String>,
   web::types::Query(qs): web::types::Query<ClusterQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
+  let name = name.into_inner();
   let nsp = match qs.namespace {
     None => String::from("global"),
     Some(namespace) => namespace,
   };
-  let gen_key = nsp.to_owned() + "-" + &name.into_inner();
+  let gen_key = nsp.to_owned() + "-" + &name;
 
   let item =
     repositories::cluster::find_by_key(gen_key.to_owned(), &pool).await?;
@@ -112,7 +116,25 @@ async fn delete_cluster_by_name(
     &pool,
   )
   .await?;
+  let qs = ContainerFilterQuery {
+    cluster: Some(name),
+    namespace: Some(nsp),
+    cargo: None,
+  };
+
   repositories::cluster_cargo::delete_by_key(gen_key.to_owned(), &pool).await?;
+  let containers = services::container::list_container(qs, &docker_api).await?;
+  let mut stream = stream::iter(containers);
+  while let Some(container) = stream.next().await {
+    let options = bollard::container::RemoveContainerOptions {
+      force: true,
+      ..Default::default()
+    };
+    docker_api
+      .remove_container(&container.id.unwrap(), Some(options))
+      .await?;
+  }
+
   services::cluster::delete_networks(item, &docker_api, &pool).await?;
   log::debug!("deleting cluster cargo");
   let res = repositories::cluster::delete_by_key(gen_key, &pool).await?;

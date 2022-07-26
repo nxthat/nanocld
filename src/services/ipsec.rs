@@ -88,7 +88,7 @@ fn gen_ipsec_host_conf(config: &DaemonConfig) -> HostConfig {
 async fn create_ipsec_network(docker_api: &Docker) -> Result<(), DockerError> {
   let network_name = "nanoclvpn0";
   let network_state =
-    utils::get_network_state(docker_api, network_name).await?;
+    utils::get_network_state(network_name, docker_api).await?;
   if network_state != utils::NetworkState::NotFound {
     return Ok(());
   }

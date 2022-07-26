@@ -21,7 +21,7 @@ pub enum NetworkState {
   Ready,
 }
 
-/// # Generate labels width a namespace
+/// # Generate labels with a namespace
 ///
 /// # Arguments
 /// - [namespace](str) the name of the namespace
@@ -45,8 +45,8 @@ pub fn gen_labels_with_namespace(namespace: &str) -> HashMap<&str, &str> {
 /// Start service by it's name
 ///
 /// # Arguments
-/// - [docker](Docker) bollard docker instance
 /// - [name](str) name of the service to start
+/// - [docker_api](Docker) bollard docker instance
 ///
 /// # Return
 /// if sucess return nothing a [docker error](DockerError) is returned if an error occur
@@ -59,9 +59,9 @@ pub fn gen_labels_with_namespace(namespace: &str) -> HashMap<&str, &str> {
 /// ```
 pub async fn start_service(
   name: &str,
-  docker: &Docker,
+  docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  docker
+  docker_api
     .start_container(name, None::<StartContainerOptions<String>>)
     .await?;
   Ok(())
@@ -110,8 +110,8 @@ fn parse_create_output(
 /// Build a nxthat service from github
 ///
 /// # Arguments
-/// - [docker](Docker) bollard docker instance
 /// - [name](str) name of the service to build
+/// - [docker_api](Docker) bollard docker instance
 ///
 /// # Return
 /// if sucess return nothing a [docker error](DockerError) is returned if an error occur
@@ -124,9 +124,9 @@ fn parse_create_output(
 /// ```
 pub async fn build_service(
   service_name: &'static str,
-  docker: &Docker,
+  docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  if image_exists(service_name, docker).await {
+  if image_exists(service_name, docker_api).await {
     return Ok(());
   }
   let git_url = "https://github.com/nxthat/".to_owned();
@@ -137,7 +137,7 @@ pub async fn build_service(
     ..Default::default()
   };
   log::info!("building service [{}]", &service_name);
-  let mut stream = docker.build_image(options, None, None);
+  let mut stream = docker_api.build_image(options, None, None);
   while let Some(output) = stream.next().await {
     parse_build_output(service_name, output)?;
   }
@@ -149,8 +149,8 @@ pub async fn build_service(
 /// Install a service from docker image
 ///
 /// # Arguments
-/// - [docker](Docker) bollard docker instance
 /// - [name](str) name of the service to install
+/// - [docker_api](Docker) bollard docker instance
 ///
 /// # Return
 /// if sucess return nothing a [docker error](DockerError) is returned if an error occur
@@ -159,17 +159,17 @@ pub async fn build_service(
 /// ```rust,norun
 /// use crate::services;
 ///
-/// services::utils::install_service("postgresql", &docker).await;
+/// services::utils::install_service("postgresql", &docker_api).await;
 /// ```
 pub async fn install_service(
   image_name: &'static str,
-  docker: &Docker,
+  docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  if image_exists(image_name, docker).await {
+  if image_exists(image_name, docker_api).await {
     return Ok(());
   }
   log::info!("starting install service [{}]", image_name);
-  let mut stream = docker.create_image(
+  let mut stream = docker_api.create_image(
     Some(CreateImageOptions {
       from_image: image_name,
       ..Default::default()
@@ -195,8 +195,8 @@ pub async fn image_exists(image_name: &str, docker: &Docker) -> bool {
 /// Install a service from docker image
 ///
 /// # Arguments
-/// - [docker](Docker) bollard docker instance
 /// - [name](str) name of the service to install
+/// - [docker_api](Docker) bollard docker instance
 ///
 /// # Return
 /// /// if success return [network state](NetworkState)
@@ -209,15 +209,15 @@ pub async fn image_exists(image_name: &str, docker: &Docker) -> bool {
 /// services::utils::get_network_state(&docker, "network-name").await;
 /// ```
 pub async fn get_network_state(
-  docker: &Docker,
   network_name: &str,
+  docker_api: &Docker,
 ) -> Result<NetworkState, DockerError> {
   let config = InspectNetworkOptions {
     verbose: true,
     scope: "local",
   };
 
-  let res = docker.inspect_network(network_name, Some(config)).await;
+  let res = docker_api.inspect_network(network_name, Some(config)).await;
   if let Err(err) = res {
     match err {
       DockerError::DockerResponseServerError {
@@ -242,8 +242,8 @@ pub async fn get_network_state(
 /// Create a network by name with default settings using docker api
 ///
 /// # Arguments
-/// - [docker](Docker) bollard docker instance
 /// - [name](str) name of the network to create
+/// - [docker_api](Docker) bollard docker instance
 ///
 /// # Return
 /// if sucess return nothing a [docker error](DockerError) is returned if an error occur
@@ -255,8 +255,8 @@ pub async fn get_network_state(
 /// services::utils::create_network(&docker, "network-name").await;
 /// ```
 pub async fn create_network(
-  docker: &Docker,
   network_name: &str,
+  docker_api: &Docker,
 ) -> Result<(), DockerError> {
   let mut options: HashMap<String, String> = HashMap::new();
   options.insert(
@@ -269,7 +269,7 @@ pub async fn create_network(
     options,
     ..Default::default()
   };
-  docker.create_network(config).await?;
+  docker_api.create_network(config).await?;
   Ok(())
 }
 
@@ -277,8 +277,8 @@ pub async fn create_network(
 /// Get state of a service by his name
 ///
 /// # Arguments
-/// - [docker](Docker) bollard docker instance
 /// - [name](str) name of the service
+/// - [docker_api](Docker) bollard docker instance
 ///
 /// # Return
 /// if success return [service state](ServiceState)
@@ -292,9 +292,9 @@ pub async fn create_network(
 /// ```
 pub async fn get_service_state(
   container_name: &'static str,
-  docker: &Docker,
+  docker_api: &Docker,
 ) -> ServiceState {
-  let resp = docker.inspect_container(container_name, None).await;
+  let resp = docker_api.inspect_container(container_name, None).await;
   if resp.is_err() {
     return ServiceState::Uninstalled;
   }

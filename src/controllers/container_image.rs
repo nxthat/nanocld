@@ -144,14 +144,26 @@ async fn deploy_container_image(
         &pool,
       )
       .await?;
-      let cnt_to_remove = services::cluster::list_containers(
+      // Containers to remove after update
+      let cntr = services::cluster::list_containers(
         &cluster_cargo.cluster_key,
         &cluster_cargo.cargo_key,
         &docker_api,
       )
       .await?;
 
-      println!("container to remove {:#?}", &cnt_to_remove);
+      let mut scntr = stream::iter(cntr.to_owned());
+
+      let mut count = 0;
+      while let Some(cnt) = scntr.next().await {
+        let options = bollard::container::RenameContainerOptions {
+          name: format!("{}-tmp-{}", &cargo.name, &count),
+        };
+        docker_api
+          .rename_container(&cnt.id.unwrap_or_default(), options)
+          .await?;
+        count += 1;
+      }
 
       let opts = JoinCargoOptions {
         cluster: cluster.to_owned(),
@@ -165,9 +177,9 @@ async fn deploy_container_image(
       services::cluster::start(&cluster, &daemon_config, &pool, &docker_api)
         .await?;
 
-      let mut stream = stream::iter(cnt_to_remove);
+      let mut scntr = stream::iter(cntr);
 
-      while let Some(container) = stream.next().await {
+      while let Some(container) = scntr.next().await {
         let options = Some(bollard::container::RemoveContainerOptions {
           force: true,
           ..Default::default()

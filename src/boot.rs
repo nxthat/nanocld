@@ -50,9 +50,9 @@ pub async fn create_default_network(
 ) -> Result<(), DockerError> {
   let network_name = "nanoclservices0";
   let state =
-    services::utils::get_network_state(docker_api, network_name).await?;
+    services::utils::get_network_state(network_name, docker_api).await?;
   if state == services::utils::NetworkState::NotFound {
-    services::utils::create_network(docker_api, network_name).await?;
+    services::utils::create_network(network_name, docker_api).await?;
   }
   Ok(())
 }
