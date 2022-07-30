@@ -69,12 +69,14 @@ async fn create_postgre_container(
 /// ```
 /// let pool = create_pool();
 /// ```
-pub fn create_pool(host: String) -> Pool {
-  let db_url = "postgres://root:root@".to_owned() + &host + "/nanocl";
-  let manager = ConnectionManager::<PgConnection>::new(db_url);
-  r2d2::Pool::builder()
-    .build(manager)
-    .expect("Failed to create pool.")
+pub async fn create_pool(host: String) -> Pool {
+  web::block(move || {
+    let db_url = "postgres://root:root@".to_owned() + &host + "/nanocl";
+    let manager = ConnectionManager::<PgConnection>::new(db_url);
+    r2d2::Pool::builder().build(manager)
+  })
+  .await
+  .expect("cannot connect to postgresql.")
 }
 
 /// # Get connection from a pool

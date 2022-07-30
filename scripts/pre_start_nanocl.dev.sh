@@ -7,18 +7,16 @@ set -e -x
 # Set up bridge network:
 if ! ip link show $bridge > /dev/null 2>&1
 then
-   sudo ip link add name $bridge type bridge
-   sudo ip addr add ${net:-"142.0.0.1/24"} dev $bridge
-   sudo ip link set dev $bridge up
+   ip link add name $bridge type bridge
+   ip addr add ${net:-"142.0.0.1/24"} dev $bridge
+   ip link set dev $bridge up
 fi
 
-sudo mkdir -p /run/nanocl
-sudo mkdir -p /var/lib/nanocl
+mkdir -p /run/nanocl
+mkdir -p /var/lib/nanocl
 
-sudo containerd --config ./fake_path/etc/nanocl/containerd.conf 2> /dev/null &
-sudo dockerd --config-file ./fake_path/etc/nanocl/dockerd.json 2> /dev/null &
+containerd --config ./fake_path/etc/nanocl/containerd.conf &> /dev/null 2>&1
+dockerd --config-file ./fake_path/etc/nanocl/dockerd.json &> /dev/null 2>&1
 
-sleep 4
-
-sudo chmod 777 -R /run/nanocl
-sudo chmod 777 -R /var/lib/nanocl
+chmod 777 -R /run/nanocl
+chmod 777 -R /var/lib/nanocl

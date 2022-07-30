@@ -81,17 +81,14 @@ pub mod test {
       .await
       .unwrap();
 
-    services::postgresql::create_pool(ip_addr)
+    services::postgresql::create_pool(ip_addr).await
   }
 
   pub async fn generate_server(config: Config) -> test::TestServer {
     let docker = gen_docker_client();
 
-    let ip_addr = services::postgresql::get_postgres_ip(&docker)
-      .await
-      .unwrap();
+    let pool = gen_postgre_pool().await;
 
-    let pool = services::postgresql::create_pool(ip_addr);
     test::server(move || {
       App::new()
         .state(pool.clone())

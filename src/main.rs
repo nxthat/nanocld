@@ -114,7 +114,7 @@ async fn main() -> std::io::Result<()> {
     Ok(docker_api) => docker_api,
   };
 
-  // Download and configure and boot internal services
+  // Download, configure and boot internal services
   if args.install_services {
     if let Err(err) = install::install_services(&docker_api).await {
       let exit_code = parse_main_error(&args, &daemon_config, err);

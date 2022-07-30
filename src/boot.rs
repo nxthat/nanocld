@@ -80,10 +80,11 @@ pub async fn boot(
 ) -> Result<BootState, DaemonError> {
   log::info!("booting");
   boot_docker_services(config, docker_api).await?;
+  println!("boot_docer_services");
   let postgres_ip = services::postgresql::get_postgres_ip(docker_api).await?;
   log::info!("creating postgresql state pool");
   // Connect to postgresql
-  let db_pool = services::postgresql::create_pool(postgres_ip.to_owned());
+  let db_pool = services::postgresql::create_pool(postgres_ip.to_owned()).await;
   let pool = web::types::State::new(db_pool.to_owned());
   let conn = services::postgresql::get_pool_conn(&pool)?;
   log::info!("runing migration");
