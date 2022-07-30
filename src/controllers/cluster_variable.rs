@@ -2,16 +2,10 @@ use ntex::web;
 use serde::{Serialize, Deserialize};
 
 use crate::repositories;
-use crate::models::{Pool, ClusterVariablePartial};
-
-use super::utils::gen_nsp_key_by_name;
-
+use crate::models::{Pool, GenericNspQuery, ClusterVariablePartial};
 use crate::errors::HttpResponseError;
 
-#[derive(Serialize, Deserialize)]
-pub struct ClusterVaribleQuery {
-  namespace: Option<String>,
-}
+use super::utils::gen_nsp_key_by_name;
 
 /// Create cluster variable
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -32,7 +26,7 @@ pub struct ClusterVaribleQuery {
 async fn create_cluster_variable(
   pool: web::types::State<Pool>,
   c_name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterVaribleQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   web::types::Json(payload): web::types::Json<ClusterVariablePartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = c_name.into_inner();
@@ -67,7 +61,7 @@ async fn create_cluster_variable(
 async fn list_cluster_variable(
   pool: web::types::State<Pool>,
   c_name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterVaribleQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = c_name.into_inner();
 
@@ -107,7 +101,7 @@ pub struct ClusterVariablePath {
 async fn delete_cluster_variable(
   pool: web::types::State<Pool>,
   url_path: web::types::Path<ClusterVariablePath>,
-  web::types::Query(qs): web::types::Query<ClusterVaribleQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let var_name = format!("{}-{}", &url_path.c_name, &url_path.v_name);
   let var_key = gen_nsp_key_by_name(&qs.namespace, &var_name);
@@ -136,7 +130,7 @@ async fn delete_cluster_variable(
 async fn get_cluster_variable_by_name(
   pool: web::types::State<Pool>,
   url_path: web::types::Path<ClusterVariablePath>,
-  web::types::Query(qs): web::types::Query<ClusterVaribleQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let var_name = format!("{}-{}", &url_path.c_name, &url_path.v_name);
   let var_key = gen_nsp_key_by_name(&qs.namespace, &var_name);

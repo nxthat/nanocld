@@ -4,14 +4,9 @@ use ntex::web;
 use ntex::http::StatusCode;
 use serde::{Serialize, Deserialize};
 
+use crate::repositories;
+use crate::models::{Pool, GenericNspQuery, ClusterNetworkPartial};
 use crate::errors::HttpResponseError;
-use crate::repositories::{cluster, cluster_network, self};
-use crate::models::{ClusterNetworkPartial, Pool};
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ClusterNetworkQuery {
-  pub(crate) namespace: Option<String>,
-}
 
 /// List network for given cluster
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -31,7 +26,7 @@ pub struct ClusterNetworkQuery {
 async fn list_cluster_network(
   pool: web::types::State<Pool>,
   c_name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterNetworkQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = match qs.namespace {
     None => String::from("global"),
@@ -39,8 +34,9 @@ async fn list_cluster_network(
   };
 
   let gen_key = nsp + "-" + &c_name.into_inner();
-  let item = cluster::find_by_key(gen_key, &pool).await?;
-  let items = cluster_network::list_for_cluster(item, &pool).await?;
+  let item = repositories::cluster::find_by_key(gen_key, &pool).await?;
+  let items =
+    repositories::cluster_network::list_for_cluster(item, &pool).await?;
 
   Ok(web::HttpResponse::Ok().json(&items))
 }
@@ -65,7 +61,7 @@ async fn create_cluster_network(
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
   c_name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterNetworkQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   web::types::Json(payload): web::types::Json<ClusterNetworkPartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = c_name.into_inner();
@@ -74,12 +70,15 @@ async fn create_cluster_network(
     Some(nsp) => nsp,
   };
   let gen_key = nsp.to_owned() + "-" + &name;
-  let cluster = cluster::find_by_key(gen_key.clone(), &pool).await?;
+  let cluster =
+    repositories::cluster::find_by_key(gen_key.clone(), &pool).await?;
   let mut labels = HashMap::new();
   labels.insert(String::from("cluster_key"), gen_key.clone());
   let gen_name = cluster.key.to_owned() + "-" + &payload.name;
   let network_existing =
-    match cluster_network::find_by_key(gen_name.clone(), &pool).await {
+    match repositories::cluster_network::find_by_key(gen_name.clone(), &pool)
+      .await
+    {
       Err(_) => false,
       Ok(_) => true,
     };
@@ -145,7 +144,7 @@ async fn create_cluster_network(
       msg: String::from("Unable to get ipam config gateway"),
     })?;
 
-  let new_network = cluster_network::create_for_cluster(
+  let new_network = repositories::cluster_network::create_for_cluster(
     nsp,
     name,
     payload,
@@ -182,7 +181,7 @@ struct InspectClusterNetworkPath {
 async fn inspect_cluster_network_by_name(
   pool: web::types::State<Pool>,
   url_path: web::types::Path<InspectClusterNetworkPath>,
-  web::types::Query(qs): web::types::Query<ClusterNetworkQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let c_name = url_path.c_name.to_owned();
   let n_name = url_path.n_name.to_owned();
@@ -191,7 +190,8 @@ async fn inspect_cluster_network_by_name(
     Some(nsp) => nsp,
   };
   let gen_key = nsp + "-" + &c_name + "-" + &n_name;
-  let network = cluster_network::find_by_key(gen_key, &pool).await?;
+  let network =
+    repositories::cluster_network::find_by_key(gen_key, &pool).await?;
   Ok(web::HttpResponse::Ok().json(&network))
 }
 
@@ -215,7 +215,7 @@ async fn delete_cluster_network_by_name(
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
   url_path: web::types::Path<InspectClusterNetworkPath>,
-  web::types::Query(qs): web::types::Query<ClusterNetworkQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let c_name = url_path.c_name.to_owned();
   let n_name = url_path.n_name.to_owned();
@@ -224,7 +224,8 @@ async fn delete_cluster_network_by_name(
     Some(nsp) => nsp,
   };
   let gen_key = nsp + "-" + &c_name + "-" + &n_name;
-  let network = cluster_network::find_by_key(gen_key, &pool).await?;
+  let network =
+    repositories::cluster_network::find_by_key(gen_key, &pool).await?;
 
   if let Err(err) = docker_api.remove_network(&network.docker_network_id).await
   {
@@ -234,7 +235,8 @@ async fn delete_cluster_network_by_name(
     });
   }
 
-  let res = cluster_network::delete_by_key(network.key, &pool).await?;
+  let res =
+    repositories::cluster_network::delete_by_key(network.key, &pool).await?;
   Ok(web::HttpResponse::Ok().json(&res))
 }
 
@@ -254,7 +256,7 @@ async fn delete_cluster_network_by_name(
 #[web::get("/networks/count")]
 async fn count_cluster_network_by_namespace(
   pool: web::types::State<Pool>,
-  web::types::Query(qs): web::types::Query<ClusterNetworkQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = match qs.namespace {
     None => String::from("global"),

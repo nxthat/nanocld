@@ -2,7 +2,7 @@ use ntex::web;
 use diesel::prelude::*;
 
 use crate::services;
-use crate::models::{Pool, ClusterCargoPartial, ClusterCargoItem, PgDeleteGeneric};
+use crate::models::{Pool, ClusterCargoPartial, ClusterCargoItem, GenericDelete};
 
 use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
@@ -55,7 +55,7 @@ pub async fn get_by_cluster_key(
 pub async fn delete_by_key(
   key: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -66,14 +66,14 @@ pub async fn delete_by_key(
   .await;
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 
 pub async fn delete_by_cargo_key(
   cargo_key: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -84,7 +84,7 @@ pub async fn delete_by_cargo_key(
   .await;
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 

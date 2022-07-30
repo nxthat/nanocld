@@ -3,7 +3,7 @@ use diesel::prelude::*;
 
 use crate::services;
 use crate::models::{
-  Pool, CargoItem, CargoPartial, PgDeleteGeneric, NamespaceItem, PgGenericCount,
+  Pool, CargoItem, CargoPartial, GenericDelete, NamespaceItem, GenericCount,
 };
 
 use crate::errors::HttpResponseError;
@@ -56,7 +56,7 @@ pub async fn create(
 pub async fn count(
   namespace: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgGenericCount, HttpResponseError> {
+) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -70,14 +70,14 @@ pub async fn count(
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgGenericCount { count: result }),
+    Ok(result) => Ok(GenericCount { count: result }),
   }
 }
 
 pub async fn delete_by_key(
   key: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -89,7 +89,7 @@ pub async fn delete_by_key(
   .await;
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 

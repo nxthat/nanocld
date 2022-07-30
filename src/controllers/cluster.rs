@@ -6,23 +6,16 @@ use ntex::http::StatusCode;
 use serde::{Deserialize, Serialize};
 
 use crate::config::DaemonConfig;
-use crate::models::ContainerFilterQuery;
-use crate::services;
-use crate::repositories;
-
+use crate::{services, repositories};
 use crate::services::cluster::JoinCargoOptions;
 use crate::models::{
-  Pool, ClusterJoinBody, ClusterPartial, ClusterItemWithRelation,
+  Pool, GenericNspQuery, ClusterJoinBody, ClusterPartial,
+  ClusterItemWithRelation, ContainerFilterQuery,
 };
 
 use crate::errors::HttpResponseError;
 
 use super::utils::gen_nsp_key_by_name;
-
-#[derive(Debug, Serialize, Deserialize)]
-struct ClusterQuery {
-  pub(crate) namespace: Option<String>,
-}
 
 /// List all cluster
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -40,7 +33,7 @@ struct ClusterQuery {
 #[web::get("/clusters")]
 async fn list_cluster(
   pool: web::types::State<Pool>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = match qs.namespace {
     None => String::from("global"),
@@ -68,7 +61,7 @@ async fn list_cluster(
 #[web::post("/clusters")]
 async fn create_cluster(
   pool: web::types::State<Pool>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   web::types::Json(json): web::types::Json<ClusterPartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = match qs.namespace {
@@ -99,7 +92,7 @@ async fn delete_cluster_by_name(
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
   name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
   let nsp = match qs.namespace {
@@ -159,7 +152,7 @@ async fn delete_cluster_by_name(
 async fn inspect_cluster_by_name(
   pool: web::types::State<Pool>,
   name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
   let nsp = match qs.namespace {
@@ -209,7 +202,7 @@ async fn inspect_cluster_by_name(
 #[web::post("/clusters/{name}/start")]
 async fn start_cluster_by_name(
   name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   pool: web::types::State<Pool>,
   config: web::types::State<DaemonConfig>,
   docker_api: web::types::State<bollard::Docker>,
@@ -245,7 +238,7 @@ async fn join_cargo_to_cluster(
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
   name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   web::types::Json(payload): web::types::Json<ClusterJoinBody>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
@@ -310,7 +303,7 @@ async fn join_cargo_to_cluster(
 #[web::get("/clusters/count")]
 async fn count_cluster(
   pool: web::types::State<Pool>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = match qs.namespace {
     None => String::from("global"),
@@ -330,7 +323,7 @@ pub struct ClusterTemplatePartial {
 #[web::post("/clusters/{name}/nginx_templates")]
 async fn add_cluster_template(
   name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   web::types::Json(payload): web::types::Json<ClusterTemplatePartial>,
   pool: web::types::State<Pool>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
@@ -361,7 +354,7 @@ pub struct DeleteClusterTemplatePath {
 #[web::delete("/clusters/{cl_name}/nginx_templates/{nt_name}")]
 async fn delete_cluster_template(
   req_path: web::types::Path<DeleteClusterTemplatePath>,
-  web::types::Query(qs): web::types::Query<ClusterQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   pool: web::types::State<Pool>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let gen_id = gen_nsp_key_by_name(&qs.namespace, &req_path.cl_name);
@@ -424,7 +417,7 @@ mod test_namespace_cluster {
   async fn test_list_with_nsp(srv: &TestServer) -> TestReturn {
     let resp = srv
       .get("/clusters")
-      .query(&ClusterQuery {
+      .query(&GenericNspQuery {
         namespace: Some(String::from("test")),
       })?
       .send()

@@ -46,3 +46,9 @@ pub struct GitRepositoryPartial {
   pub(crate) url: String,
   pub(crate) name: String,
 }
+
+/// Structure used as query to build a git repository by branch name
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GitRepositoryBuildQuery {
+  pub(crate) branch: Option<String>,
+}

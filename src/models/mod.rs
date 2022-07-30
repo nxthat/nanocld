@@ -51,14 +51,20 @@ use utoipa::Component;
 /// Generic postgresql delete response
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(Component))]
-pub struct PgDeleteGeneric {
+pub struct GenericDelete {
   pub(crate) count: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(Component))]
-pub struct PgGenericCount {
+pub struct GenericCount {
   pub(crate) count: i64,
+}
+
+/// Generic namespace query filter
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GenericNspQuery {
+  pub(crate) namespace: Option<String>,
 }
 
 /// Re exports ours enums and diesel sql_types for schema.rs

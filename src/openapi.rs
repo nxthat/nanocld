@@ -1,8 +1,5 @@
 use ntex::web;
 use serde_json::json;
-
-#[cfg(feature = "openapi")]
-use ntex_files as fs;
 #[cfg(feature = "openapi")]
 use utoipa::OpenApi;
 #[cfg(feature = "openapi")]
@@ -77,8 +74,6 @@ use crate::errors::ApiError;
     // Cargo
     CargoItem,
     CargoPartial,
-    CargoProxyConfigItem,
-    CargoProxyConfigPartial,
 
     // Cluster
     ClusterItem,
@@ -92,7 +87,7 @@ use crate::errors::ApiError;
     // Cluster network
     ClusterNetworkItem,
     ClusterNetworkPartial,
-    ClusterItemWithRelation,
+    // ClusterItemWithRelation,
 
     // Todo Docker network struct bindings
     // Network,
@@ -116,6 +111,7 @@ async fn get_api_specs() -> Result<web::HttpResponse, web::Error> {
     let api_spec = to_json();
     return Ok(
       web::HttpResponse::Ok()
+        .header("Access-Control-Allow", "*")
         .content_type("application/json")
         .body(api_spec),
     );
@@ -128,23 +124,9 @@ async fn get_api_specs() -> Result<web::HttpResponse, web::Error> {
   }
 }
 
-#[web::get("/explorer")]
-async fn explorer_default() -> Result<web::HttpResponse, web::Error> {
-  Ok(web::HttpResponse::NotImplemented().json(&json!({
-    "msg": "to use this route you must build with openapi feature"
-  })))
-}
-
 pub fn ntex_config(config: &mut web::ServiceConfig) {
-  config.service(get_api_specs);
   #[cfg(feature = "openapi")]
   {
-    config.service(
-      fs::Files::new("/explorer", "./static/swagger").index_file("index.html"),
-    );
-  }
-  #[cfg(not(feature = "openapi"))]
-  {
-    config.service(explorer_default);
+    config.service(get_api_specs);
   }
 }

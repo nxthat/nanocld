@@ -50,6 +50,7 @@ pub struct CargoItem {
 
 /// Cargo item with his relation
 #[derive(Debug, Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(Component))]
 pub struct CargoItemWithRelation {
   pub(crate) key: String,
   pub(crate) namespace_name: String,

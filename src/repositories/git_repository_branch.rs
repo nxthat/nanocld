@@ -3,7 +3,7 @@ use diesel::prelude::*;
 
 use crate::services;
 use crate::models::{
-  Pool, GitRepositoryBranchPartial, GitRepositoryBranchItem, PgDeleteGeneric,
+  Pool, GitRepositoryBranchPartial, GitRepositoryBranchItem, GenericDelete,
 };
 
 use crate::errors::HttpResponseError;
@@ -73,7 +73,7 @@ pub async fn create_many(
 pub async fn delete_by_repository_id(
   repository_name: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -86,7 +86,7 @@ pub async fn delete_by_repository_id(
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 

@@ -6,8 +6,8 @@ use crate::services;
 use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
 use crate::models::{
-  Pool, ClusterItem, ClusterPartial, PgDeleteGeneric, PgGenericCount,
-  CargoItem, ClusterCargoItem, ClusterVariableItem,
+  Pool, ClusterItem, ClusterPartial, GenericDelete, GenericCount, CargoItem,
+  ClusterCargoItem, ClusterVariableItem,
 };
 
 /// # Create cluster for namespace
@@ -64,7 +64,7 @@ pub async fn create_for_namespace(
 pub async fn count(
   namespace: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgGenericCount, HttpResponseError> {
+) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -78,7 +78,7 @@ pub async fn count(
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgGenericCount { count: result }),
+    Ok(result) => Ok(GenericCount { count: result }),
   }
 }
 
@@ -165,7 +165,7 @@ pub async fn find_by_namespace(
 pub async fn delete_by_key(
   key: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -178,7 +178,7 @@ pub async fn delete_by_key(
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 

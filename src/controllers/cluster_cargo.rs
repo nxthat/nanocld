@@ -1,25 +1,13 @@
-use futures::{stream, StreamExt};
 use ntex::web;
-use serde::{Serialize, Deserialize};
+use futures::{stream, StreamExt};
 
 use crate::config::DaemonConfig;
 use crate::{services, repositories};
-use crate::models::Pool;
+use crate::models::{Pool, GenericNspQuery, ClusterCargoPatchPath};
 use crate::errors::HttpResponseError;
 use crate::services::cluster::JoinCargoOptions;
 
 use super::utils::gen_nsp_key_by_name;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ClusterCargoQuery {
-  namespace: Option<String>,
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct ClusterCargoPatchPath {
-  cluster_name: String,
-  cargo_name: String,
-}
 
 #[web::patch("/clusters/{cluster_name}/cargoes/{cargo_name}")]
 async fn update_cluster_cargo_by_name(
@@ -27,7 +15,7 @@ async fn update_cluster_cargo_by_name(
   daemon_config: web::types::State<DaemonConfig>,
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
-  web::types::Query(qs): web::types::Query<ClusterCargoQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let cluster_key = gen_nsp_key_by_name(&qs.namespace, &req_path.cluster_name);
   let cargo_key = gen_nsp_key_by_name(&qs.namespace, &req_path.cargo_name);

@@ -2,7 +2,7 @@
 use ntex::web;
 
 use crate::repositories::namespace;
-use crate::models::{NamespacePartial, Pool};
+use crate::models::{Pool, NamespacePartial};
 
 use crate::errors::HttpResponseError;
 
@@ -112,7 +112,7 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
 mod test_namespace {
   use serde_json::json;
 
-  use crate::models::{NamespacePartial, PgDeleteGeneric};
+  use crate::models::{NamespacePartial, GenericDelete};
   use crate::utils::test::*;
 
   use super::ntex_config;
@@ -170,7 +170,7 @@ mod test_namespace {
       .send()
       .await?;
 
-    let body = resp.json::<PgDeleteGeneric>().await?;
+    let body = resp.json::<GenericDelete>().await?;
     assert_eq!(body.count, 1);
     assert!(resp.status().is_success());
     Ok(())

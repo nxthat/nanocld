@@ -43,7 +43,7 @@ pub struct ClusterItem {
 
 /// Cluster item with his relations
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+// #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct ClusterItemWithRelation {
   pub(crate) key: String,
   pub(crate) name: String,

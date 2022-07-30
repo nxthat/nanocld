@@ -1,5 +1,7 @@
-use ntex::{web, rt};
-use ntex::{channel::mpsc::channel, util::Bytes};
+use ntex::rt;
+use ntex::web;
+use ntex::util::Bytes;
+use ntex::channel::mpsc::channel;
 use futures::{
   SinkExt, StreamExt,
   channel::mpsc::{unbounded, UnboundedSender},

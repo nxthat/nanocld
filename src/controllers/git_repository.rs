@@ -1,18 +1,15 @@
 //! File to handle git repository routes
 use ntex::web;
 use ntex::http::StatusCode;
-use serde::{Deserialize, Serialize};
 
 use crate::config::DaemonConfig;
 use crate::{services, repositories};
-use crate::models::{Pool, GitRepositoryPartial, GitRepositoryBranchPartial};
+use crate::models::{
+  Pool, GitRepositoryPartial, GitRepositoryBranchPartial,
+  GitRepositoryBuildQuery,
+};
 
 use crate::errors::HttpResponseError;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct GitRepositoryBuildQuery {
-  branch: Option<String>,
-}
 
 /// List all git repository
 #[cfg_attr(feature = "openapi", utoipa::path(

@@ -4,7 +4,7 @@ use ntex::web;
 use diesel::prelude::*;
 
 use crate::services;
-use crate::models::{Pool, NamespacePartial, NamespaceItem, PgDeleteGeneric};
+use crate::models::{Pool, NamespacePartial, NamespaceItem, GenericDelete};
 
 use crate::errors::HttpResponseError;
 use super::errors::db_blocking_error;
@@ -125,7 +125,7 @@ pub async fn inspect_by_name(
 pub async fn delete_by_name(
   name: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -136,7 +136,7 @@ pub async fn delete_by_name(
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 

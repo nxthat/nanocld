@@ -2,7 +2,7 @@ use ntex::web;
 use diesel::prelude::*;
 
 use crate::services;
-use crate::models::{Pool, NginxTemplateItem, PgDeleteGeneric};
+use crate::models::{Pool, NginxTemplateItem, GenericDelete};
 
 use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
@@ -64,7 +64,7 @@ pub async fn get_by_name(
 pub async fn delete_by_name(
   name: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::nginx_templates::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -76,6 +76,6 @@ pub async fn delete_by_name(
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }

@@ -4,8 +4,8 @@ use diesel::prelude::*;
 use crate::services;
 use crate::errors::HttpResponseError;
 use crate::models::{
-  Pool, ClusterNetworkPartial, ClusterNetworkItem, PgDeleteGeneric,
-  ClusterItem, PgGenericCount,
+  Pool, ClusterNetworkPartial, ClusterNetworkItem, GenericDelete, ClusterItem,
+  GenericCount,
 };
 
 use super::errors::db_blocking_error;
@@ -28,7 +28,7 @@ pub async fn list_for_cluster(
 pub async fn count_by_namespace(
   namespace: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgGenericCount, HttpResponseError> {
+) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -42,7 +42,7 @@ pub async fn count_by_namespace(
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgGenericCount { count: result }),
+    Ok(result) => Ok(GenericCount { count: result }),
   }
 }
 
@@ -83,7 +83,7 @@ pub async fn create_for_cluster(
 pub async fn delete_by_key(
   key: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
   let conn = services::postgresql::get_pool_conn(pool)?;
 
@@ -96,7 +96,7 @@ pub async fn delete_by_key(
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 

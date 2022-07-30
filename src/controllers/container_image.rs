@@ -1,13 +1,15 @@
+use ntex::rt;
+use ntex::web;
+use ntex::http::StatusCode;
+use ntex::util::Bytes;
+use ntex::channel::mpsc;
 use futures::{StreamExt, stream};
-use ntex::{web, http::StatusCode, channel::mpsc, rt, util::Bytes};
 
-use crate::{
-  errors::HttpResponseError,
-  models::{ContainerImagePartial, Pool},
-  config::DaemonConfig,
-  repositories,
-  services::{self, cluster::JoinCargoOptions},
-};
+use crate::config::DaemonConfig;
+use crate::{services, repositories};
+use crate::services::cluster::JoinCargoOptions;
+use crate::models::{ContainerImagePartial, Pool};
+use crate::errors::HttpResponseError;
 
 #[web::get("/containers/images")]
 async fn list_container_image(

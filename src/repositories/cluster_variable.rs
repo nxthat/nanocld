@@ -3,7 +3,7 @@ use diesel::prelude::*;
 
 use crate::services;
 use crate::models::{
-  Pool, ClusterVariablePartial, ClusterVariableItem, PgDeleteGeneric,
+  Pool, ClusterVariablePartial, ClusterVariableItem, GenericDelete,
 };
 
 use crate::errors::HttpResponseError;
@@ -59,7 +59,7 @@ pub async fn list_by_cluster(
 pub async fn delete_by_cluster_key(
   cluster_key: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -72,14 +72,14 @@ pub async fn delete_by_cluster_key(
   .await;
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 
 pub async fn delete_by_key(
   key: String,
   pool: &web::types::State<Pool>,
-) -> Result<PgDeleteGeneric, HttpResponseError> {
+) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
   let conn = services::postgresql::get_pool_conn(pool)?;
@@ -90,7 +90,7 @@ pub async fn delete_by_key(
   .await;
   match res {
     Err(err) => Err(db_blocking_error(err)),
-    Ok(result) => Ok(PgDeleteGeneric { count: result }),
+    Ok(result) => Ok(GenericDelete { count: result }),
   }
 }
 

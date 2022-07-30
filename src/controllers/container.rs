@@ -1,30 +1,16 @@
-use bollard::container::LogOutput;
-use futures::StreamExt;
-use ntex::channel::mpsc;
 use ntex::rt;
-use ntex::util::Bytes;
 use ntex::web;
+use ntex::util::Bytes;
+use ntex::channel::mpsc;
+use futures::StreamExt;
 use serde::{Serialize, Deserialize};
 
+use bollard::container::LogOutput;
 use bollard::exec::{StartExecOptions, StartExecResults};
 
 use crate::services;
 use crate::errors::HttpResponseError;
-use crate::models::ContainerFilterQuery;
-
-#[derive(Serialize, Deserialize)]
-pub struct ContainerExecQuery {
-  pub(crate) attach_stdin: Option<bool>,
-  pub(crate) attach_stdout: Option<bool>,
-  pub(crate) attach_stderr: Option<bool>,
-  pub(crate) detach_keys: Option<String>,
-  pub(crate) tty: Option<bool>,
-  pub(crate) env: Option<Vec<String>>,
-  pub(crate) cmd: Option<Vec<String>>,
-  pub(crate) privileged: Option<bool>,
-  pub(crate) user: Option<String>,
-  pub(crate) working_dir: Option<String>,
-}
+use crate::models::{ContainerExecBody, ContainerFilterQuery};
 
 #[web::get("/containers")]
 async fn list_container(
@@ -39,7 +25,7 @@ async fn list_container(
 async fn create_exec(
   name: web::types::Path<String>,
   // mut stream: web::types::Payload,
-  web::types::Json(body): web::types::Json<ContainerExecQuery>,
+  web::types::Json(body): web::types::Json<ContainerExecBody>,
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   println!("im called");
@@ -79,14 +65,18 @@ pub struct LogOutputStream {
 async fn start_exec(
   id: web::types::Path<String>,
   docker_api: web::types::State<bollard::Docker>,
-  stream: web::types::Payload,
+  // Todo pipe this stream with stdio
+  #[allow(unused_variables)] stream: web::types::Payload,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let res = docker_api
     .start_exec(&id.into_inner(), None::<StartExecOptions>)
     .await?;
 
   match res {
-    StartExecResults::Attached { mut output, input } => {
+    StartExecResults::Attached {
+      mut output,
+      input: _,
+    } => {
       let (tx, rx_body) = mpsc::channel();
 
       rt::spawn(async move {

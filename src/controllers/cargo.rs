@@ -1,19 +1,13 @@
-use ntex::http::StatusCode;
 use ntex::web;
-use serde::{Deserialize, Serialize};
+use ntex::http::StatusCode;
 
 use crate::{services, repositories};
 use crate::models::{
-  Pool, CargoPartial, CargoEnvPartial, CargoItemWithRelation,
+  Pool, GenericNspQuery, CargoPartial, CargoEnvPartial, CargoItemWithRelation,
   ContainerFilterQuery,
 };
 
 use crate::errors::HttpResponseError;
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CargoQuery {
-  pub(crate) namespace: Option<String>,
-}
 
 /// List cargo
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -31,7 +25,7 @@ pub struct CargoQuery {
 #[web::get("/cargoes")]
 async fn list_cargo(
   pool: web::types::State<Pool>,
-  web::types::Query(qs): web::types::Query<CargoQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = match qs.namespace {
     None => String::from("global"),
@@ -41,11 +35,6 @@ async fn list_cargo(
   let nsp = repositories::namespace::find_by_name(nsp, &pool).await?;
   let items = repositories::cargo::find_by_namespace(nsp, &pool).await?;
   Ok(web::HttpResponse::Ok().json(&items))
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CargoPatchPayload {
-  cluster: Option<String>,
 }
 
 /// Create new cargo
@@ -65,7 +54,7 @@ pub struct CargoPatchPayload {
 #[web::post("/cargoes")]
 async fn create_cargo(
   pool: web::types::State<Pool>,
-  web::types::Query(qs): web::types::Query<CargoQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   web::types::Json(payload): web::types::Json<CargoPartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = match qs.namespace {
@@ -125,7 +114,7 @@ async fn delete_cargo_by_name(
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
   name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<CargoQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   log::info!("asking cargo deletion {}", &name);
   let nsp = match qs.namespace {
@@ -161,7 +150,7 @@ async fn delete_cargo_by_name(
 #[web::get("/cargoes/count")]
 async fn count_cargo(
   pool: web::types::State<Pool>,
-  web::types::Query(qs): web::types::Query<CargoQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = match qs.namespace {
     None => String::from("global"),
@@ -189,7 +178,7 @@ async fn count_cargo(
 #[web::get("/cargoes/{name}/inspect")]
 async fn inspect_cargo_by_name(
   name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<CargoQuery>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {

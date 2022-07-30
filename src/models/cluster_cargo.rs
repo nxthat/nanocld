@@ -8,6 +8,7 @@ use super::cargo::CargoItem;
 use super::cluster::ClusterItem;
 use super::cluster_network::ClusterNetworkItem;
 
+/// Structure definition of a cluster cargo item in database
 #[derive(
   Debug,
   Serialize,
@@ -31,10 +32,18 @@ pub struct ClusterCargoItem {
   pub(crate) network_key: String,
 }
 
+/// Structure used as body parameter to create a cluster cargo
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct ClusterCargoPartial {
   pub(crate) cargo_key: String,
   pub(crate) cluster_key: String,
   pub(crate) network_key: String,
+}
+
+/// Structure used to parse path parameter of cluster cargo patch method
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ClusterCargoPatchPath {
+  pub(crate) cluster_name: String,
+  pub(crate) cargo_name: String,
 }
