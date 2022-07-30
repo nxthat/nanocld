@@ -237,8 +237,8 @@ async fn patch_cargo_by_name(
 
     let env = CargoEnvPartial {
       cargo_key: gen_key.to_owned(),
-      name: arr[0].to_owned(),
-      value: arr[1].to_owned(),
+      name: name.to_owned(),
+      value: value.to_owned(),
     };
 
     let env_exists = repositories::cargo_env::exist_in_cargo(
