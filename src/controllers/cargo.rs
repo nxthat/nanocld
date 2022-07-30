@@ -1,13 +1,18 @@
+use futures::{stream, StreamExt};
 use ntex::web;
 use ntex::http::StatusCode;
 
+use crate::config::DaemonConfig;
+use crate::services::cluster::JoinCargoOptions;
 use crate::{services, repositories};
 use crate::models::{
   Pool, GenericNspQuery, CargoPartial, CargoEnvPartial, CargoItemWithRelation,
-  ContainerFilterQuery,
+  ContainerFilterQuery, CargoPatchPartial,
 };
 
 use crate::errors::HttpResponseError;
+
+use super::utils::*;
 
 /// List cargo
 #[cfg_attr(feature = "openapi", utoipa::path(
@@ -27,10 +32,7 @@ async fn list_cargo(
   pool: web::types::State<Pool>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let nsp = match qs.namespace {
-    None => String::from("global"),
-    Some(nsp) => nsp,
-  };
+  let nsp = ensure_namespace(&qs.namespace);
 
   let nsp = repositories::namespace::find_by_name(nsp, &pool).await?;
   let items = repositories::cargo::find_by_namespace(nsp, &pool).await?;
@@ -57,10 +59,7 @@ async fn create_cargo(
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
   web::types::Json(payload): web::types::Json<CargoPartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let nsp = match qs.namespace {
-    None => String::from("global"),
-    Some(nsp) => nsp,
-  };
+  let nsp = ensure_namespace(&qs.namespace);
   log::info!(
     "creating cargo for namespace {} with payload {:?}",
     &nsp,
@@ -117,10 +116,7 @@ async fn delete_cargo_by_name(
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   log::info!("asking cargo deletion {}", &name);
-  let nsp = match qs.namespace {
-    None => String::from("global"),
-    Some(nsp) => nsp,
-  };
+  let nsp = ensure_namespace(&qs.namespace);
   let gen_key = nsp + "-" + &name.into_inner();
 
   repositories::cargo::find_by_key(gen_key.clone(), &pool).await?;
@@ -152,10 +148,7 @@ async fn count_cargo(
   pool: web::types::State<Pool>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let nsp = match qs.namespace {
-    None => String::from("global"),
-    Some(nsp) => nsp,
-  };
+  let nsp = ensure_namespace(&qs.namespace);
   let res = repositories::cargo::count(nsp, &pool).await?;
 
   Ok(web::HttpResponse::Ok().json(&res))
@@ -184,10 +177,7 @@ async fn inspect_cargo_by_name(
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
   log::info!("asking cargo inspection {}", &name);
-  let nsp = match &qs.namespace {
-    None => String::from("global"),
-    Some(nsp) => nsp.to_owned(),
-  };
+  let nsp = ensure_namespace(&qs.namespace);
   let gen_key = nsp + "-" + &name;
   let res = repositories::cargo::find_by_key(gen_key.to_owned(), &pool).await?;
 
@@ -214,12 +204,151 @@ async fn inspect_cargo_by_name(
   Ok(web::HttpResponse::Ok().json(&cargo))
 }
 
+#[web::patch("/cargoes/{name}")]
+async fn patch_cargo_by_name(
+  name: web::types::Path<String>,
+  web::types::Json(mut payload): web::types::Json<CargoPatchPartial>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+  daemon_config: web::types::State<DaemonConfig>,
+  pool: web::types::State<Pool>,
+  docker_api: web::types::State<bollard::Docker>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let name = name.into_inner();
+  let namespace = ensure_namespace(&qs.namespace);
+  let gen_key = format_key(&namespace, &name);
+
+  let cargo =
+    repositories::cargo::find_by_key(gen_key.to_owned(), &pool).await?;
+
+  // Add environement variables
+  let mut env_stream =
+    stream::iter(payload.environnements.to_owned().unwrap_or_default());
+  while let Some(env) = env_stream.next().await {
+    let arr = env.split('=').collect::<Vec<&str>>();
+
+    if arr.len() != 2 {
+      return Err(HttpResponseError {
+        msg: format!("env variable formated incorrectly {}", &env),
+        status: StatusCode::UNPROCESSABLE_ENTITY,
+      });
+    }
+    let name = arr[0].to_owned();
+    let value = arr[1].to_owned();
+
+    let env = CargoEnvPartial {
+      cargo_key: gen_key.to_owned(),
+      name: arr[0].to_owned(),
+      value: arr[1].to_owned(),
+    };
+
+    let env_exists = repositories::cargo_env::exist_in_cargo(
+      name.to_owned(),
+      gen_key.to_owned(),
+      &pool,
+    )
+    .await?;
+    if env_exists {
+      repositories::cargo_env::patch_for_cargo(
+        name.to_owned(),
+        gen_key.to_owned(),
+        value,
+        &pool,
+      )
+      .await?;
+    } else {
+      repositories::cargo_env::create(env, &pool).await?;
+    }
+  }
+
+  // Add binds
+  let mut binds: Vec<String> = Vec::new();
+  if let Some(mut payload_binds) = payload.binds.clone() {
+    binds.append(&mut cargo.binds.to_owned());
+    binds.append(&mut payload_binds);
+  }
+  payload.binds = Some(binds);
+
+  // Update entity
+  let updated_cargo =
+    repositories::cargo::update_by_key(namespace, name, payload, &pool).await?;
+
+  let cluster_cargoes =
+    repositories::cluster_cargo::find_by_cargo_key(cargo.key, &pool).await?;
+  let mut cluster_cargoes_stream = stream::iter(cluster_cargoes);
+  while let Some(cluster_cargo) = cluster_cargoes_stream.next().await {
+    let network = repositories::cluster_network::find_by_key(
+      cluster_cargo.network_key,
+      &pool,
+    )
+    .await?;
+
+    let cluster = repositories::cluster::find_by_key(
+      cluster_cargo.cluster_key.to_owned(),
+      &pool,
+    )
+    .await?;
+    let cargo = repositories::cargo::find_by_key(
+      cluster_cargo.cargo_key.to_owned(),
+      &pool,
+    )
+    .await?;
+    // Containers to remove after update
+    let cntr = services::cluster::list_containers(
+      &cluster_cargo.cluster_key,
+      &cluster_cargo.cargo_key,
+      &docker_api,
+    )
+    .await?;
+
+    let mut scntr = stream::iter(cntr.to_owned());
+
+    let mut count = 0;
+    while let Some(cnt) = scntr.next().await {
+      let options = bollard::container::RenameContainerOptions {
+        name: format!("{}-tmp-{}", &cargo.name, &count),
+      };
+      docker_api
+        .rename_container(&cnt.id.unwrap_or_default(), options)
+        .await?;
+      count += 1;
+    }
+
+    let opts = JoinCargoOptions {
+      cluster: cluster.to_owned(),
+      cargo,
+      network,
+      is_creating_relation: false,
+    };
+
+    services::cluster::join_cargo(&opts, &docker_api, &pool).await?;
+
+    services::cluster::start(&cluster, &daemon_config, &pool, &docker_api)
+      .await?;
+
+    let mut scntr = stream::iter(cntr);
+
+    while let Some(container) = scntr.next().await {
+      let options = Some(bollard::container::RemoveContainerOptions {
+        force: true,
+        ..Default::default()
+      });
+      println!("removing container {:#?}", &container);
+      docker_api
+        .remove_container(&container.id.clone().unwrap_or_default(), options)
+        .await?;
+    }
+  }
+
+  Ok(web::HttpResponse::Accepted().json(&updated_cargo))
+}
+
 pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(list_cargo);
   config.service(create_cargo);
   config.service(count_cargo);
   config.service(delete_cargo_by_name);
   config.service(inspect_cargo_by_name);
+  config.service(patch_cargo_by_name);
 }
 
 #[cfg(test)]

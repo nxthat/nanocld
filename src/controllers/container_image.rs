@@ -124,7 +124,6 @@ async fn deploy_container_image(
     repositories::cargo::find_by_image_name(id_or_name, &pool).await?;
 
   let mut cargoes_stream = stream::iter(cargoes);
-
   while let Some(cargo) = cargoes_stream.next().await {
     let cluster_cargoes =
       repositories::cluster_cargo::find_by_cargo_key(cargo.key, &pool).await?;

@@ -4,6 +4,7 @@ use diesel::prelude::*;
 use crate::services;
 use crate::models::{
   Pool, CargoItem, CargoPartial, GenericDelete, NamespaceItem, GenericCount,
+  CargoPatchPartial, CargoPatchItem,
 };
 
 use crate::errors::HttpResponseError;
@@ -127,5 +128,44 @@ pub async fn find_by_image_name(
   match res {
     Err(err) => Err(db_blocking_error(err)),
     Ok(items) => Ok(items),
+  }
+}
+
+pub async fn update_by_key(
+  nsp: String,
+  name: String,
+  item: CargoPatchPartial,
+  pool: &web::types::State<Pool>,
+) -> Result<CargoItem, HttpResponseError> {
+  use crate::schema::cargoes::dsl;
+
+  let conn = services::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || {
+    let mut key: Option<String> = None;
+
+    if let Some(ref name) = item.name {
+      key = Some(format!("{}-{}", &nsp, name));
+    }
+
+    let data = CargoPatchItem {
+      key,
+      name: item.name,
+      image_name: item.image_name,
+      binds: item.binds,
+      dns_entry: item.dns_entry,
+      domainname: item.domainname,
+      hostname: item.hostname,
+    };
+    diesel::update(
+      dsl::cargoes.filter(dsl::key.eq(&format!("{}-{}", &nsp, &name))),
+    )
+    .set(&data)
+    .get_result(&conn)
+  })
+  .await;
+
+  match res {
+    Err(err) => Err(db_blocking_error(err)),
+    Ok(item) => Ok(item),
   }
 }

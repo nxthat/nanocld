@@ -7,8 +7,7 @@ use crate::models::{Pool, CargoEnvPartial, CargoEnvItem, GenericDelete};
 use crate::errors::HttpResponseError;
 use super::errors::db_blocking_error;
 
-// May be needed later
-pub async fn _create(
+pub async fn create(
   item: CargoEnvPartial,
   pool: &web::types::State<Pool>,
 ) -> Result<CargoEnvItem, HttpResponseError> {
@@ -26,6 +25,55 @@ pub async fn _create(
       .values(&item)
       .execute(&conn)?;
     Ok(item)
+  })
+  .await;
+
+  match res {
+    Err(err) => Err(db_blocking_error(err)),
+    Ok(item) => Ok(item),
+  }
+}
+
+pub async fn exist_in_cargo(
+  name: String,
+  cargo_key: String,
+  pool: &web::types::State<Pool>,
+) -> Result<bool, HttpResponseError> {
+  use crate::schema::cargo_environnements::dsl;
+
+  let conn = services::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || {
+    diesel::select(diesel::dsl::exists(
+      dsl::cargo_environnements
+        .filter(dsl::name.eq(&name))
+        .filter(dsl::cargo_key.eq(&cargo_key)),
+    ))
+    .get_result(&conn)
+  })
+  .await;
+  match res {
+    Err(err) => Err(db_blocking_error(err)),
+    Ok(data) => Ok(data),
+  }
+}
+
+pub async fn patch_for_cargo(
+  name: String,
+  cargo_key: String,
+  value: String,
+  pool: &web::types::State<Pool>,
+) -> Result<CargoEnvItem, HttpResponseError> {
+  use crate::schema::cargo_environnements::dsl;
+
+  let conn = services::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || {
+    diesel::update(
+      dsl::cargo_environnements
+        .filter(dsl::name.eq(&name))
+        .filter(dsl::cargo_key.eq(&cargo_key)),
+    )
+    .set(dsl::value.eq(&value))
+    .get_result(&conn)
   })
   .await;
 

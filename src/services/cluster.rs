@@ -337,7 +337,7 @@ pub async fn start(
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct MustacheData {
-  pub(crate) vars: HashMap<String, String>,
+  pub vars: HashMap<String, String>,
 }
 
 pub async fn join_cargo(
@@ -362,6 +362,8 @@ pub async fn join_cargo(
     repositories::cargo_env::list_by_cargo_key(opts.cargo.key.to_owned(), pool)
       .await?;
 
+  println!("envs {:#?}", &envs);
+
   let env_string =
     serde_json::to_string(&envs).map_err(|err| HttpResponseError {
       msg: format!("unable to format cargo env items {:#?}", err),
@@ -375,6 +377,7 @@ pub async fn join_cargo(
     })?;
 
   let vars = services::cluster_variable::cluster_vars_to_hashmap(vars);
+  println!("vars ! {:#?}", &vars);
   let template_data = MustacheData { vars };
   let env_string_with_vars = template
     .render_to_string(&template_data)
@@ -382,6 +385,7 @@ pub async fn join_cargo(
       msg: format!("unable to populate env with cluster variables: {:#?}", err),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
+  println!("template string {:#?}", &env_string_with_vars);
   let envs = serde_json::from_str::<Vec<CargoEnvItem>>(&env_string_with_vars)
     .map_err(|err| HttpResponseError {
     msg: format!("unable to reserialize environements : {:#?}", err),
@@ -397,6 +401,7 @@ pub async fn join_cargo(
       acc
     })
     .to_vec();
+  println!("environements ! {:#?}", &environnements);
   let create_opts = CreateCargoContainerOpts {
     cargo: &opts.cargo,
     network_key: &opts.network.key,

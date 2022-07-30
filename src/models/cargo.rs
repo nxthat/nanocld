@@ -20,6 +20,29 @@ pub struct CargoPartial {
   pub(crate) hostname: Option<String>,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct CargoPatchPartial {
+  pub(crate) name: Option<String>,
+  pub(crate) image_name: Option<String>,
+  pub(crate) binds: Option<Vec<String>>,
+  pub(crate) dns_entry: Option<String>,
+  pub(crate) domainname: Option<String>,
+  pub(crate) hostname: Option<String>,
+  pub(crate) environnements: Option<Vec<String>>,
+}
+
+#[derive(AsChangeset)]
+#[table_name = "cargoes"]
+pub struct CargoPatchItem {
+  pub(crate) key: Option<String>,
+  pub(crate) name: Option<String>,
+  pub(crate) image_name: Option<String>,
+  pub(crate) binds: Option<Vec<String>>,
+  pub(crate) dns_entry: Option<String>,
+  pub(crate) domainname: Option<String>,
+  pub(crate) hostname: Option<String>,
+}
+
 /// Cargo item is an definition to container create image and start them
 /// this structure ensure read and write in database
 #[derive(
