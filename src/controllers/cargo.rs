@@ -193,6 +193,7 @@ async fn inspect_cargo_by_name(
     name: res.name,
     namespace_name: res.namespace_name,
     binds: res.binds,
+    replicas: res.replicas,
     image_name: res.image_name,
     domainname: res.domainname,
     dns_entry: res.dns_entry,
