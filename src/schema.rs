@@ -144,15 +144,15 @@ joinable!(cluster_cargoes -> clusters (cluster_key));
 joinable!(cluster_networks -> clusters (cluster_key));
 
 allow_tables_to_appear_in_same_query!(
-    cargo_environnements,
-    cargoes,
-    cluster_cargoes,
-    cluster_networks,
-    cluster_variables,
-    clusters,
-    git_repositories,
-    git_repository_branches,
-    namespaces,
-    nginx_logs,
-    nginx_templates,
+  cargo_environnements,
+  cargoes,
+  cluster_cargoes,
+  cluster_networks,
+  cluster_variables,
+  clusters,
+  git_repositories,
+  git_repository_branches,
+  namespaces,
+  nginx_logs,
+  nginx_templates,
 );
