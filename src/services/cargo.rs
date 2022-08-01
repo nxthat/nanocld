@@ -3,9 +3,14 @@ use ntex::http::StatusCode;
 use std::collections::HashMap;
 use futures::{StreamExt, stream};
 
-use crate::models::CargoItem;
+use crate::config::DaemonConfig;
+use crate::{repositories, services};
+
+use crate::models::{CargoItem, Pool};
 
 use crate::errors::HttpResponseError;
+
+use super::cluster::JoinCargoOptions;
 
 #[derive(Debug)]
 pub struct CreateCargoContainerOpts<'a> {
@@ -137,5 +142,81 @@ pub async fn delete_container(
   //   .into_iter()
   //   .collect::<Result<Vec<()>, HttpResponseError>>()?;
 
+  Ok(())
+}
+
+/// Regenerate containers for a given cargo
+pub async fn update_containers(
+  cargo_key: String,
+  daemon_config: &web::types::State<DaemonConfig>,
+  docker_api: &web::types::State<bollard::Docker>,
+  pool: &web::types::State<Pool>,
+) -> Result<(), HttpResponseError> {
+  let cluster_cargoes =
+    repositories::cluster_cargo::find_by_cargo_key(cargo_key, pool).await?;
+  let mut cluster_cargoes_stream = stream::iter(cluster_cargoes);
+  while let Some(cluster_cargo) = cluster_cargoes_stream.next().await {
+    let network = repositories::cluster_network::find_by_key(
+      cluster_cargo.network_key,
+      pool,
+    )
+    .await?;
+
+    let cluster = repositories::cluster::find_by_key(
+      cluster_cargo.cluster_key.to_owned(),
+      pool,
+    )
+    .await?;
+    let cargo = repositories::cargo::find_by_key(
+      cluster_cargo.cargo_key.to_owned(),
+      pool,
+    )
+    .await?;
+
+    // Containers to remove after update
+    let cntr = services::cluster::list_containers(
+      &cluster_cargo.cluster_key,
+      &cluster_cargo.cargo_key,
+      docker_api,
+    )
+    .await?;
+
+    let mut scntr = stream::iter(cntr.to_owned());
+
+    let mut count = 0;
+    while let Some(cnt) = scntr.next().await {
+      let options = bollard::container::RenameContainerOptions {
+        name: format!("{}-tmp-{}", &cargo.name, &count),
+      };
+      docker_api
+        .rename_container(&cnt.id.unwrap_or_default(), options)
+        .await?;
+      count += 1;
+    }
+
+    let opts = JoinCargoOptions {
+      cluster: cluster.to_owned(),
+      cargo,
+      network,
+      is_creating_relation: false,
+    };
+
+    services::cluster::join_cargo(&opts, docker_api, pool).await?;
+
+    services::cluster::start(&cluster, daemon_config, pool, docker_api).await?;
+
+    let mut scntr = stream::iter(cntr);
+
+    while let Some(container) = scntr.next().await {
+      let options = Some(bollard::container::RemoveContainerOptions {
+        force: true,
+        ..Default::default()
+      });
+      println!("removing container {:#?}", &container);
+      docker_api
+        .remove_container(&container.id.clone().unwrap_or_default(), options)
+        .await?;
+    }
+  }
   Ok(())
 }

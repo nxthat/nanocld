@@ -3,8 +3,7 @@ use ntex::web;
 use ntex::http::StatusCode;
 
 use crate::config::DaemonConfig;
-use crate::services::cluster::JoinCargoOptions;
-use crate::{services, repositories};
+use crate::{repositories, services};
 use crate::models::{
   Pool, GenericNspQuery, CargoPartial, CargoEnvPartial, CargoItemWithRelation,
   ContainerFilterQuery, CargoPatchPartial,
@@ -248,6 +247,7 @@ async fn patch_cargo_by_name(
     )
     .await?;
     if env_exists {
+      // Update env variable if it exists
       repositories::cargo_env::patch_for_cargo(
         name.to_owned(),
         gen_key.to_owned(),
@@ -256,6 +256,7 @@ async fn patch_cargo_by_name(
       )
       .await?;
     } else {
+      // Unless we create it
       repositories::cargo_env::create(env, &pool).await?;
     }
   }
@@ -272,73 +273,13 @@ async fn patch_cargo_by_name(
   let updated_cargo =
     repositories::cargo::update_by_key(namespace, name, payload, &pool).await?;
 
-  let cluster_cargoes =
-    repositories::cluster_cargo::find_by_cargo_key(cargo.key, &pool).await?;
-  let mut cluster_cargoes_stream = stream::iter(cluster_cargoes);
-  while let Some(cluster_cargo) = cluster_cargoes_stream.next().await {
-    let network = repositories::cluster_network::find_by_key(
-      cluster_cargo.network_key,
-      &pool,
-    )
-    .await?;
-
-    let cluster = repositories::cluster::find_by_key(
-      cluster_cargo.cluster_key.to_owned(),
-      &pool,
-    )
-    .await?;
-    let cargo = repositories::cargo::find_by_key(
-      cluster_cargo.cargo_key.to_owned(),
-      &pool,
-    )
-    .await?;
-    // Containers to remove after update
-    let cntr = services::cluster::list_containers(
-      &cluster_cargo.cluster_key,
-      &cluster_cargo.cargo_key,
-      &docker_api,
-    )
-    .await?;
-
-    let mut scntr = stream::iter(cntr.to_owned());
-
-    let mut count = 0;
-    while let Some(cnt) = scntr.next().await {
-      let options = bollard::container::RenameContainerOptions {
-        name: format!("{}-tmp-{}", &cargo.name, &count),
-      };
-      docker_api
-        .rename_container(&cnt.id.unwrap_or_default(), options)
-        .await?;
-      count += 1;
-    }
-
-    let opts = JoinCargoOptions {
-      cluster: cluster.to_owned(),
-      cargo,
-      network,
-      is_creating_relation: false,
-    };
-
-    services::cluster::join_cargo(&opts, &docker_api, &pool).await?;
-
-    services::cluster::start(&cluster, &daemon_config, &pool, &docker_api)
-      .await?;
-
-    let mut scntr = stream::iter(cntr);
-
-    while let Some(container) = scntr.next().await {
-      let options = Some(bollard::container::RemoveContainerOptions {
-        force: true,
-        ..Default::default()
-      });
-      println!("removing container {:#?}", &container);
-      docker_api
-        .remove_container(&container.id.clone().unwrap_or_default(), options)
-        .await?;
-    }
-  }
-
+  services::cargo::update_containers(
+    gen_key,
+    &daemon_config,
+    &docker_api,
+    &pool,
+  )
+  .await?;
   Ok(web::HttpResponse::Accepted().json(&updated_cargo))
 }
 
