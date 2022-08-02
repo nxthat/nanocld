@@ -41,8 +41,10 @@ fn gen_nginx_host_conf(config: &DaemonConfig) -> HostConfig {
   let stream_path = Path::new(&config.state_dir).join("nginx/streams-enabled");
   let log_path = Path::new(&config.state_dir).join("nginx/log");
   let ssl_path = Path::new(&config.state_dir).join("nginx/ssl");
+  let sock_path = Path::new(&config.state_dir).join("socket");
   let letsencrypt_path = Path::new(&config.state_dir).join("nginx/letsencrypt");
   let binds = Some(vec![
+    format!("{}:/opt/nanocl-socket", sock_path.display()),
     format!("{}:/etc/nginx/sites-enabled", sites_path.display()),
     format!("{}:/var/log/nginx", log_path.display()),
     format!("{}:/etc/nginx/ssl", ssl_path.display()),
