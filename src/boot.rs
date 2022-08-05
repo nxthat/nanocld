@@ -68,7 +68,8 @@ async fn boot_docker_services(
   services::dnsmasq::boot(config, docker_api).await?;
   // Boot nginx service to manage proxy
   services::nginx::boot(config, docker_api).await?;
-  services::ipsec::boot(config, docker_api).await?;
+
+  // services::ipsec::boot(config, docker_api).await?;
   Ok(())
 }
 

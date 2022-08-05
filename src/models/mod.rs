@@ -42,6 +42,9 @@ pub use container::*;
 mod container_image;
 pub use container_image::*;
 
+mod node;
+pub use node::*;
+
 pub type DBConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -70,6 +73,7 @@ pub struct GenericNspQuery {
 /// Re exports ours enums and diesel sql_types for schema.rs
 pub mod exports {
   pub use diesel::sql_types::*;
+  pub use super::node::{Node_modes, Ssh_auth_modes};
   pub use super::nginx_template::Nginx_template_modes;
   pub use super::git_repository::Git_repository_source_type;
 }

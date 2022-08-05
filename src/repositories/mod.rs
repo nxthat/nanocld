@@ -1,6 +1,8 @@
 //! Functions to manipulate model in database
 pub mod errors;
 
+pub mod node;
+
 pub mod namespace;
 
 pub mod nginx_log;

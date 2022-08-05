@@ -4,3 +4,5 @@ CREATE TABLE "namespaces" (
 );
 
 INSERT INTO "namespaces" ("name") VALUES ('global');
+INSERT INTO "namespaces" ("name") VALUES ('system');
+

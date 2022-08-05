@@ -138,6 +138,19 @@ table! {
     }
 }
 
+table! {
+    use crate::models::exports::*;
+
+    nodes (name) {
+        name -> Varchar,
+        mode -> Node_modes,
+        ip_address -> Varchar,
+        ssh_auth_mode -> Ssh_auth_modes,
+        ssh_user -> Varchar,
+        ssh_credential -> Varchar,
+    }
+}
+
 joinable!(cargoes -> namespaces (namespace_name));
 joinable!(cluster_cargoes -> cargoes (cargo_key));
 joinable!(cluster_cargoes -> cluster_networks (network_key));
@@ -156,4 +169,5 @@ allow_tables_to_appear_in_same_query!(
     namespaces,
     nginx_logs,
     nginx_templates,
+    nodes,
 );

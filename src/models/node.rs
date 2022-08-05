@@ -1,0 +1,63 @@
+use diesel_derive_enum::DbEnum;
+use serde::{Serialize, Deserialize};
+#[cfg(feature = "openapi")]
+use utoipa::Component;
+
+use crate::schema::nodes;
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, DbEnum)]
+#[DieselType = "Node_modes"]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "openapi", derive(Component))]
+pub enum NodeMode {
+  Master,
+  Worker,
+  Proxy,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, DbEnum)]
+#[DieselType = "Ssh_auth_modes"]
+#[serde(rename_all = "snake_case")]
+#[cfg_attr(feature = "openapi", derive(Component))]
+pub enum SshAuthMode {
+  Passwd,
+  Rsa,
+}
+
+#[derive(Serialize, Deserialize)]
+#[cfg_attr(feature = "openapi", derive(Component))]
+pub struct NodePartial {
+  pub(crate) name: String,
+  pub(crate) mode: NodeMode,
+  pub(crate) ip_address: String,
+  pub(crate) ssh_auth_mode: SshAuthMode,
+  pub(crate) ssh_user: String,
+  pub(crate) ssh_credential: String,
+}
+
+#[derive(
+  Debug, Clone, Serialize, Deserialize, Queryable, Identifiable, Insertable,
+)]
+#[primary_key(name)]
+#[table_name = "nodes"]
+pub struct NodeItem {
+  pub(crate) name: String,
+  pub(crate) mode: NodeMode,
+  pub(crate) ip_address: String,
+  pub(crate) ssh_auth_mode: SshAuthMode,
+  pub(crate) ssh_user: String,
+  pub(crate) ssh_credential: String,
+}
+
+impl From<NodePartial> for NodeItem {
+  fn from(p: NodePartial) -> Self {
+    NodeItem {
+      name: p.name,
+      mode: p.mode,
+      ip_address: p.ip_address,
+      ssh_auth_mode: p.ssh_auth_mode,
+      ssh_user: p.ssh_user,
+      ssh_credential: p.ssh_credential,
+    }
+  }
+}

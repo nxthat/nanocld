@@ -8,6 +8,8 @@ arch=`dpkg --print-architecture`
 version=`cat ./Cargo.toml | grep -m 1 "version = \"" | sed 's/[^0-9.]*\([0-9.]*\).*/\1/'`
 release_path="./target/${pkg_name}_${version}_${arch}"
 
+export RUSTFLAGS="-C target-feature=-crt-static"
+
 # clean directory
 rm -fr ${release_path}
 # create directories structure for package
