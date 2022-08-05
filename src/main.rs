@@ -17,6 +17,7 @@ mod cli;
 mod boot;
 mod events;
 mod version;
+mod components;
 
 mod utils;
 mod errors;
@@ -115,8 +116,8 @@ async fn main() -> std::io::Result<()> {
   };
 
   // Download, configure and boot internal services
-  if args.install_services {
-    if let Err(err) = install::install_services(&docker_api).await {
+  if args.install_components {
+    if let Err(err) = install::install_components(&docker_api).await {
       let exit_code = parse_main_error(&args, &daemon_config, err);
       std::process::exit(exit_code);
     }

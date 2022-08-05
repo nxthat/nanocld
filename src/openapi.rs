@@ -124,9 +124,9 @@ async fn get_api_specs() -> Result<web::HttpResponse, web::Error> {
   }
 }
 
-pub fn ntex_config(config: &mut web::ServiceConfig) {
+pub fn ntex_config(_config: &mut web::ServiceConfig) {
   #[cfg(feature = "openapi")]
   {
-    config.service(get_api_specs);
+    _config.service(get_api_specs);
   }
 }

@@ -4,7 +4,7 @@ use crate::errors::DaemonError;
 
 use super::cli::Cli;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct DaemonConfig {
   pub(crate) hosts: Vec<String>,
   pub(crate) state_dir: String,

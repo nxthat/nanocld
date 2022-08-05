@@ -1,7 +1,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::services;
+use crate::components;
 use crate::models::{
   Pool, CargoItem, CargoPartial, GenericDelete, NamespaceItem, GenericCount,
   CargoPatchPartial, CargoPatchItem,
@@ -14,7 +14,7 @@ pub async fn find_by_namespace(
   nsp: NamespaceItem,
   pool: &web::types::State<Pool>,
 ) -> Result<Vec<CargoItem>, HttpResponseError> {
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || CargoItem::belonging_to(&nsp).load(&conn)).await;
   match res {
@@ -30,7 +30,7 @@ pub async fn create(
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let new_item = CargoItem {
       key: nsp.to_owned() + "-" + &item.name,
@@ -61,7 +61,7 @@ pub async fn count(
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cargoes
       .filter(dsl::namespace_name.eq(namespace))
@@ -82,7 +82,7 @@ pub async fn delete_by_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::cargoes)
       .filter(dsl::key.eq(key))
@@ -101,7 +101,7 @@ pub async fn find_by_key(
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res =
     web::block(move || dsl::cargoes.filter(dsl::key.eq(key)).get_result(&conn))
       .await;
@@ -118,7 +118,7 @@ pub async fn find_by_image_name(
 ) -> Result<Vec<CargoItem>, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cargoes
       .filter(dsl::image_name.eq(image_name))
@@ -140,7 +140,7 @@ pub async fn update_by_key(
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let mut key: Option<String> = None;
 

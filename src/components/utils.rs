@@ -9,7 +9,7 @@ use bollard::{
 };
 
 #[derive(Debug, PartialEq)]
-pub enum ServiceState {
+pub enum ComponentState {
   Uninstalled,
   Running,
   Stopped,
@@ -57,7 +57,7 @@ pub fn gen_labels_with_namespace(namespace: &str) -> HashMap<&str, &str> {
 ///
 /// services::utils::start_service(&docker, "nanocl-proxy-nginx").await;
 /// ```
-pub async fn start_service(
+pub async fn start_component(
   name: &str,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
@@ -120,9 +120,9 @@ fn parse_create_output(
 /// ```rust,norun
 /// use crate::services;
 ///
-/// services::utils::build_service(&docker, "nanocl-proxy-nginx").await;
+/// services::utils::build_component(&docker, "nanocl-proxy-nginx").await;
 /// ```
-pub async fn build_service(
+pub async fn build_component(
   service_name: &'static str,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
@@ -159,9 +159,9 @@ pub async fn build_service(
 /// ```rust,norun
 /// use crate::services;
 ///
-/// services::utils::install_service("postgresql", &docker_api).await;
+/// services::utils::install_component("postgresql", &docker_api).await;
 /// ```
-pub async fn install_service(
+pub async fn install_component(
   image_name: &'static str,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
@@ -288,25 +288,25 @@ pub async fn create_network(
 /// ```rust,norun
 /// use crate::services;
 ///
-/// services::utils::get_service_state(&docker, "nanocl-proxy-nginx").await;
+/// services::utils::get_component_state(&docker, "nanocl-proxy-nginx").await;
 /// ```
-pub async fn get_service_state(
+pub async fn get_component_state(
   container_name: &'static str,
   docker_api: &Docker,
-) -> ServiceState {
+) -> ComponentState {
   let resp = docker_api.inspect_container(container_name, None).await;
   if resp.is_err() {
-    return ServiceState::Uninstalled;
+    return ComponentState::Uninstalled;
   }
   let body = resp.expect("ContainerInspectResponse");
   if let Some(state) = body.state {
     if let Some(running) = state.running {
       return if running {
-        ServiceState::Running
+        ComponentState::Running
       } else {
-        ServiceState::Stopped
+        ComponentState::Stopped
       };
     }
   }
-  ServiceState::Stopped
+  ComponentState::Stopped
 }

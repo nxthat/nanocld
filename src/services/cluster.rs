@@ -8,7 +8,7 @@ use futures::stream::FuturesUnordered;
 
 use crate::config::DaemonConfig;
 use crate::utils::render_template;
-use crate::{services, repositories};
+use crate::{services, components, repositories};
 use crate::models::{
   Pool, ClusterItem, CargoItem, ClusterNetworkItem, ClusterCargoPartial,
   CargoEnvItem, NginxTemplateModes, ClusterCargoItem,
@@ -318,7 +318,7 @@ pub async fn start(
           });
         }
 
-        services::dnsmasq::add_dns_entry(
+        components::dnsmasq::add_dns_entry(
           dns_settings[1],
           dns_settings[0],
           &config.state_dir,
@@ -326,10 +326,10 @@ pub async fn start(
         .map_err(|err| err.to_http_error())?;
       }
 
-      services::dnsmasq::restart(docker_api)
+      components::dnsmasq::restart(docker_api)
         .await
         .map_err(|err| err.to_http_error())?;
-      services::nginx::reload_config(docker_api).await?;
+      components::nginx::reload_config(docker_api).await?;
     }
   }
   Ok(())

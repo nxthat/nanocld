@@ -14,7 +14,7 @@ pub struct Cli {
   pub(crate) genopenapi: bool,
   /// Only install required services this have to be called after fresh installation
   #[clap(long)]
-  pub(crate) install_services: bool,
+  pub(crate) install_components: bool,
   /// Daemon host to listen to you can use tcp:// and unix://
   /// [default: unix:///run/nanocl/nanocl.sock]
   #[clap(short = 'H', long = "--host")]

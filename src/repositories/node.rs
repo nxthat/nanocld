@@ -1,7 +1,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::services;
+use crate::components;
 use crate::models::{Pool, NodeItem, NodePartial};
 
 use crate::errors::HttpResponseError;
@@ -21,12 +21,12 @@ use super::errors::db_blocking_error;
 ///
 /// let res = repositories::node::list(&pool).await;
 /// ```
-pub async fn list(
+pub async fn _list(
   pool: &web::types::State<Pool>,
 ) -> Result<Vec<NodeItem>, HttpResponseError> {
   use crate::schema::nodes::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || dsl::nodes.load(&conn)).await;
 
   match res {
@@ -53,13 +53,13 @@ pub async fn list(
 /// };
 /// let res = repositories::node::create(node, &pool).await;
 /// ```
-pub async fn create(
+pub async fn _create(
   node: NodePartial,
   pool: &web::types::State<Pool>,
 ) -> Result<NodeItem, HttpResponseError> {
   use crate::schema::nodes::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let node: NodeItem = node.into();
     diesel::insert_into(dsl::nodes)

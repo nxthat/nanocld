@@ -3,7 +3,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::services;
+use crate::components;
 use crate::models::{Pool, NamespacePartial, NamespaceItem, GenericDelete};
 
 use crate::errors::HttpResponseError;
@@ -33,7 +33,7 @@ pub async fn create(
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let item = NamespaceItem { name: item.name };
     diesel::insert_into(dsl::namespaces)
@@ -67,7 +67,7 @@ pub async fn list(
 ) -> Result<Vec<NamespaceItem>, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || dsl::namespaces.load(&conn)).await;
 
   match res {
@@ -96,7 +96,7 @@ pub async fn inspect_by_name(
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::namespaces.filter(dsl::name.eq(name)).get_result(&conn)
   })
@@ -128,7 +128,7 @@ pub async fn delete_by_name(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::namespaces.filter(dsl::name.eq(name))).execute(&conn)
   })
@@ -146,7 +146,7 @@ pub async fn find_by_name(
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::namespaces.filter(dsl::name.eq(name)).get_result(&conn)
   })

@@ -2,7 +2,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::services;
+use crate::components;
 use crate::models::{Pool, NginxLogItem, NginxLogPartial};
 
 use crate::errors::HttpResponseError;
@@ -14,7 +14,7 @@ pub async fn create_log(
 ) -> Result<NginxLogItem, HttpResponseError> {
   use crate::schema::nginx_logs::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let item = NginxLogItem::from(partial);
     diesel::insert_into(dsl::nginx_logs)

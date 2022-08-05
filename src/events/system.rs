@@ -6,9 +6,9 @@ use std::sync::{Arc, Mutex, MutexGuard};
 use futures::channel::mpsc;
 use futures::{StreamExt, SinkExt, stream};
 
-use crate::services;
-use crate::models::Pool;
 use crate::config::DaemonConfig;
+use crate::components;
+use crate::models::Pool;
 
 #[derive(Debug, Clone)]
 pub struct EventSystemClient {
@@ -65,7 +65,7 @@ impl EventSystem {
     let state_dir = self.0.config.state_dir.clone();
     let pool = self.0.pool.clone();
     let clients = self.0.clients.clone();
-    let mut receiver = services::nginx::watch_nginx_logs(state_dir, pool);
+    let mut receiver = components::nginx::watch_nginx_logs(state_dir, pool);
     rt::Arbiter::new().exec_fn(move || {
       rt::spawn(async move {
         while let Some(data) = receiver.next().await {

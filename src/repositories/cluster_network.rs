@@ -1,7 +1,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::services;
+use crate::components;
 use crate::errors::HttpResponseError;
 use crate::models::{
   Pool, ClusterNetworkPartial, ClusterNetworkItem, GenericDelete, ClusterItem,
@@ -15,7 +15,7 @@ pub async fn list_for_cluster(
   cluster: ClusterItem,
   pool: &web::types::State<Pool>,
 ) -> Result<Vec<ClusterNetworkItem>, HttpResponseError> {
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res =
     web::block(move || ClusterNetworkItem::belonging_to(&cluster).load(&conn))
       .await;
@@ -31,7 +31,7 @@ pub async fn count_by_namespace(
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
 
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_networks
       .filter(dsl::namespace.eq(namespace))
@@ -55,7 +55,7 @@ pub async fn create_for_cluster(
   pool: &web::types::State<Pool>,
 ) -> Result<ClusterNetworkItem, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     let cluster_key = namespace_name.to_owned() + "-" + &cluster_name;
@@ -85,7 +85,7 @@ pub async fn delete_by_key(
   pool: &web::types::State<Pool>,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     diesel::delete(dsl::cluster_networks)
@@ -105,7 +105,7 @@ pub async fn find_by_key(
   pool: &web::types::State<Pool>,
 ) -> Result<ClusterNetworkItem, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
-  let conn = services::postgresql::get_pool_conn(pool)?;
+  let conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     dsl::cluster_networks
@@ -154,7 +154,7 @@ mod cluster_networks {
 
     // create docker network for relationship
     let docker = bollard::Docker::connect_with_unix(
-      "/run/nanocl/docker.sock",
+      "/run/docker.sock",
       120,
       bollard::API_DEFAULT_VERSION,
     )
