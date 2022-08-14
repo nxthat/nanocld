@@ -18,6 +18,7 @@ mod boot;
 mod events;
 mod version;
 mod components;
+mod hypervisor;
 
 mod utils;
 mod errors;

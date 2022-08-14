@@ -1,5 +1,6 @@
 pub mod errors;
 
+pub mod node;
 pub mod cargo;
 pub mod docker;
 pub mod github;

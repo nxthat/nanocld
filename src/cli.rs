@@ -1,5 +1,7 @@
 use clap::{AppSettings, Parser};
 
+use crate::models::NodeMode;
+
 /// nanocl daemon
 /// vms and containers manager at scale for intranet
 #[derive(Debug, Clone, Parser)]
@@ -36,4 +38,7 @@ pub struct Cli {
   /// Generated token for given github user
   #[clap(long)]
   pub(crate) github_token: Option<String>,
+  /// Node mode
+  #[clap(long, default_value = "master")]
+  pub(crate) mode: NodeMode,
 }

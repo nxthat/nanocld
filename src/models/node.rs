@@ -1,3 +1,4 @@
+use clap::{Parser, arg_enum};
 use diesel_derive_enum::DbEnum;
 use serde::{Serialize, Deserialize};
 #[cfg(feature = "openapi")]
@@ -5,14 +6,16 @@ use utoipa::Component;
 
 use crate::schema::nodes;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, DbEnum)]
-#[DieselType = "Node_modes"]
-#[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "openapi", derive(Component))]
-pub enum NodeMode {
-  Master,
-  Worker,
-  Proxy,
+arg_enum! {
+  #[derive(Debug, Clone, Parser, PartialEq, Serialize, Deserialize, DbEnum)]
+  #[DieselType = "Node_modes"]
+  #[serde(rename_all = "snake_case")]
+  #[cfg_attr(feature = "openapi", derive(Component))]
+  pub enum NodeMode {
+    Master,
+    Worker,
+    Proxy,
+  }
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, DbEnum)]

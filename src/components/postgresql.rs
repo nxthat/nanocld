@@ -37,7 +37,7 @@ async fn create_postgre_container(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let image = Some("postgres:latest");
+  let image = Some("postgres:alpine3.16");
   let env = Some(vec![
     "POSTGRES_USER=root",
     "POSTGRES_PASSWORD=root",

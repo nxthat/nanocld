@@ -1,3 +1,6 @@
+use std::path::PathBuf;
+
+use futures::{FutureExt, TryStreamExt, StreamExt};
 use ntex::http::StatusCode;
 use serde::Serialize;
 
@@ -28,6 +31,19 @@ where
       })?;
 
   Ok(result)
+}
+
+/// Todo download file over http protocol
+pub async fn _download_file(url: &str, path: impl AsRef<PathBuf>) {
+  let client = ntex::http::Client::new();
+  let res = client.get(url).send().await.unwrap();
+  let status = res.status();
+  if status.is_client_error() || status.is_server_error() {
+    return;
+  }
+
+  let mut file_stream = res.into_stream();
+  while let Some(_payload) = file_stream.next().await {}
 }
 
 pub fn _get_free_port() -> Result<u16, HttpResponseError> {
