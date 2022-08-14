@@ -168,7 +168,7 @@ pub async fn install_component(
   if image_exists(image_name, docker_api).await {
     return Ok(());
   }
-  log::info!("starting install service [{}]", image_name);
+  log::info!("installing component [{}]", image_name);
   let mut stream = docker_api.create_image(
     Some(CreateImageOptions {
       from_image: image_name,
@@ -180,7 +180,7 @@ pub async fn install_component(
   while let Some(output) = stream.next().await {
     parse_create_output(image_name, output)?;
   }
-  log::info!("successfully installed service [{}]", image_name);
+  log::info!("successfully installed component [{}]", image_name);
   Ok(())
 }
 
