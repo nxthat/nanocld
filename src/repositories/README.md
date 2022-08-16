@@ -1,4 +1,5 @@
 # Repositories
+This is super ugly i need to find a way to template this shit.
 
 Repositories are set of functions control database query
 

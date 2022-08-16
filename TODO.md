@@ -4,7 +4,6 @@
 - Remove deploy method for image ?
 - Github hook for CI
 - Github hook for CD
-- refactor services
 
 # Addon or plugins ?
 - mark dnsmasq nginx and ipsec as default plugins or addon ?

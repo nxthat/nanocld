@@ -26,8 +26,6 @@ async fn update_cluster_cargo_by_name(
   )
   .await?;
 
-  println!("cluster_cargo : {:#?}", &cluster_cargo);
-
   let network = repositories::cluster_network::find_by_key(
     cluster_cargo.network_key,
     &pool,
@@ -41,8 +39,6 @@ async fn update_cluster_cargo_by_name(
   let cnt_to_remove =
     services::cluster::list_containers(&cluster_key, &cargo_key, &docker_api)
       .await?;
-
-  println!("container to remove {:#?}", &cnt_to_remove);
 
   let opts = JoinCargoOptions {
     cluster: cluster.to_owned(),
@@ -63,7 +59,6 @@ async fn update_cluster_cargo_by_name(
       force: true,
       ..Default::default()
     });
-    println!("removing container {:#?}", &container);
     docker_api
       .remove_container(&container.id.clone().unwrap_or_default(), options)
       .await?;

@@ -27,3 +27,5 @@ pub mod cluster_cargo;
 pub mod container;
 
 pub mod node;
+
+pub mod virtual_machine_images;

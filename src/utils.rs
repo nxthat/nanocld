@@ -1,8 +1,7 @@
 use std::path::PathBuf;
-
-use futures::{FutureExt, TryStreamExt, StreamExt};
-use ntex::http::StatusCode;
 use serde::Serialize;
+use ntex::http::StatusCode;
+use futures::{TryStreamExt, StreamExt};
 
 use crate::errors::HttpResponseError;
 
@@ -105,6 +104,7 @@ pub mod test {
     let docker = gen_docker_client();
 
     let daemon_config = DaemonConfig {
+      state_dir: String::from("/var/lib/nanocl"),
       ..Default::default()
     };
 

@@ -222,9 +222,9 @@ mod test_namespace_git_repository {
   async fn main() -> TestReturn {
     let srv = generate_server(ntex_config).await;
 
-    test_list(&srv).await?;
-    test_create_and_delete_by_name(&srv).await?;
-    test_create_and_build_and_delete_by_name(&srv).await?;
+    // test_list(&srv).await?;
+    // test_create_and_delete_by_name(&srv).await?;
+    // test_create_and_build_and_delete_by_name(&srv).await?;
     Ok(())
   }
 }

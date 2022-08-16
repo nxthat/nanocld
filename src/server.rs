@@ -41,6 +41,8 @@ pub async fn start<'a>(
       .configure(controllers::container_image::ntex_config)
       // bind controller cluster
       .configure(controllers::cluster::ntex_config)
+      // bind controller virtual machine images
+      .configure(controllers::virtual_machine_images::ntex_config)
       // bind controller cluster variables
       .configure(controllers::cluster_variable::ntex_config)
       // bind controller cluster network

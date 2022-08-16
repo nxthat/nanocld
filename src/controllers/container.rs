@@ -28,7 +28,6 @@ async fn create_exec(
   web::types::Json(body): web::types::Json<ContainerExecBody>,
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  println!("im called");
   let container_name = name.into_inner();
   let config = bollard::exec::CreateExecOptions::<String> {
     attach_stdin: body.attach_stdin,

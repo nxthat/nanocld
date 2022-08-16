@@ -81,7 +81,6 @@ pub async fn boot(
 ) -> Result<BootState, DaemonError> {
   log::info!("booting");
   boot_docker_services(config, docker_api).await?;
-  println!("boot_docer_services");
   let postgres_ip = components::postgresql::get_postgres_ip(docker_api).await?;
   log::info!("creating postgresql state pool");
   // Connect to postgresql

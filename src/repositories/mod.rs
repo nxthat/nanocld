@@ -19,3 +19,5 @@ pub mod git_repository;
 pub mod git_repository_branch;
 
 pub mod cluster_variable;
+
+pub mod virtual_machine_image;

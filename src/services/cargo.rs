@@ -215,7 +215,6 @@ pub async fn update_containers(
         force: true,
         ..Default::default()
       });
-      println!("removing container {:#?}", &container);
       docker_api
         .remove_container(&container.id.clone().unwrap_or_default(), options)
         .await?;

@@ -71,7 +71,6 @@ impl EventSystem {
         while let Some(data) = receiver.next().await {
           let iter: EventSystemClients =
             if let Some(clients) = unlock_mutex(&clients) {
-              println!("clients length {}", &clients.len());
               clients.clone()
             } else {
               HashMap::new()

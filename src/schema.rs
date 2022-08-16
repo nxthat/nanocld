@@ -151,11 +151,36 @@ table! {
     }
 }
 
+table! {
+    use crate::models::exports::*;
+
+    virtual_machine_images (key) {
+        key -> Varchar,
+        name -> Varchar,
+        size -> Int8,
+        is_base -> Bool,
+        parent_key -> Nullable<Varchar>,
+    }
+}
+
+table! {
+    use crate::models::exports::*;
+
+    virtual_machines (key) {
+        key -> Varchar,
+        name -> Varchar,
+        image -> Varchar,
+        ip_address -> Varchar,
+        mac_address -> Varchar,
+    }
+}
+
 joinable!(cargoes -> namespaces (namespace_name));
 joinable!(cluster_cargoes -> cargoes (cargo_key));
 joinable!(cluster_cargoes -> cluster_networks (network_key));
 joinable!(cluster_cargoes -> clusters (cluster_key));
 joinable!(cluster_networks -> clusters (cluster_key));
+joinable!(virtual_machines -> virtual_machine_images (image));
 
 allow_tables_to_appear_in_same_query!(
     cargo_environnements,
@@ -170,4 +195,6 @@ allow_tables_to_appear_in_same_query!(
     nginx_logs,
     nginx_templates,
     nodes,
+    virtual_machine_images,
+    virtual_machines,
 );
