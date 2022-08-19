@@ -21,6 +21,7 @@ use crate::schema::virtual_machine_images;
 pub struct VmImageItem {
   pub(crate) key: String,
   pub(crate) name: String,
+  pub(crate) image_path: String,
   pub(crate) size: i64,
   pub(crate) is_base: bool,
   pub(crate) parent_key: Option<String>,
@@ -29,6 +30,7 @@ pub struct VmImageItem {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct VmImagePartial {
   pub(crate) name: String,
+  pub(crate) image_path: String,
   #[serde(default)]
   pub(crate) is_base: bool,
   pub(crate) parent_key: Option<String>,

@@ -102,7 +102,6 @@ pub mod test {
 
   pub async fn generate_server(config: Config) -> test::TestServer {
     let docker = gen_docker_client();
-
     let daemon_config = DaemonConfig {
       state_dir: String::from("/var/lib/nanocl"),
       ..Default::default()

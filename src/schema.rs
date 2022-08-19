@@ -157,6 +157,7 @@ table! {
     virtual_machine_images (key) {
         key -> Varchar,
         name -> Varchar,
+        image_path -> Varchar,
         size -> Int8,
         is_base -> Bool,
         parent_key -> Nullable<Varchar>,
