@@ -27,7 +27,6 @@
 
 ## ❓ What is nanocl daemon ?
 
-
 Nanocl daemon is an (HCO) Hybrid Cloud Orchestrator.
 </br>
 It is used to manage and monitor not only containers but virtual machine as well.
@@ -36,12 +35,23 @@ You can build an entire CI/CD pipeline from tests to high availability productio
 
 <img src="https://download.next-hat.com/ressources/images/infra.png" />
 
-## Let's get started
+## ✨ Features
+- [x] Manage container (CRUD)
+- [x] Allow network communication with proxy
+- [x] Single-node mode
+- [x] Monitor http request
+- [x] Store a git repository state as image
+- [ ] Manage virtual machine (CRUD)
+- [ ] Git repository hooks
+- [ ] Self hosted git ?
+- [ ] Highly-scalable distributed mode
+
+## 🎉 Let's get started
 
 - [Installation](https://docs.next-hat.com/setups/nanocl/get-nanocl)
 - [Get Started](https://docs.next-hat.com/guides/nanocl/get-started/1.orientation-and-setup)
 
-## Contribution
+## 🔨 Contribution
 
 If you want to contribute see [development](./DEVELOPING.md) section to see how
 to setup a dev environement for nanocl
