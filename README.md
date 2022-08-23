@@ -6,9 +6,9 @@
   <p>
   
   
-  [![Stars](https://img.shields.io/github/stars/nxthat/nanocld?style=social)](https://github.com/nxthat/nanocld) 
+  [![Stars](https://img.shields.io/github/stars/nxthat/nanocld?style=social)](https://github.com/nxthat/nanocld)
+  [![Build With](https://img.shields.io/badge/built_with-Rust-dca282.svg)](https://github.com/nxthat/nanocld)
   [![Chat on Discord](https://img.shields.io/discord/1011267493114949693?label=chat&logo=discord)](https://discord.gg/WV4Aac8uZg)
-  [![Build With](https://img.shields.io/badge/built_with-Rust-dca282.svg?style=flat-square)](https://github.com/nxthat/nanocld) 
   
   </p>
   
