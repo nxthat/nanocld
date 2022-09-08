@@ -48,6 +48,9 @@ pub use node::*;
 mod virtual_machine_image;
 pub use virtual_machine_image::*;
 
+mod virtual_machine;
+pub use virtual_machine::*;
+
 pub type DBConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 

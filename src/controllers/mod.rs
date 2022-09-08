@@ -29,3 +29,5 @@ pub mod container;
 pub mod node;
 
 pub mod virtual_machine_images;
+
+pub mod virtual_machine;

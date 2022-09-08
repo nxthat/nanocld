@@ -104,7 +104,7 @@ pub async fn delete_by_name(
 /// git_repository::find_by_name(name, &pool).await;
 /// ```
 pub async fn find_by_name(
-  name_or_name: String,
+  name: String,
   pool: &web::types::State<Pool>,
 ) -> Result<GitRepositoryItem, HttpResponseError> {
   use crate::schema::git_repositories::dsl;
@@ -112,7 +112,7 @@ pub async fn find_by_name(
   let conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::git_repositories
-      .filter(dsl::name.eq(name_or_name))
+      .filter(dsl::name.eq(name))
       .get_result(&conn)
   })
   .await;

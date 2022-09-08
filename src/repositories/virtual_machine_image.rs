@@ -2,7 +2,7 @@ use ntex::web;
 use diesel::prelude::*;
 
 use crate::components;
-use crate::models::{Pool, VmImageItem};
+use crate::models::{Pool, VmImageItem, GenericDelete};
 use crate::errors::HttpResponseError;
 
 use super::errors::db_blocking_error;
@@ -26,5 +26,43 @@ pub async fn create(
   match res {
     Err(err) => Err(db_blocking_error(err)),
     Ok(item) => Ok(item),
+  }
+}
+
+pub async fn find_by_id(
+  key: String,
+  pool: &web::types::State<Pool>,
+) -> Result<VmImageItem, HttpResponseError> {
+  use crate::schema::virtual_machine_images::dsl;
+
+  let conn = components::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || {
+    dsl::virtual_machine_images
+      .filter(dsl::key.eq(key))
+      .get_result(&conn)
+  })
+  .await;
+
+  match res {
+    Err(err) => Err(db_blocking_error(err)),
+    Ok(item) => Ok(item),
+  }
+}
+
+pub async fn delete_by_id(
+  key: String,
+  pool: &web::types::State<Pool>,
+) -> Result<GenericDelete, HttpResponseError> {
+  use crate::schema::virtual_machine_images::dsl;
+  let conn = components::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || {
+    diesel::delete(dsl::virtual_machine_images.filter(dsl::key.eq(key)))
+      .execute(&conn)
+  })
+  .await;
+
+  match res {
+    Err(err) => Err(db_blocking_error(err)),
+    Ok(count) => Ok(GenericDelete { count }),
   }
 }

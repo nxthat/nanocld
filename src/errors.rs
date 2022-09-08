@@ -8,6 +8,8 @@ use diesel_migrations::RunMigrationsError;
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
+use crate::{config, cli};
+
 /// Http response error
 #[derive(Debug, Error)]
 pub struct HttpResponseError {
@@ -78,4 +80,34 @@ pub enum DaemonError {
   /// HttpResponseError
   #[error(transparent)]
   HttpResponse(#[from] HttpResponseError),
+}
+
+pub fn parse_main_error(
+  #[allow(unused)] args: &cli::Cli,
+  config: &config::DaemonConfig,
+  err: DaemonError,
+) -> i32 {
+  match err {
+    DaemonError::Docker(err) => match err {
+      bollard::errors::Error::HyperResponseError { err } => {
+        if err.is_connect() {
+          log::error!(
+            "unable to connect to docker host {}",
+            &config.docker_host,
+          );
+          return 1;
+        }
+        log::error!("{}", err);
+        1
+      }
+      _ => {
+        log::error!("{}", err);
+        1
+      }
+    },
+    _ => {
+      log::error!("{}", err);
+      1
+    }
+  }
 }

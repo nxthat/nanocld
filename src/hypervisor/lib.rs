@@ -78,6 +78,14 @@ pub trait Hypervisor {
   /// Generic new that all implementation must have
   fn new() -> Self;
 
+  fn generate_seed(
+    &self,
+    instance: &VmInstance,
+    config: String,
+  ) -> Result<(), HypervisorError> {
+    Ok(())
+  }
+
   /// # Get instance pidfile path
   /// Mostly used for qemu when we run it as a daemon
   fn get_instance_pidfile_path(&self, instance: &VmInstance) -> String {
