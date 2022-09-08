@@ -33,7 +33,7 @@ jobs:
     - name: Install docker
       run: sudo sh ./scripts/install_docker.ubuntu.sh
     - name: Ci file perm
-      run: sudo mkdir /run/nanocl && sudo chmod 777 -R /run/nanocl && sudo chmod 777 -R /var/lib/nanocl
+      run: sudo mkdir /run/nanocl && sudo mkdir /var/lib/nanocl && sudo chmod 777 -R /run/nanocl && sudo chmod 777 -R /var/lib/nanocl
     - name: Setup nanocl
       run: cargo run --bin nanocld -- --install-components
     - name: Run tests
