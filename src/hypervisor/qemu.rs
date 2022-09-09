@@ -16,14 +16,14 @@ impl Hypervisor for Qemu {
 
   fn resize_image(
     &self,
-    image_path: impl AsRef<Path>,
+    image_path: String,
     size: String,
   ) -> Result<(), super::HypervisorError> {
-    let file_meta = fs::metadata(image_path.as_ref())?;
+    let file_meta = fs::metadata(&image_path)?;
     // Todo verify file perm
     let _file_perm = file_meta.permissions();
     let ouput = Command::new("qemu-img")
-      .args(["resize", image_path.as_ref().to_str().unwrap(), &size])
+      .args(["resize", &image_path, &size])
       .output()?;
 
     println!("{:#?}", &ouput);
@@ -123,7 +123,7 @@ pub mod test {
   async fn test_images() -> TestReturn {
     let qemu = Qemu::new();
     qemu.resize_image(
-      "/var/lib/nanoc/qemu/images/ubuntu-22.img",
+      String::from("/var/lib/nanoc/qemu/images/ubuntu-22.img"),
       String::from("50G"),
     )?;
     Ok(())

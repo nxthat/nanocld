@@ -8,4 +8,5 @@ pub mod cluster;
 pub mod container;
 pub mod git_repository;
 pub mod cluster_variable;
-pub mod virtual_machine_images;
+pub mod virtual_machine_image;
+pub mod virtual_machine;

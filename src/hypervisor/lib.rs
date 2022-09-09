@@ -76,7 +76,9 @@ impl VmInstance {
 /// to have linux and windows compatibility
 pub trait Hypervisor {
   /// Generic new that all implementation must have
-  fn new() -> Self;
+  fn new() -> Self
+  where
+    Self: Sized;
 
   fn generate_seed(
     &self,
@@ -114,7 +116,7 @@ pub trait Hypervisor {
   /// ```
   fn resize_image(
     &self,
-    image_path: impl AsRef<Path>,
+    image_path: String,
     size: String,
   ) -> Result<(), HypervisorError>;
 
