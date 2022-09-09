@@ -36,15 +36,19 @@ You can build an entire CI/CD pipeline from tests to high availability productio
 <img src="https://download.next-hat.com/ressources/images/infra.png" />
 
 ## ✨ Features
-- [x] Manage container (CRUD)
-- [x] Allow network communication with proxy
+- [x] Manage containers (CRUD)
+- [x] Manage networks (CRUD)
+- [x] Manage clusters (CRUD)
+- [x] Http proxy
+- [x] Udp/Tcp proxy
+- [x] Store a git repository state as image
 - [x] Single-node mode
 - [x] Monitor http request
-- [x] Store a git repository state as image
+- [ ] Monitor tcp/udp packets
 - [ ] Manage virtual machine (CRUD)
 - [ ] Git repository hooks
-- [ ] Self hosted git ?
 - [ ] Highly-scalable distributed mode
+- [ ] Self hosted git ?
 
 ## 🎉 Let's get started
 
