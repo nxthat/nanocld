@@ -119,14 +119,17 @@ pub mod test {
 
   use crate::utils::test::TestReturn;
 
-  #[ntex::test]
+  // #[ntex::test]
   async fn test_images() -> TestReturn {
     let qemu = Qemu::new();
-    qemu.resize_image("./vm_images/ubuntu-22.img", String::from("50G"))?;
+    qemu.resize_image(
+      "/var/lib/nanoc/qemu/images/ubuntu-22.img",
+      String::from("50G"),
+    )?;
     Ok(())
   }
 
-  #[ntex::test]
+  // #[ntex::test]
   async fn test_instances() -> TestReturn {
     let qemu = Qemu::new();
     let instance = qemu.create_instance("ubuntu", "ubuntu-22");

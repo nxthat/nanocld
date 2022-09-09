@@ -77,7 +77,7 @@ mod test {
   use super::ntex_config;
   use crate::utils::test::*;
 
-  #[ntex::test]
+  // #[ntex::test]
   async fn test_import_image() -> TestReturn {
     let srv = generate_server(ntex_config).await;
 

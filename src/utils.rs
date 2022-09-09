@@ -234,6 +234,7 @@ pub fn _get_free_port() -> Result<u16, HttpResponseError> {
 pub mod test {
   use ntex::web::*;
 
+  use std::env;
   use crate::components;
   use crate::config::DaemonConfig;
   use crate::models::Pool;
@@ -245,8 +246,10 @@ pub mod test {
   type Config = fn(&mut ServiceConfig);
 
   pub fn gen_docker_client() -> bollard::Docker {
+    let socket_path = env::var("DOCKER_SOCKET_PATH")
+      .unwrap_or_else(|_| String::from("/run/docker.sock"));
     bollard::Docker::connect_with_unix(
-      "/run/nanocl/docker.sock",
+      &socket_path,
       120,
       bollard::API_DEFAULT_VERSION,
     )
