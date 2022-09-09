@@ -25,7 +25,7 @@ pub async fn create(
     .try_into()
     .map_err(|err| HttpResponseError {
       status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: format!("Unable to convert u64 to i64 xdlol {:#?}", err),
+      msg: format!("Unable to convert u64 to i64 {:#?}", err),
     })?;
 
   let item = VmImageItem {

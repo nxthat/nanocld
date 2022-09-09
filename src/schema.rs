@@ -170,9 +170,13 @@ table! {
     virtual_machines (key) {
         key -> Varchar,
         name -> Varchar,
+        pid_path -> Varchar,
         image -> Varchar,
-        ip_address -> Varchar,
-        mac_address -> Varchar,
+        memory -> Int2,
+        cpu -> Int2,
+        network -> Varchar,
+        ip_addr -> Varchar,
+        mac_addr -> Varchar,
     }
 }
 
