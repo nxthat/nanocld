@@ -51,10 +51,10 @@ impl VmImage {
 
 #[derive(Debug, Clone)]
 pub struct VmConfig {
-  pub(crate) cpu: i32,
+  pub(crate) cpu: i16,
   pub(crate) memory: String,
   pub(crate) network: String,
-  pub(crate) macaddr: String,
+  pub(crate) mac_addr: String,
 }
 
 impl VmInstance {
@@ -116,13 +116,22 @@ pub trait Hypervisor {
   /// ```
   fn resize_image(
     &self,
-    image_path: String,
-    size: String,
+    image_path: &str,
+    size: &str,
   ) -> Result<(), HypervisorError>;
 
   /// # Create image
   /// Create virtual machine image at given path with given size
-  fn create_image(&self);
+  fn create_image(&self, image_path: &str, size: &str);
+
+  /// # Copy image
+  /// Create a copy of an existing image with given size for a vm instance
+  fn copy_image(
+    &self,
+    parent_img: &str,
+    img: &str,
+    size: &str,
+  ) -> Result<(), HypervisorError>;
 
   /// # Create instance
   /// Create a virtual machine instance

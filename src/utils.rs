@@ -1,4 +1,4 @@
-use std::{fs, path::Path, os::unix::prelude::FileExt};
+use std::{fs, path::Path, os::unix::prelude::FileExt, io::Read};
 use serde::{Serialize, Deserialize};
 use ntex::{
   web, rt,
@@ -228,6 +228,30 @@ pub fn _get_free_port() -> Result<u16, HttpResponseError> {
   };
   drop(socket);
   Ok(port)
+}
+
+pub fn generate_mac_addr() -> Result<String, HttpResponseError> {
+  let mut mac: [u8; 6] = [0; 6];
+  let mut urandom =
+    fs::File::open("/dev/urandom").map_err(|err| HttpResponseError {
+      msg: format!(
+        "Unable to open /dev/urandom to generate a mac addr {:?}",
+        &err
+      ),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+  urandom
+    .read_exact(&mut mac)
+    .map_err(|err| HttpResponseError {
+      msg: String::from("Unable to red /dev/urandom to generate a mac addr"),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    })?;
+  let mac_addr = format!(
+    "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
+    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
+  );
+
+  Ok(mac_addr)
 }
 
 #[cfg(test)]

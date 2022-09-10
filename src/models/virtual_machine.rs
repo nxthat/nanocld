@@ -1,7 +1,20 @@
+use diesel_derive_enum::DbEnum;
 use serde::{Serialize, Deserialize};
 
 use super::virtual_machine_image::VmImageItem;
 use crate::schema::virtual_machines;
+
+#[cfg(feature = "openapi")]
+use utoipa::Component;
+
+#[derive(Serialize, Deserialize, Debug, PartialEq, DbEnum, Clone)]
+#[serde(rename_all = "snake_case")]
+#[DieselType = "Virtual_machine_states"]
+#[cfg_attr(feature = "openapi", derive(Component))]
+pub enum VirtualMachineState {
+  Running,
+  Stopped,
+}
 
 // Virtual machine item
 // This structure is used to create new entry in database
@@ -16,13 +29,15 @@ pub struct VmItem {
   pub(crate) key: String,
   // Name of the virtual machine.
   pub(crate) name: String,
+  // State of the virtual machine Running / Stopped
+  pub(crate) state: VirtualMachineState,
   // Path of the pid where is stored the pid of the vm
   pub(crate) pid_path: String,
   // Image of the virtual machine.
   // Note that when you create a virtual machine it will copy the image.
   pub(crate) image: String,
   // Number of ram used by the virtual machine
-  pub(crate) memory: i16,
+  pub(crate) memory: String,
   // Number of cpu used by the virtual machine
   pub(crate) cpu: i16,
   // Network where virtual machine is connected
@@ -41,10 +56,12 @@ pub struct VmPartial {
   pub(crate) name: String,
   // Image to base the virtual machine on
   pub(crate) image: String,
+  // Size of the image that will be size of the disk for the virtual machine
+  pub(crate) image_size: String,
   // Number of cpu used by the virtual machine
   pub(crate) cpu: i16,
   // Number of memory used by the virtual machine
-  pub(crate) memory: i16,
+  pub(crate) memory: String,
   // Network to connect virtual machine to
   pub(crate) network: String,
 }

@@ -13,6 +13,6 @@ pub mod simple_scenario {
   #[ntex::test]
   async fn scenario() {
     before_test().await;
-    let client = Client::new();
+    let _client = Client::new();
   }
 }
