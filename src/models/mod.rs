@@ -82,4 +82,5 @@ pub mod exports {
   pub use super::node::{Node_modes, Ssh_auth_modes};
   pub use super::nginx_template::Nginx_template_modes;
   pub use super::git_repository::Git_repository_source_type;
+  pub use super::virtual_machine::Virtual_machine_states;
 }

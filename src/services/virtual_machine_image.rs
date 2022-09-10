@@ -15,7 +15,7 @@ pub async fn create(
 ) -> Result<VmImageItem, HttpResponseError> {
   let path = Path::new(&config.state_dir)
     .join("qemu/images")
-    .join(&item.image_path);
+    .join(&item.path);
   let file_size = fs::metadata(path)
     .map_err(|err| HttpResponseError {
       status: StatusCode::INTERNAL_SERVER_ERROR,
@@ -31,7 +31,7 @@ pub async fn create(
   let item = VmImageItem {
     key: item.name.to_owned(),
     name: item.name,
-    image_path: item.image_path,
+    path: item.path,
     size: file_size,
     is_base: true,
     parent_key: None,

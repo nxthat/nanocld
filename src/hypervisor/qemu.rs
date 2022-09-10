@@ -1,7 +1,4 @@
-/// # Qemu Hypervisor
-/// Hypervisor implementation for qemu compatibility
 use std::fs;
-use std::path::Path;
 use std::process::Command;
 
 use super::Hypervisor;
@@ -9,6 +6,8 @@ use super::lib::{VmInstance, VmConfig};
 
 pub struct Qemu {}
 
+/// # Qemu Hypervisor
+/// Hypervisor implementation for qemu compatibility
 impl Hypervisor for Qemu {
   fn new() -> Self {
     Qemu {}
@@ -16,21 +15,30 @@ impl Hypervisor for Qemu {
 
   fn resize_image(
     &self,
-    image_path: String,
-    size: String,
+    image_path: &str,
+    size: &str,
   ) -> Result<(), super::HypervisorError> {
-    let file_meta = fs::metadata(&image_path)?;
-    // Todo verify file perm
-    let _file_perm = file_meta.permissions();
-    let ouput = Command::new("qemu-img")
-      .args(["resize", &image_path, &size])
+    let file_meta = fs::metadata(image_path)?;
+    let _file_perm = file_meta.permissions(); // Todo verify file perm
+    Command::new("qemu-img")
+      .args(["resize", image_path, size])
       .output()?;
-
-    println!("{:#?}", &ouput);
     Ok(())
   }
 
-  fn create_image(&self) {}
+  fn create_image(&self, _image: &str, _size: &str) {}
+
+  fn copy_image(
+    &self,
+    parent_img: &str,
+    img: &str,
+    size: &str,
+  ) -> Result<(), super::HypervisorError> {
+    fs::metadata(&parent_img)?; // Todo verify file perm
+    fs::copy(parent_img, img)?;
+    self.resize_image(img, size)?;
+    Ok(())
+  }
 
   fn create_instance(&self, name: &str, image: &str) -> VmInstance {
     VmInstance::new(name, image)
@@ -75,7 +83,7 @@ impl Hypervisor for Qemu {
     );
     let cpu = config.cpu.to_string();
     let network_bridge = format!("bridge,br={}", config.network);
-    let macaddr = format!("nic,macaddr={}", config.macaddr);
+    let macaddr = format!("nic,macaddr={}", config.mac_addr);
     let pidfile = self.get_instance_pidfile_path(instance);
     let args = vec![
       "-machine",
@@ -122,10 +130,7 @@ pub mod test {
   // #[ntex::test]
   async fn test_images() -> TestReturn {
     let qemu = Qemu::new();
-    qemu.resize_image(
-      String::from("/var/lib/nanoc/qemu/images/ubuntu-22.img"),
-      String::from("50G"),
-    )?;
+    qemu.resize_image("/var/lib/nanoc/qemu/images/ubuntu-22.img", "50G")?;
     Ok(())
   }
 
@@ -137,7 +142,7 @@ pub mod test {
       cpu: 2,
       memory: String::from("2G"),
       network: String::from("nanoclservices0"),
-      macaddr: String::from("2c:4d:11:12:11:11"),
+      mac_addr: String::from("2c:4d:11:12:11:11"),
     };
     assert_eq!(instance.name, "ubuntu");
     qemu.start_instance(&instance, &instance_config)?;
