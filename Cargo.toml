@@ -35,4 +35,4 @@ diesel_migrations = "1.4.0"
 diesel-derive-enum = { version = "1.1.2", features = ["postgres"] }
 diesel = { version = "1.4.8", features = ["postgres", "uuidv07", "r2d2", "chrono"] }
 # Dependency required with feature openapi
-utoipa = { version = "1.0.2", features = ["uuid", "chrono"], optional = true }
+utoipa = { version = "2.1.0", features = ["uuid", "chrono"], optional = true }
