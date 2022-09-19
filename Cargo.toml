@@ -31,7 +31,7 @@ url = { version = "2", features = ["serde"] }
 serde = { version = "1.0.140", features = ["derive"] }
 uuid = { version = "1.1", features = ["serde", "v4"] }
 ntex = { version = "=0.5.24", features = ["rustls", "tokio"] }
-diesel_migrations = "1.4.0"
+diesel_migrations = "2.0.0"
 diesel-derive-enum = { version = "1.1.2", features = ["postgres"] }
 diesel = { version = "1.4.8", features = ["postgres", "uuidv07", "r2d2", "chrono"] }
 # Dependency required with feature openapi
