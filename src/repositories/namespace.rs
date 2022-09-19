@@ -18,7 +18,7 @@ use super::errors::db_blocking_error;
 ///
 /// # Examples
 ///
-/// ```rust,noerun
+/// ```rust,norun
 ///
 /// use crate::repositories;
 ///
@@ -33,12 +33,12 @@ pub async fn create(
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let item = NamespaceItem { name: item.name };
     diesel::insert_into(dsl::namespaces)
       .values(&item)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(item)
   })
   .await;
@@ -57,7 +57,7 @@ pub async fn create(
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 ///
 /// use crate::repositories;
 /// repositories::namespace::list(&pool).await;
@@ -67,8 +67,8 @@ pub async fn list(
 ) -> Result<Vec<NamespaceItem>, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
-  let res = web::block(move || dsl::namespaces.load(&conn)).await;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || dsl::namespaces.load(&mut conn)).await;
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
@@ -96,9 +96,11 @@ pub async fn inspect_by_name(
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
-    dsl::namespaces.filter(dsl::name.eq(name)).get_result(&conn)
+    dsl::namespaces
+      .filter(dsl::name.eq(name))
+      .get_result(&mut conn)
   })
   .await;
 
@@ -128,9 +130,10 @@ pub async fn delete_by_name(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
-    diesel::delete(dsl::namespaces.filter(dsl::name.eq(name))).execute(&conn)
+    diesel::delete(dsl::namespaces.filter(dsl::name.eq(name)))
+      .execute(&mut conn)
   })
   .await;
 
@@ -146,9 +149,11 @@ pub async fn find_by_name(
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
-    dsl::namespaces.filter(dsl::name.eq(name)).get_result(&conn)
+    dsl::namespaces
+      .filter(dsl::name.eq(name))
+      .get_result(&mut conn)
   })
   .await;
 

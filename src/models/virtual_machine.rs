@@ -7,9 +7,9 @@ use crate::schema::virtual_machines;
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
-#[derive(Serialize, Deserialize, Debug, PartialEq, DbEnum, Clone)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, DbEnum, Clone)]
+#[DieselTypePath = "crate::models::exports::Virtual_machine_states"]
 #[serde(rename_all = "snake_case")]
-#[DieselType = "Virtual_machine_states"]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub enum VirtualMachineState {
   Running,
@@ -19,9 +19,9 @@ pub enum VirtualMachineState {
 // Virtual machine item
 // This structure is used to create new entry in database
 #[derive(Debug, Insertable, Queryable, Identifiable, Associations)]
-#[primary_key(key)]
-#[table_name = "virtual_machines"]
-#[belongs_to(VmImageItem, foreign_key = "image")]
+#[diesel(primary_key(key))]
+#[diesel(table_name = virtual_machines)]
+#[diesel(belongs_to(VmImageItem, foreign_key = image))]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct VmItem {
   // The key is a concatenation of the namespace where the virtual machine is created and the name

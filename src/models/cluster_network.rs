@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -26,9 +27,9 @@ pub struct ClusterNetworkPartial {
   Associations,
   AsChangeset,
 )]
-#[primary_key(key)]
-#[belongs_to(ClusterItem, foreign_key = "cluster_key")]
-#[table_name = "cluster_networks"]
+#[diesel(primary_key(key))]
+#[diesel(table_name = cluster_networks)]
+#[diesel(belongs_to(ClusterItem, foreign_key = cluster_key))]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct ClusterNetworkItem {
   pub(crate) key: String,

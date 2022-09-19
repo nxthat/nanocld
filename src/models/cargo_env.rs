@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -19,11 +20,10 @@ pub struct CargoEnvPartial {
   Queryable,
   Insertable,
   Identifiable,
-  Associations,
   AsChangeset,
 )]
-#[primary_key(key)]
-#[table_name = "cargo_environnements"]
+#[diesel(primary_key(key))]
+#[diesel(table_name = cargo_environnements)]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct CargoEnvItem {
   pub(crate) key: String,

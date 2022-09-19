@@ -1,14 +1,15 @@
 use clap::{Parser, arg_enum};
 use diesel_derive_enum::DbEnum;
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
 use crate::schema::nodes;
 
 arg_enum! {
-  #[derive(Debug, Clone, Parser, PartialEq, Serialize, Deserialize, DbEnum)]
-  #[DieselType = "Node_modes"]
+  #[derive(Debug, Clone, Parser, Eq, PartialEq, Serialize, Deserialize, DbEnum)]
+  #[DieselTypePath = "crate::models::exports::Node_modes"]
   #[serde(rename_all = "snake_case")]
   #[cfg_attr(feature = "openapi", derive(Component))]
   pub enum NodeMode {
@@ -18,8 +19,8 @@ arg_enum! {
   }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, DbEnum)]
-#[DieselType = "Ssh_auth_modes"]
+#[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, DbEnum)]
+#[DieselTypePath = "crate::models::exports::Ssh_auth_modes"]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub enum SshAuthMode {
@@ -41,8 +42,8 @@ pub struct NodePartial {
 #[derive(
   Debug, Clone, Serialize, Deserialize, Queryable, Identifiable, Insertable,
 )]
-#[primary_key(name)]
-#[table_name = "nodes"]
+#[diesel(primary_key(name))]
+#[diesel(table_name = nodes)]
 pub struct NodeItem {
   pub(crate) name: String,
   pub(crate) mode: NodeMode,

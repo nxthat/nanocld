@@ -19,7 +19,7 @@ use super::errors::db_blocking_error;
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 ///
 /// use crate::repositories::git_repository;
 /// let new_repository = GitRepositoryItem {}
@@ -33,7 +33,7 @@ pub async fn create(
 ) -> Result<GitRepositoryItem, HttpResponseError> {
   use crate::schema::git_repositories::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let new_namespace = GitRepositoryItem {
       url: item.url,
@@ -43,7 +43,7 @@ pub async fn create(
     };
     diesel::insert_into(dsl::git_repositories)
       .values(&new_namespace)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(new_namespace)
   })
   .await;
@@ -63,7 +63,7 @@ pub async fn create(
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 ///
 /// use crate::repositories::git_repository;
 ///
@@ -75,10 +75,10 @@ pub async fn delete_by_name(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::git_repositories::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::git_repositories.filter(dsl::name.eq(name)))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
 
@@ -97,7 +97,7 @@ pub async fn delete_by_name(
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 ///
 /// use crate::repositories::git_repository;
 ///
@@ -109,11 +109,11 @@ pub async fn find_by_name(
 ) -> Result<GitRepositoryItem, HttpResponseError> {
   use crate::schema::git_repositories::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::git_repositories
       .filter(dsl::name.eq(name))
-      .get_result(&conn)
+      .get_result(&mut conn)
   })
   .await;
 
@@ -131,7 +131,7 @@ pub async fn find_by_name(
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 ///
 /// use crate::repositories::git_repository;
 ///
@@ -142,8 +142,8 @@ pub async fn list(
 ) -> Result<Vec<GitRepositoryItem>, HttpResponseError> {
   use crate::schema::git_repositories::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
-  let res = web::block(move || dsl::git_repositories.load(&conn)).await;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || dsl::git_repositories.load(&mut conn)).await;
   match res {
     Err(err) => Err(db_blocking_error(err)),
     Ok(items) => Ok(items),

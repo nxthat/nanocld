@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -14,9 +15,9 @@ use crate::schema::virtual_machine_images;
   Identifiable,
   Associations,
 )]
-#[primary_key(key)]
-#[table_name = "virtual_machine_images"]
-#[belongs_to(Self, foreign_key = "parent_key")]
+#[diesel(primary_key(key))]
+#[diesel(table_name = virtual_machine_images)]
+#[diesel(belongs_to(Self, foreign_key = parent_key))]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct VmImageItem {
   pub(crate) key: String,

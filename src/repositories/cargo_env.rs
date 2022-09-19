@@ -13,7 +13,7 @@ pub async fn create(
 ) -> Result<CargoEnvItem, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let item = CargoEnvItem {
       key: item.cargo_key.to_owned() + "-" + &item.name,
@@ -23,7 +23,7 @@ pub async fn create(
     };
     diesel::insert_into(dsl::cargo_environnements)
       .values(&item)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(item)
   })
   .await;
@@ -41,14 +41,14 @@ pub async fn exist_in_cargo(
 ) -> Result<bool, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::select(diesel::dsl::exists(
       dsl::cargo_environnements
         .filter(dsl::name.eq(&name))
         .filter(dsl::cargo_key.eq(&cargo_key)),
     ))
-    .get_result(&conn)
+    .get_result(&mut conn)
   })
   .await;
   match res {
@@ -65,7 +65,7 @@ pub async fn patch_for_cargo(
 ) -> Result<CargoEnvItem, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::update(
       dsl::cargo_environnements
@@ -73,7 +73,7 @@ pub async fn patch_for_cargo(
         .filter(dsl::cargo_key.eq(&cargo_key)),
     )
     .set(dsl::value.eq(&value))
-    .get_result(&conn)
+    .get_result(&mut conn)
   })
   .await;
 
@@ -89,21 +89,23 @@ pub async fn create_many(
 ) -> Result<Vec<CargoEnvItem>, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let records = items
       .into_iter()
-      .map(|item| CargoEnvItem {
-        key: item.cargo_key.to_owned() + "-" + &item.name,
-        cargo_key: item.cargo_key,
-        name: item.name,
-        value: item.value,
+      .map(|item| {
+        CargoEnvItem {
+          key: item.cargo_key.to_owned() + "-" + &item.name,
+          cargo_key: item.cargo_key,
+          name: item.name,
+          value: item.value,
+        }
       })
       .collect::<Vec<CargoEnvItem>>();
 
     diesel::insert_into(dsl::cargo_environnements)
       .values(&records)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(records)
   })
   .await;
@@ -121,10 +123,10 @@ pub async fn _delete_by_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::cargo_environnements.filter(dsl::key.eq(key)))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
 
@@ -140,12 +142,12 @@ pub async fn delete_by_cargo_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(
       dsl::cargo_environnements.filter(dsl::cargo_key.eq(cargo_key)),
     )
-    .execute(&conn)
+    .execute(&mut conn)
   })
   .await;
   match res {
@@ -160,11 +162,11 @@ pub async fn list_by_cargo_key(
 ) -> Result<Vec<CargoEnvItem>, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cargo_environnements
       .filter(dsl::cargo_key.eq(cargo_key))
-      .get_results(&conn)
+      .get_results(&mut conn)
   })
   .await;
 

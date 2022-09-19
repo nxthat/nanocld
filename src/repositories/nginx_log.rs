@@ -14,12 +14,12 @@ pub async fn create_log(
 ) -> Result<NginxLogItem, HttpResponseError> {
   use crate::schema::nginx_logs::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let item = NginxLogItem::from(partial);
     diesel::insert_into(dsl::nginx_logs)
       .values(&item)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(item)
   })
   .await;

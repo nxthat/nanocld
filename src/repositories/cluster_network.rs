@@ -15,10 +15,12 @@ pub async fn list_for_cluster(
   cluster: ClusterItem,
   pool: &web::types::State<Pool>,
 ) -> Result<Vec<ClusterNetworkItem>, HttpResponseError> {
-  let conn = components::postgresql::get_pool_conn(pool)?;
-  let res =
-    web::block(move || ClusterNetworkItem::belonging_to(&cluster).load(&conn))
-      .await;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
+
+  let res = web::block(move || {
+    ClusterNetworkItem::belonging_to(&cluster).load(&mut conn)
+  })
+  .await;
   match res {
     Err(err) => Err(db_blocking_error(err)),
     Ok(items) => Ok(items),
@@ -31,12 +33,12 @@ pub async fn count_by_namespace(
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_networks
       .filter(dsl::namespace.eq(namespace))
       .count()
-      .get_result(&conn)
+      .get_result(&mut conn)
   })
   .await;
 
@@ -55,7 +57,8 @@ pub async fn create_for_cluster(
   pool: &web::types::State<Pool>,
 ) -> Result<ClusterNetworkItem, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
-  let conn = components::postgresql::get_pool_conn(pool)?;
+
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     let cluster_key = namespace_name.to_owned() + "-" + &cluster_name;
@@ -69,7 +72,7 @@ pub async fn create_for_cluster(
     };
     diesel::insert_into(dsl::cluster_networks)
       .values(&item)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(item)
   })
   .await;
@@ -85,12 +88,12 @@ pub async fn delete_by_key(
   pool: &web::types::State<Pool>,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     diesel::delete(dsl::cluster_networks)
       .filter(dsl::key.eq(key))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
 
@@ -105,12 +108,12 @@ pub async fn find_by_key(
   pool: &web::types::State<Pool>,
 ) -> Result<ClusterNetworkItem, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     dsl::cluster_networks
       .filter(dsl::key.eq(key))
-      .get_result(&conn)
+      .get_result(&mut conn)
   })
   .await;
 

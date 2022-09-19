@@ -26,8 +26,8 @@ pub async fn _list(
 ) -> Result<Vec<NodeItem>, HttpResponseError> {
   use crate::schema::nodes::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
-  let res = web::block(move || dsl::nodes.load(&conn)).await;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || dsl::nodes.load(&mut conn)).await;
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
@@ -59,12 +59,12 @@ pub async fn _create(
 ) -> Result<NodeItem, HttpResponseError> {
   use crate::schema::nodes::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let node: NodeItem = node.into();
     diesel::insert_into(dsl::nodes)
       .values(&node)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(node)
   })
   .await;

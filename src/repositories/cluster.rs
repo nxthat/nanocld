@@ -37,7 +37,7 @@ pub async fn create_for_namespace(
   pool: &web::types::State<Pool>,
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     let k = nsp.to_owned() + "-" + &item.name;
@@ -50,7 +50,7 @@ pub async fn create_for_namespace(
 
     diesel::insert_into(dsl::clusters)
       .values(&new_cluster)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(new_cluster)
   })
   .await;
@@ -67,12 +67,12 @@ pub async fn count(
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::clusters
       .filter(dsl::namespace.eq(namespace))
       .count()
-      .get_result(&conn)
+      .get_result(&mut conn)
   })
   .await;
 
@@ -91,7 +91,7 @@ pub async fn count(
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 /// // Find cluster by id
 ///
 /// use crate::repositories::cluster;
@@ -103,9 +103,9 @@ pub async fn find_by_key(
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
-    dsl::clusters.filter(dsl::key.eq(key)).get_result(&conn)
+    dsl::clusters.filter(dsl::key.eq(key)).get_result(&mut conn)
   })
   .await;
 
@@ -124,7 +124,7 @@ pub async fn find_by_key(
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 /// // List cluster by namespace
 ///
 /// use crate::repositories::cluster;
@@ -136,9 +136,9 @@ pub async fn find_by_namespace(
 ) -> Result<Vec<ClusterItem>, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
-    dsl::clusters.filter(dsl::namespace.eq(nsp)).load(&conn)
+    dsl::clusters.filter(dsl::namespace.eq(nsp)).load(&mut conn)
   })
   .await;
   match res {
@@ -156,7 +156,7 @@ pub async fn find_by_namespace(
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 /// // Delete cluster by generated id
 ///
 /// use crate::repositories::cluster;
@@ -168,11 +168,11 @@ pub async fn delete_by_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::clusters)
       .filter(dsl::key.eq(key))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
 
@@ -189,12 +189,12 @@ pub async fn patch_proxy_templates(
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
 
   let cluster = web::block(move || {
     diesel::update(dsl::clusters.filter(dsl::key.eq(key)))
       .set(dsl::proxy_templates.eq(proxy_templates))
-      .get_result::<ClusterItem>(&conn)
+      .get_result::<ClusterItem>(&mut conn)
   })
   .await
   .map_err(db_blocking_error)?;
@@ -208,13 +208,13 @@ pub async fn list_cargo(
 ) -> Result<Vec<(ClusterCargoItem, CargoItem)>, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
   use crate::schema::cargoes;
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
 
   let cargoes = web::block(move || {
     let data: Vec<(ClusterCargoItem, CargoItem)> = dsl::cluster_cargoes
       .filter(dsl::cluster_key.eq(key))
       .inner_join(cargoes::table)
-      .load(&conn)?;
+      .load(&mut conn)?;
     // let cargoes = data.into_iter().map(|d| d.1).collect::<Vec<CargoItem>>();
     Ok(data)
   })
@@ -229,12 +229,12 @@ pub async fn list_variable(
 ) -> Result<Vec<ClusterVariableItem>, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     dsl::cluster_variables
       .filter(dsl::cluster_key.eq(key))
-      .get_results(&conn)
+      .get_results(&mut conn)
   })
   .await
   .map_err(db_blocking_error)?;

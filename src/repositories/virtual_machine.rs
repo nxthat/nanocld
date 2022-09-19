@@ -13,11 +13,11 @@ pub async fn create(
 ) -> Result<VmItem, HttpResponseError> {
   use crate::schema::virtual_machines::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::insert_into(dsl::virtual_machines)
       .values(&item)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(item)
   })
   .await;

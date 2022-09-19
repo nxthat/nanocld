@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -34,7 +35,7 @@ pub struct CargoPatchPartial {
 }
 
 #[derive(AsChangeset)]
-#[table_name = "cargoes"]
+#[diesel(table_name = cargoes)]
 pub struct CargoPatchItem {
   pub(crate) key: Option<String>,
   pub(crate) name: Option<String>,
@@ -59,9 +60,9 @@ pub struct CargoPatchItem {
   Associations,
   AsChangeset,
 )]
-#[primary_key(key)]
-#[belongs_to(NamespaceItem, foreign_key = "namespace_name")]
-#[table_name = "cargoes"]
+#[diesel(primary_key(key))]
+#[diesel(table_name = cargoes)]
+#[diesel(belongs_to(NamespaceItem, foreign_key = namespace_name))]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct CargoItem {
   pub(crate) key: String,
