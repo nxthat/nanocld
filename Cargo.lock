@@ -313,6 +313,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "diesel"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "01e2adfd0a7a81070ed7beec0c62636458926326c16fedb77796d41e447b282d"
+dependencies = [
+ "diesel_derives 2.0.0",
+]
+
+[[package]]
 name = "diesel-derive-enum"
 version = "2.0.0-rc.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -337,12 +346,24 @@ dependencies = [
 ]
 
 [[package]]
+name = "diesel_derives"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "22a7ab9d7967e6a1a247ea38aedf88ab808b4ac0c159576bc71866ab8f9f9250"
+dependencies = [
+ "proc-macro-error",
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
 name = "diesel_migrations"
 version = "2.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e9ae22beef5e9d6fab9225ddb073c1c6c1a7a6ded5019d5da11d1e5c5adc34e2"
 dependencies = [
- "diesel",
+ "diesel 2.0.0",
  "migrations_internals",
  "migrations_macros",
 ]
@@ -716,6 +737,7 @@ checksum = "10a35a97730320ffe8e2d410b5d3b69279b98d2c14bdb8b70ea89ecf7888d41e"
 dependencies = [
  "autocfg",
  "hashbrown",
+ "serde",
 ]
 
 [[package]]
@@ -869,7 +891,7 @@ dependencies = [
  "bollard",
  "chrono",
  "clap",
- "diesel",
+ "diesel 1.4.8",
  "diesel-derive-enum",
  "diesel_migrations",
  "env_logger",
@@ -1744,10 +1766,11 @@ dependencies = [
 
 [[package]]
 name = "utoipa"
-version = "1.1.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a0bdc651bbdd526cc02a07dea1dfb49030a1757178c7552185baccd65ef6f741"
+checksum = "808abcf80ca3896cd77bfac11c1bfe38165af535f7e7a0dd605d588cbd295aed"
 dependencies = [
+ "indexmap",
  "serde",
  "serde_json",
  "utoipa-gen",
@@ -1755,9 +1778,9 @@ dependencies = [
 
 [[package]]
 name = "utoipa-gen"
-version = "1.1.0"
+version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "36592981d9d4ff5900ec9a09634a9373231324f8a7ba918bb3351b4b2987e4e1"
+checksum = "caca00d6eca0540cb9726008cdf410fecf7483b10af94d92d65dcd568b0e28fa"
 dependencies = [
  "proc-macro-error",
  "proc-macro2",
