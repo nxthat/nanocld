@@ -14,9 +14,10 @@ pub async fn find_by_namespace(
   nsp: NamespaceItem,
   pool: &web::types::State<Pool>,
 ) -> Result<Vec<CargoItem>, HttpResponseError> {
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
 
-  let res = web::block(move || CargoItem::belonging_to(&nsp).load(&conn)).await;
+  let res =
+    web::block(move || CargoItem::belonging_to(&nsp).load(&mut conn)).await;
   match res {
     Err(err) => Err(db_blocking_error(err)),
     Ok(items) => Ok(items),
@@ -30,7 +31,7 @@ pub async fn create(
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let new_item = CargoItem {
       key: nsp.to_owned() + "-" + &item.name,
@@ -45,7 +46,7 @@ pub async fn create(
     };
     diesel::insert_into(dsl::cargoes)
       .values(&new_item)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(new_item)
   })
   .await;
@@ -61,12 +62,12 @@ pub async fn count(
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cargoes
       .filter(dsl::namespace_name.eq(namespace))
       .count()
-      .get_result(&conn)
+      .get_result(&mut conn)
   })
   .await;
 
@@ -82,11 +83,11 @@ pub async fn delete_by_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::cargoes)
       .filter(dsl::key.eq(key))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
   match res {
@@ -101,10 +102,11 @@ pub async fn find_by_key(
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
-  let res =
-    web::block(move || dsl::cargoes.filter(dsl::key.eq(key)).get_result(&conn))
-      .await;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let res = web::block(move || {
+    dsl::cargoes.filter(dsl::key.eq(key)).get_result(&mut conn)
+  })
+  .await;
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
@@ -118,11 +120,11 @@ pub async fn find_by_image_name(
 ) -> Result<Vec<CargoItem>, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cargoes
       .filter(dsl::image_name.eq(image_name))
-      .load(&conn)
+      .load(&mut conn)
   })
   .await;
 
@@ -140,7 +142,7 @@ pub async fn update_by_key(
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let mut key: Option<String> = None;
 
@@ -162,7 +164,7 @@ pub async fn update_by_key(
       dsl::cargoes.filter(dsl::key.eq(&format!("{}-{}", &nsp, &name))),
     )
     .set(&data)
-    .get_result(&conn)
+    .get_result(&mut conn)
   })
   .await;
 

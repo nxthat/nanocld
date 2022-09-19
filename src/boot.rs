@@ -1,7 +1,11 @@
 //! File used to describe daemon boot
+use std::error::Error;
+
 use ntex::web;
 
 use bollard::errors::Error as DockerError;
+
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::config::DaemonConfig;
 use crate::{components, repositories};
@@ -9,7 +13,7 @@ use crate::models::{Pool, NamespacePartial};
 
 use crate::errors::DaemonError;
 
-embed_migrations!("./migrations");
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[derive(Clone)]
 pub struct BootState {
@@ -73,6 +77,18 @@ async fn boot_docker_services(
   Ok(())
 }
 
+fn run_migrations(
+  connection: &mut impl MigrationHarness<diesel::pg::Pg>,
+) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
+  // This will run the necessary migrations.
+  // See the documentation for `MigrationHarness` for
+  // all available methods.
+
+  log::info!("runing migration");
+  connection.run_pending_migrations(MIGRATIONS)?;
+  Ok(())
+}
+
 /// Boot function called before http server start to
 /// initialize his state and some background task
 pub async fn boot(
@@ -87,10 +103,9 @@ pub async fn boot(
   let db_pool =
     components::postgresql::create_pool(postgres_ip.to_owned()).await;
   let pool = web::types::State::new(db_pool.to_owned());
-  let conn = components::postgresql::get_pool_conn(&pool)?;
-  log::info!("runing migration");
+  let mut conn = components::postgresql::get_pool_conn(&pool)?;
   // wrap into state to be abble to use our functions
-  embedded_migrations::run(&conn)?;
+  run_migrations(&mut conn)?;
   // Create default namesapce
   create_default_nsp(&pool).await?;
 

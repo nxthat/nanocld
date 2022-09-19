@@ -17,7 +17,7 @@ pub async fn create(
 ) -> Result<ClusterVariableItem, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let item = ClusterVariableItem {
       key: format!("{}-{}", cluster_key, item.name),
@@ -27,7 +27,7 @@ pub async fn create(
     };
     diesel::insert_into(dsl::cluster_variables)
       .values(&item)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(item)
   })
   .await;
@@ -43,11 +43,11 @@ pub async fn list_by_cluster(
 ) -> Result<Vec<ClusterVariableItem>, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_variables
       .filter(dsl::cluster_key.eq(cluster_key))
-      .get_results(&conn)
+      .get_results(&mut conn)
   })
   .await;
   match res {
@@ -62,12 +62,12 @@ pub async fn delete_by_cluster_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(
       dsl::cluster_variables.filter(dsl::cluster_key.eq(cluster_key)),
     )
-    .execute(&conn)
+    .execute(&mut conn)
   })
   .await;
   match res {
@@ -82,10 +82,10 @@ pub async fn delete_by_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::cluster_variables.filter(dsl::key.eq(key)))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
   match res {
@@ -100,11 +100,11 @@ pub async fn find_by_key(
 ) -> Result<ClusterVariableItem, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_variables
       .filter(dsl::key.eq(key))
-      .get_result(&conn)
+      .get_result(&mut conn)
   })
   .await;
   match res {

@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -28,11 +29,10 @@ pub struct ClusterPartial {
   Identifiable,
   Insertable,
   Queryable,
-  Associations,
   AsChangeset,
 )]
-#[primary_key(key)]
-#[table_name = "clusters"]
+#[diesel(primary_key(key))]
+#[diesel(table_name = clusters)]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct ClusterItem {
   pub(crate) key: String,

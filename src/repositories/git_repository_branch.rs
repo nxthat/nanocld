@@ -19,7 +19,7 @@ use super::errors::db_blocking_error;
 ///
 /// # Examples
 ///
-/// ```
+/// ```rust,norun
 ///
 /// use crate::repositories::git_repository_branch;
 /// let new_branches = vec![
@@ -33,20 +33,22 @@ pub async fn create_many(
 ) -> Result<Vec<GitRepositoryBranchItem>, HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let branches = items
       .into_iter()
-      .map(|item| GitRepositoryBranchItem {
-        key: item.repository_name.to_owned() + "-" + &item.name,
-        name: item.name,
-        last_commit_sha: item.last_commit_sha,
-        repository_name: item.repository_name,
+      .map(|item| {
+        GitRepositoryBranchItem {
+          key: item.repository_name.to_owned() + "-" + &item.name,
+          name: item.name,
+          last_commit_sha: item.last_commit_sha,
+          repository_name: item.repository_name,
+        }
       })
       .collect::<Vec<GitRepositoryBranchItem>>();
     diesel::insert_into(dsl::git_repository_branches)
       .values(&branches)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(branches)
   })
   .await;
@@ -66,7 +68,7 @@ pub async fn create_many(
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```rust,norun
 /// use crate::repositories::git_repository_branch;
 /// git_repository_branch::delete_by_repository_id(repository_id, pool).await;
 /// ```
@@ -76,11 +78,11 @@ pub async fn delete_by_repository_id(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::git_repository_branches)
       .filter(dsl::repository_name.eq(repository_name))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
 
@@ -96,11 +98,11 @@ pub async fn get_by_key(
 ) -> Result<GitRepositoryBranchItem, HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::git_repository_branches
       .filter(dsl::key.eq(key))
-      .get_result(&conn)
+      .get_result(&mut conn)
   })
   .await;
 
@@ -116,11 +118,11 @@ pub async fn update_item(
 ) -> Result<(), HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::update(dsl::git_repository_branches.filter(dsl::key.eq(item.key)))
       .set(dsl::last_commit_sha.eq(item.last_commit_sha))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
 

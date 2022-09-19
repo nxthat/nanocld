@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -7,16 +8,10 @@ use crate::schema::namespaces;
 /// Namespace to encapsulate clusters
 /// this structure ensure read and write in database
 #[derive(
-  Debug,
-  Serialize,
-  Deserialize,
-  Identifiable,
-  Insertable,
-  Queryable,
-  Associations,
+  Debug, Serialize, Deserialize, Identifiable, Insertable, Queryable,
 )]
-#[primary_key(name)]
-#[table_name = "namespaces"]
+#[diesel(primary_key(name))]
+#[diesel(table_name = namespaces)]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct NamespaceItem {
   pub(crate) name: String,

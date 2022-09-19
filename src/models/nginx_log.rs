@@ -1,6 +1,7 @@
+use uuid::Uuid;
 use chrono::{DateTime, FixedOffset};
 use serde::{Serialize, Deserialize, Deserializer};
-use uuid::Uuid;
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -10,8 +11,7 @@ fn deserialize_empty_string<'de, D>(
   deserializer: D,
 ) -> Result<Option<String>, D::Error>
 where
-  D: Deserializer<'de>,
-{
+  D: Deserializer<'de>, {
   let buf = String::deserialize(deserializer)?;
   if buf.is_empty() {
     Ok(None)
@@ -22,8 +22,7 @@ where
 
 fn deserialize_string_to_i64<'de, D>(deserializer: D) -> Result<i64, D::Error>
 where
-  D: Deserializer<'de>,
-{
+  D: Deserializer<'de>, {
   let buf = String::deserialize(deserializer)?;
   let res = buf.parse::<i64>().unwrap_or_default();
   Ok(res)
@@ -31,8 +30,7 @@ where
 
 fn deserialize_string_to_i32<'de, D>(deserializer: D) -> Result<i32, D::Error>
 where
-  D: Deserializer<'de>,
-{
+  D: Deserializer<'de>, {
   let buf = String::deserialize(deserializer)?;
   let res = buf.parse::<i32>().unwrap_or_default();
   Ok(res)
@@ -40,8 +38,7 @@ where
 
 fn deserialize_string_to_f64<'de, D>(deserializer: D) -> Result<f64, D::Error>
 where
-  D: Deserializer<'de>,
-{
+  D: Deserializer<'de>, {
   let buf = String::deserialize(deserializer)?;
   let res = buf.parse::<f64>().unwrap_or_default();
   Ok(res)
@@ -84,7 +81,7 @@ pub struct NginxLogPartial {
 
 /// I REALLY THINK I HARD TROLLED THERE MY BAD XD
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable)]
-#[table_name = "nginx_logs"]
+#[diesel(table_name = nginx_logs)]
 pub struct NginxLogItem {
   pub(crate) key: Uuid,
   pub(crate) date_gmt: DateTime<FixedOffset>,

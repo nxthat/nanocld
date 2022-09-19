@@ -4,7 +4,6 @@ use serde_json::json;
 use thiserror::Error;
 
 use bollard::errors::Error as DockerError;
-use diesel_migrations::RunMigrationsError;
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -23,15 +22,19 @@ impl From<DockerError> for HttpResponseError {
       DockerError::DockerResponseServerError {
         status_code,
         message,
-      } => HttpResponseError {
-        msg: message,
-        status: StatusCode::from_u16(status_code)
-          .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
-      },
-      _ => HttpResponseError {
-        msg: format!("{}", err),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      },
+      } => {
+        HttpResponseError {
+          msg: message,
+          status: StatusCode::from_u16(status_code)
+            .unwrap_or(StatusCode::INTERNAL_SERVER_ERROR),
+        }
+      }
+      _ => {
+        HttpResponseError {
+          msg: format!("{}", err),
+          status: StatusCode::INTERNAL_SERVER_ERROR,
+        }
+      }
     }
   }
 }
@@ -76,7 +79,7 @@ pub enum DaemonError {
   Docker(#[from] DockerError),
   /// Diesel migration error
   #[error(transparent)]
-  DieselMigration(#[from] RunMigrationsError),
+  DieselMigration(#[from] Box<dyn std::error::Error + Send + Sync + 'static>),
   /// HttpResponseError
   #[error(transparent)]
   HttpResponse(#[from] HttpResponseError),
@@ -88,23 +91,25 @@ pub fn parse_main_error(
   err: DaemonError,
 ) -> i32 {
   match err {
-    DaemonError::Docker(err) => match err {
-      bollard::errors::Error::HyperResponseError { err } => {
-        if err.is_connect() {
-          log::error!(
-            "unable to connect to docker host {}",
-            &config.docker_host,
-          );
-          return 1;
+    DaemonError::Docker(err) => {
+      match err {
+        bollard::errors::Error::HyperResponseError { err } => {
+          if err.is_connect() {
+            log::error!(
+              "unable to connect to docker host {}",
+              &config.docker_host,
+            );
+            return 1;
+          }
+          log::error!("{}", err);
+          1
         }
-        log::error!("{}", err);
-        1
+        _ => {
+          log::error!("{}", err);
+          1
+        }
       }
-      _ => {
-        log::error!("{}", err);
-        1
-      }
-    },
+    }
     _ => {
       log::error!("{}", err);
       1

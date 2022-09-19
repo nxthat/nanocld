@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -9,8 +10,8 @@ use crate::schema::git_repository_branches;
 #[derive(
   Debug, Clone, Serialize, Deserialize, Queryable, Identifiable, Insertable,
 )]
-#[primary_key(key)]
-#[table_name = "git_repository_branches"]
+#[diesel(primary_key(key))]
+#[diesel(table_name = git_repository_branches)]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct GitRepositoryBranchItem {
   pub(crate) key: String,

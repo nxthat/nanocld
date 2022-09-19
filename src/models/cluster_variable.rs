@@ -1,4 +1,5 @@
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -16,9 +17,9 @@ use super::cluster::ClusterItem;
   Associations,
   AsChangeset,
 )]
-#[primary_key(key)]
-#[table_name = "cluster_variables"]
-#[belongs_to(ClusterItem, foreign_key = "cluster_key")]
+#[diesel(primary_key(key))]
+#[diesel(table_name = cluster_variables)]
+#[diesel(belongs_to(ClusterItem, foreign_key = cluster_key))]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct ClusterVariableItem {
   pub(crate) key: String,

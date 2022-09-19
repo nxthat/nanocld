@@ -1,5 +1,4 @@
 use std::fs;
-use std::path::Path;
 
 use super::HypervisorError;
 
@@ -51,10 +50,10 @@ impl VmImage {
 
 #[derive(Debug, Clone)]
 pub struct VmConfig {
-  pub(crate) cpu: i32,
+  pub(crate) cpu: i16,
   pub(crate) memory: String,
   pub(crate) network: String,
-  pub(crate) macaddr: String,
+  pub(crate) mac_addr: String,
 }
 
 impl VmInstance {
@@ -76,7 +75,9 @@ impl VmInstance {
 /// to have linux and windows compatibility
 pub trait Hypervisor {
   /// Generic new that all implementation must have
-  fn new() -> Self;
+  fn new() -> Self
+  where
+    Self: Sized;
 
   fn generate_seed(
     &self,
@@ -114,13 +115,22 @@ pub trait Hypervisor {
   /// ```
   fn resize_image(
     &self,
-    image_path: impl AsRef<Path>,
-    size: String,
+    image_path: &str,
+    size: &str,
   ) -> Result<(), HypervisorError>;
 
   /// # Create image
   /// Create virtual machine image at given path with given size
-  fn create_image(&self);
+  fn create_image(&self, image_path: &str, size: &str);
+
+  /// # Copy image
+  /// Create a copy of an existing image with given size for a vm instance
+  fn copy_image(
+    &self,
+    parent_img: &str,
+    img: &str,
+    size: &str,
+  ) -> Result<(), HypervisorError>;
 
   /// # Create instance
   /// Create a virtual machine instance

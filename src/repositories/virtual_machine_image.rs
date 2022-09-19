@@ -13,12 +13,11 @@ pub async fn create(
 ) -> Result<VmImageItem, HttpResponseError> {
   use crate::schema::virtual_machine_images::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
-
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::insert_into(dsl::virtual_machine_images)
       .values(&item)
-      .execute(&conn)?;
+      .execute(&mut conn)?;
     Ok(item)
   })
   .await;
@@ -35,11 +34,11 @@ pub async fn find_by_id(
 ) -> Result<VmImageItem, HttpResponseError> {
   use crate::schema::virtual_machine_images::dsl;
 
-  let conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::virtual_machine_images
       .filter(dsl::key.eq(key))
-      .get_result(&conn)
+      .get_result(&mut conn)
   })
   .await;
 
@@ -54,10 +53,11 @@ pub async fn delete_by_id(
   pool: &web::types::State<Pool>,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::virtual_machine_images::dsl;
-  let conn = components::postgresql::get_pool_conn(pool)?;
+
+  let mut conn = components::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::virtual_machine_images.filter(dsl::key.eq(key)))
-      .execute(&conn)
+      .execute(&mut conn)
   })
   .await;
 

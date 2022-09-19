@@ -50,11 +50,11 @@ async fn import_virtual_machine_images(
     }
     let item = VmImagePartial {
       name: payload.name,
-      image_path: dw_res.path,
+      path: dw_res.path,
       is_base: true,
       parent_key: None,
     };
-    services::virtual_machine_images::create(item, &pool, &config).await?;
+    services::virtual_machine_image::create(item, &pool, &config).await?;
     Ok::<_, HttpResponseError>(())
   });
   Ok(

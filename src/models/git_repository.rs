@@ -1,5 +1,6 @@
 use diesel_derive_enum::DbEnum;
 use serde::{Serialize, Deserialize};
+
 #[cfg(feature = "openapi")]
 use utoipa::Component;
 
@@ -12,9 +13,9 @@ use crate::schema::git_repositories;
 /// GitRepositorySourceType::Gitlab; // for gitlab.com
 /// GitRepositorySourceType::Local; // for nanocl managed git repository
 /// ```
-#[derive(Serialize, Deserialize, Debug, PartialEq, DbEnum, Clone)]
+#[derive(Serialize, Deserialize, Debug, Eq, PartialEq, DbEnum, Clone)]
+#[DieselTypePath = "crate::models::exports::Git_repository_source_type"]
 #[serde(rename_all = "snake_case")]
-#[DieselType = "Git_repository_source_type"]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub enum GitRepositorySourceType {
   Github,
@@ -28,8 +29,8 @@ pub enum GitRepositorySourceType {
 #[derive(
   Clone, Serialize, Deserialize, Insertable, Queryable, Identifiable,
 )]
-#[primary_key(name)]
-#[table_name = "git_repositories"]
+#[diesel(primary_key(name))]
+#[diesel(table_name = git_repositories)]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub struct GitRepositoryItem {
   pub(crate) name: String,

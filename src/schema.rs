@@ -157,7 +157,7 @@ table! {
     virtual_machine_images (key) {
         key -> Varchar,
         name -> Varchar,
-        image_path -> Varchar,
+        path -> Varchar,
         size -> Int8,
         is_base -> Bool,
         parent_key -> Nullable<Varchar>,
@@ -170,9 +170,14 @@ table! {
     virtual_machines (key) {
         key -> Varchar,
         name -> Varchar,
+        state -> Virtual_machine_states,
+        pid_path -> Varchar,
         image -> Varchar,
-        ip_address -> Varchar,
-        mac_address -> Varchar,
+        memory -> Varchar,
+        cpu -> Int2,
+        network -> Varchar,
+        ip_addr -> Varchar,
+        mac_addr -> Varchar,
     }
 }
 
