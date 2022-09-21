@@ -76,12 +76,9 @@ async fn create_cluster_network(
   labels.insert(String::from("cluster_key"), gen_key.clone());
   let gen_name = cluster.key.to_owned() + "-" + &payload.name;
   let network_existing =
-    match repositories::cluster_network::find_by_key(gen_name.clone(), &pool)
+    repositories::cluster_network::find_by_key(gen_name.clone(), &pool)
       .await
-    {
-      Err(_) => false,
-      Ok(_) => true,
-    };
+      .is_ok();
   if network_existing {
     return Err(HttpResponseError {
       status: StatusCode::CONFLICT,

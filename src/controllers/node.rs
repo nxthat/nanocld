@@ -1,3 +1,3 @@
 pub use ntex::web;
 
-async fn list_node() {}
+async fn _list_node() {}

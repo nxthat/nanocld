@@ -8,14 +8,14 @@ use bollard::{
   container::StartContainerOptions,
 };
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ComponentState {
   Uninstalled,
   Running,
   Stopped,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum NetworkState {
   NotFound,
   Ready,
