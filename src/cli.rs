@@ -1,9 +1,7 @@
 use clap::{AppSettings, Parser};
 
-use crate::models::NodeMode;
-
-/// nanocl daemon
-/// vms and containers manager at scale for intranet
+/// Nanocl daemon
+/// Self Sufficient Hybrid Cloud Orchestrator
 #[derive(Debug, Clone, Parser)]
 #[clap(
   about,
@@ -14,7 +12,7 @@ pub struct Cli {
   /// Only available if nanocld have been builded with feature openapi
   #[clap(long)]
   pub(crate) genopenapi: bool,
-  /// Only install required services this have to be called after fresh installation
+  /// Only install required components this have to be called after fresh installation.
   #[clap(long)]
   pub(crate) install_components: bool,
   /// Daemon host to listen to you can use tcp:// and unix://
@@ -38,7 +36,4 @@ pub struct Cli {
   /// Generated token for given github user
   #[clap(long)]
   pub(crate) github_token: Option<String>,
-  /// Node mode
-  #[clap(long, default_value = "master")]
-  pub(crate) mode: NodeMode,
 }

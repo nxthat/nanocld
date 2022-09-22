@@ -1,3 +1,4 @@
+use url::Url;
 use std::{fs, path::Path, os::unix::prelude::FileExt, io::Read};
 use serde::{Serialize, Deserialize};
 use ntex::{
@@ -8,7 +9,6 @@ use futures::{
   SinkExt, TryStreamExt,
   channel::mpsc::{UnboundedReceiver, unbounded},
 };
-use url::Url;
 
 use crate::errors::HttpResponseError;
 
@@ -53,8 +53,7 @@ pub fn render_template<T, D>(
 ) -> Result<String, HttpResponseError>
 where
   T: ToString,
-  D: Serialize,
-{
+  D: Serialize, {
   let compiled =
     mustache::compile_str(&template.to_string()).map_err(|err| {
       HttpResponseError {
@@ -63,13 +62,12 @@ where
       }
     })?;
 
-  let result =
-    compiled
-      .render_to_string(&data)
-      .map_err(|err| HttpResponseError {
-        msg: format!("{}", err),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })?;
+  let result = compiled.render_to_string(&data).map_err(|err| {
+    HttpResponseError {
+      msg: format!("{}", err),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    }
+  })?;
 
   Ok(result)
 }
@@ -84,14 +82,22 @@ pub async fn download_file(
   // a test should be made to see if the header containt filename to use it instead of the path
   let file_name = url
     .path_segments()
-    .ok_or_else(|| HttpResponseError {
-      status: StatusCode::BAD_REQUEST,
-      msg: String::from("url have empty path cannot determine file name lol."),
+    .ok_or_else(|| {
+      HttpResponseError {
+        status: StatusCode::BAD_REQUEST,
+        msg: String::from(
+          "url have empty path cannot determine file name lol.",
+        ),
+      }
     })?
     .last()
-    .ok_or_else(|| HttpResponseError {
-      status: StatusCode::BAD_REQUEST,
-      msg: String::from("url have empty path cannot determine file name lol."),
+    .ok_or_else(|| {
+      HttpResponseError {
+        status: StatusCode::BAD_REQUEST,
+        msg: String::from(
+          "url have empty path cannot determine file name lol.",
+        ),
+      }
     })?;
   let client = Client::new();
   let res = client.get(url.to_string()).send().await.map_err(|err| {
@@ -112,25 +118,31 @@ pub async fn download_file(
   }
   let total_size = res
     .header("content-length")
-    .ok_or_else(|| HttpResponseError {
-      status: StatusCode::BAD_REQUEST,
-      msg: format!("Unable to download {:?} content-length not set.", &url),
+    .ok_or_else(|| {
+      HttpResponseError {
+        status: StatusCode::BAD_REQUEST,
+        msg: format!("Unable to download {:?} content-length not set.", &url),
+      }
     })?
     .to_str()
-    .map_err(|err| HttpResponseError {
-      status: StatusCode::BAD_REQUEST,
-      msg: format!(
+    .map_err(|err| {
+      HttpResponseError {
+        status: StatusCode::BAD_REQUEST,
+        msg: format!(
         "Unable to download {:?} cannot convert content-length got error {:?}",
         &url, &err
       ),
+      }
     })?
     .parse::<u64>()
-    .map_err(|err| HttpResponseError {
-      status: StatusCode::BAD_REQUEST,
-      msg: format!(
+    .map_err(|err| {
+      HttpResponseError {
+        status: StatusCode::BAD_REQUEST,
+        msg: format!(
         "Unable to download {:?} cannot convert content-length got error {:?}",
         &url, &err
       ),
+      }
     })?;
   let url = url.to_owned();
   let file_path = Path::new(download_dir.as_ref()).join(file_name);
@@ -141,36 +153,40 @@ pub async fn download_file(
     let mut stream = res.into_stream();
     let fp = file_path.to_owned();
     let file = web::block(move || {
-      let file = fs::File::create(&fp).map_err(|err| HttpResponseError {
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-        msg: format!("Unable to create file {:?} got error {:?}", &fp, &err),
+      let file = fs::File::create(&fp).map_err(|err| {
+        HttpResponseError {
+          status: StatusCode::INTERNAL_SERVER_ERROR,
+          msg: format!("Unable to create file {:?} got error {:?}", &fp, &err),
+        }
       })?;
       Ok::<_, HttpResponseError>(file)
     })
     .await
-    .map_err(|err| HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: format!("{}", err),
+    .map_err(|err| {
+      HttpResponseError {
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+        msg: format!("{}", err),
+      }
     })?;
     let mut offset: u64 = 0;
-    while let Some(chunk) =
-      stream.try_next().await.map_err(|err| HttpResponseError {
+    while let Some(chunk) = stream.try_next().await.map_err(|err| {
+      HttpResponseError {
         status: StatusCode::INTERNAL_SERVER_ERROR,
         msg: format!(
           "Unable to load stream from {:?} got error {:?}",
           &url, &err
         ),
-      })?
-    {
-      file
-        .write_at(&chunk, offset)
-        .map_err(|err| HttpResponseError {
+      }
+    })? {
+      file.write_at(&chunk, offset).map_err(|err| {
+        HttpResponseError {
           status: StatusCode::INTERNAL_SERVER_ERROR,
           msg: format!(
             "Unable to write in file {:?} got error {:?}",
             &file_path, &err
           ),
-        })?;
+        }
+      })?;
       offset += chunk.len() as u64;
       let percent = (offset as f64 / total_size as f64) * 100.0;
       log::debug!("Downloading file from {:?} status {:?}%", &url, &percent);
@@ -183,19 +199,23 @@ pub async fn download_file(
     }
 
     if offset == total_size {
-      file.sync_all().map_err(|err| HttpResponseError {
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-        msg: format!(
-          "Unable to sync file {:?} got error {:?}",
-          &file_path, &err
-        ),
+      file.sync_all().map_err(|err| {
+        HttpResponseError {
+          status: StatusCode::INTERNAL_SERVER_ERROR,
+          msg: format!(
+            "Unable to sync file {:?} got error {:?}",
+            &file_path, &err
+          ),
+        }
       })?;
       let info = DownloadFileInfo::new(100.0, DownloadFileStatus::Done);
       let _send = wtx.send(Ok::<_, HttpResponseError>(info)).await;
     } else {
-      fs::remove_file(&file_path).map_err(|err| HttpResponseError {
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-        msg: format!("Unable to delete created file {:?}", err),
+      fs::remove_file(&file_path).map_err(|err| {
+        HttpResponseError {
+          status: StatusCode::INTERNAL_SERVER_ERROR,
+          msg: format!("Unable to delete created file {:?}", err),
+        }
       })?;
     }
     Ok::<(), HttpResponseError>(())
@@ -232,20 +252,21 @@ pub fn _get_free_port() -> Result<u16, HttpResponseError> {
 
 pub fn generate_mac_addr() -> Result<String, HttpResponseError> {
   let mut mac: [u8; 6] = [0; 6];
-  let mut urandom =
-    fs::File::open("/dev/urandom").map_err(|err| HttpResponseError {
+  let mut urandom = fs::File::open("/dev/urandom").map_err(|err| {
+    HttpResponseError {
       msg: format!(
         "Unable to open /dev/urandom to generate a mac addr {:?}",
         &err
       ),
       status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
-  urandom
-    .read_exact(&mut mac)
-    .map_err(|err| HttpResponseError {
+    }
+  })?;
+  urandom.read_exact(&mut mac).map_err(|err| {
+    HttpResponseError {
       msg: String::from("Unable to red /dev/urandom to generate a mac addr"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
+    }
+  })?;
   let mac_addr = format!(
     "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]

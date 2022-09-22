@@ -225,7 +225,6 @@ async fn patch_cargo_by_name(
     stream::iter(payload.environnements.to_owned().unwrap_or_default());
   while let Some(env) = env_stream.next().await {
     let arr = env.split('=').collect::<Vec<&str>>();
-
     if arr.len() != 2 {
       return Err(HttpResponseError {
         msg: format!("env variable formated incorrectly {}", &env),
@@ -234,13 +233,11 @@ async fn patch_cargo_by_name(
     }
     let name = arr[0].to_owned();
     let value = arr[1].to_owned();
-
     let env = CargoEnvPartial {
       cargo_key: gen_key.to_owned(),
       name: name.to_owned(),
       value: value.to_owned(),
     };
-
     let env_exists = repositories::cargo_env::exist_in_cargo(
       name.to_owned(),
       gen_key.to_owned(),
@@ -263,9 +260,8 @@ async fn patch_cargo_by_name(
   }
 
   // Add binds
-  let mut binds: Vec<String> = Vec::new();
-  if let Some(mut payload_binds) = payload.binds.clone() {
-    binds.append(&mut cargo.binds.to_owned());
+  let mut binds = cargo.binds.to_owned();
+  if let Some(mut payload_binds) = payload.binds.to_owned() {
     binds.append(&mut payload_binds);
   }
   payload.binds = Some(binds);
@@ -274,6 +270,7 @@ async fn patch_cargo_by_name(
   let updated_cargo =
     repositories::cargo::update_by_key(namespace, name, payload, &pool).await?;
 
+  // Update containers
   services::cargo::update_containers(
     gen_key,
     &daemon_config,
