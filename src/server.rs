@@ -1,22 +1,17 @@
 use ntex::web;
-use futures::channel::mpsc::UnboundedSender;
 
 use crate::openapi;
 use crate::controllers;
 use crate::boot::BootState;
 use crate::config::DaemonConfig;
-use crate::events::system::EventMessage;
 
 pub async fn start<'a>(
   config: DaemonConfig,
-  event_system: UnboundedSender<EventMessage>,
   boot_state: BootState,
 ) -> std::io::Result<()> {
   let hosts = config.hosts.to_owned();
   let mut server = web::HttpServer::new(move || {
     web::App::new()
-      // bind event system
-      .state(event_system.clone())
       // bind config state
       .state(config.clone())
       // bind postgre pool to state
@@ -35,14 +30,10 @@ pub async fn start<'a>(
       .configure(controllers::namespace::ntex_config)
       // bind controller git repository
       .configure(controllers::git_repository::ntex_config)
-      // bind nginx log
-      .configure(controllers::nginx_log::ntex_config)
       // bind controller container_image
       .configure(controllers::container_image::ntex_config)
       // bind controller cluster
       .configure(controllers::cluster::ntex_config)
-      // bind controller virtual machine images
-      .configure(controllers::virtual_machine_images::ntex_config)
       // bind controller cluster variables
       .configure(controllers::cluster_variable::ntex_config)
       // bind controller cluster network

@@ -3,4 +3,3 @@
 
 [print_schema]
 file = "src/schema.rs"
-import_types = ["crate::models::exports::*"]   # <- note the extra import

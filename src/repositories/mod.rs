@@ -5,7 +5,6 @@ pub mod node;
 
 pub mod namespace;
 
-pub mod nginx_log;
 pub mod nginx_template;
 
 pub mod cargo;
@@ -19,6 +18,3 @@ pub mod git_repository;
 pub mod git_repository_branch;
 
 pub mod cluster_variable;
-
-pub mod virtual_machine_image;
-pub mod virtual_machine;

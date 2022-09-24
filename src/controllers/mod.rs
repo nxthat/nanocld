@@ -17,8 +17,6 @@ pub mod nginx_template;
 pub mod cluster_variable;
 /// Manage container_image
 pub mod container_image;
-/// Manage nginx logs
-pub mod nginx_log;
 
 pub mod system;
 
@@ -27,7 +25,3 @@ pub mod cluster_cargo;
 pub mod container;
 
 pub mod node;
-
-pub mod virtual_machine_images;
-
-pub mod virtual_machine;

@@ -93,13 +93,11 @@ pub async fn create_many(
   let res = web::block(move || {
     let records = items
       .into_iter()
-      .map(|item| {
-        CargoEnvItem {
-          key: item.cargo_key.to_owned() + "-" + &item.name,
-          cargo_key: item.cargo_key,
-          name: item.name,
-          value: item.value,
-        }
+      .map(|item| CargoEnvItem {
+        key: item.cargo_key.to_owned() + "-" + &item.name,
+        cargo_key: item.cargo_key,
+        name: item.name,
+        value: item.value,
       })
       .collect::<Vec<CargoEnvItem>>();
 

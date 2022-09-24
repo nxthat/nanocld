@@ -28,8 +28,8 @@ pub struct ClusterPartial {
   Deserialize,
   Identifiable,
   Insertable,
-  Queryable,
   AsChangeset,
+  Queryable,
 )]
 #[diesel(primary_key(key))]
 #[diesel(table_name = clusters)]

@@ -13,7 +13,7 @@ use crate::schema::nginx_templates;
 /// NginxTemplateModes::Stream; // For low level tcp/udp forward
 /// ```
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, DbEnum, Clone)]
-#[DieselTypePath = "crate::models::exports::Nginx_template_modes"]
+#[DieselTypePath = "crate::schema::sql_types::NginxTemplateModes"]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub enum NginxTemplateModes {

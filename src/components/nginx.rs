@@ -1,8 +1,5 @@
 use std::path::Path;
 
-use ntex::{web, rt};
-use notify::{Watcher, RecursiveMode};
-use futures::channel::mpsc::{unbounded, UnboundedReceiver};
 use bollard::{
   Docker,
   models::HostConfig,
@@ -12,7 +9,6 @@ use bollard::{
 };
 
 use crate::config::DaemonConfig;
-use crate::models::{Pool, NginxLogItem};
 
 use super::utils::*;
 
@@ -77,35 +73,6 @@ async fn create_nginx_container(
   };
   docker_api.create_container(options, config).await?;
   Ok(())
-}
-
-/// This function must disapear.
-pub fn watch_nginx_logs(
-  state_dir: String,
-  pool: web::types::State<Pool>,
-) -> UnboundedReceiver<NginxLogItem> {
-  // Create a channel to receive the events.
-  let (mut _tx, rx) = unbounded::<NginxLogItem>();
-  // Create a watcher object, delivering raw events.
-  // The notification back-end is selected based on the platform.
-  rt::Arbiter::new().exec_fn(move || {
-    rt::spawn(async move {
-      // Add a path to be watched. All files and directories at that path and
-      // below will be monitored for changes.
-      let dir_path = Path::new(&state_dir).join("nginx/log");
-      let mut watcher = notify::recommended_watcher(|res| {
-        match res {
-          Ok(event) => println!("nginx event: {:?}", event),
-          Err(e) => log::error!("Received error event {}", e),
-        }
-      })
-      .unwrap();
-      // Add a path to be watched. All files and directories at that path and
-      // below will be monitored for changes.
-      watcher.watch(&dir_path, RecursiveMode::Recursive).unwrap();
-    });
-  });
-  rx
 }
 
 pub async fn boot(

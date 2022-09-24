@@ -12,10 +12,8 @@ use clap::Parser;
 
 mod cli;
 mod boot;
-mod events;
 mod version;
 mod components;
-mod hypervisor;
 
 mod utils;
 mod errors;
@@ -105,16 +103,8 @@ async fn main() -> std::io::Result<()> {
     Ok(state) => state,
   };
 
-  // Start background event_system
-  let event_system = events::system::start(
-    daemon_config.to_owned(),
-    docker_api.to_owned(),
-    boot_state.pool.to_owned(),
-  )
-  .await;
-
   // start ntex http server
-  server::start(daemon_config, event_system, boot_state).await?;
+  server::start(daemon_config, boot_state).await?;
   log::info!("kill received exiting.");
   Ok(())
 }

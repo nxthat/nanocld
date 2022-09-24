@@ -47,12 +47,6 @@ pub use container_image::*;
 mod node;
 pub use node::*;
 
-mod virtual_machine_image;
-pub use virtual_machine_image::*;
-
-mod virtual_machine;
-pub use virtual_machine::*;
-
 pub type DBConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
@@ -73,29 +67,4 @@ pub struct GenericCount {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct GenericNspQuery {
   pub(crate) namespace: Option<String>,
-}
-
-/// Re exports ours enums and diesel sql_types for schema.rs
-pub mod exports {
-  pub use diesel::sql_types::*;
-
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "node_modes"))]
-  pub struct Node_modes;
-
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "ssh_auth_modes"))]
-  pub struct Ssh_auth_modes;
-  // pub use super::node::{Node_modes, Ssh_auth_modes};
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "nginx_template_modes"))]
-  pub struct Nginx_template_modes;
-
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "git_repository_source_type"))]
-  pub struct Git_repository_source_type;
-
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "virtual_machine_states"))]
-  pub struct Virtual_machine_states;
 }

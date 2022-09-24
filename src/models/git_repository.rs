@@ -14,7 +14,7 @@ use crate::schema::git_repositories;
 /// GitRepositorySourceType::Local; // for nanocl managed git repository
 /// ```
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, DbEnum, Clone)]
-#[DieselTypePath = "crate::models::exports::Git_repository_source_type"]
+#[DieselTypePath = "crate::schema::sql_types::GitRepositorySourceType"]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "openapi", derive(Component))]
 pub enum GitRepositorySourceType {

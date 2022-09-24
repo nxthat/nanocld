@@ -1,6 +1,24 @@
-table! {
-    use crate::models::exports::*;
+// @generated automatically by Diesel CLI.
 
+pub mod sql_types {
+  #[derive(diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "git_repository_source_type"))]
+  pub struct GitRepositorySourceType;
+
+  #[derive(diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "nginx_template_modes"))]
+  pub struct NginxTemplateModes;
+
+  #[derive(diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "node_modes"))]
+  pub struct NodeModes;
+
+  #[derive(diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "ssh_auth_modes"))]
+  pub struct SshAuthModes;
+}
+
+diesel::table! {
     cargo_environnements (key) {
         key -> Varchar,
         cargo_key -> Varchar,
@@ -9,9 +27,7 @@ table! {
     }
 }
 
-table! {
-    use crate::models::exports::*;
-
+diesel::table! {
     cargoes (key) {
         key -> Varchar,
         namespace_name -> Varchar,
@@ -25,9 +41,7 @@ table! {
     }
 }
 
-table! {
-    use crate::models::exports::*;
-
+diesel::table! {
     cluster_cargoes (key) {
         key -> Varchar,
         cargo_key -> Varchar,
@@ -36,9 +50,7 @@ table! {
     }
 }
 
-table! {
-    use crate::models::exports::*;
-
+diesel::table! {
     cluster_networks (key) {
         key -> Varchar,
         name -> Varchar,
@@ -49,9 +61,7 @@ table! {
     }
 }
 
-table! {
-    use crate::models::exports::*;
-
+diesel::table! {
     cluster_variables (key) {
         key -> Varchar,
         cluster_key -> Varchar,
@@ -60,9 +70,7 @@ table! {
     }
 }
 
-table! {
-    use crate::models::exports::*;
-
+diesel::table! {
     clusters (key) {
         key -> Varchar,
         name -> Varchar,
@@ -71,20 +79,19 @@ table! {
     }
 }
 
-table! {
-    use crate::models::exports::*;
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::GitRepositorySourceType;
 
     git_repositories (name) {
         name -> Varchar,
         url -> Varchar,
         default_branch -> Varchar,
-        source -> Git_repository_source_type,
+        source -> GitRepositorySourceType,
     }
 }
 
-table! {
-    use crate::models::exports::*;
-
+diesel::table! {
     git_repository_branches (key) {
         key -> Varchar,
         name -> Varchar,
@@ -93,17 +100,13 @@ table! {
     }
 }
 
-table! {
-    use crate::models::exports::*;
-
+diesel::table! {
     namespaces (name) {
         name -> Varchar,
     }
 }
 
-table! {
-    use crate::models::exports::*;
-
+diesel::table! {
     nginx_logs (key) {
         key -> Uuid,
         date_gmt -> Timestamptz,
@@ -128,79 +131,49 @@ table! {
     }
 }
 
-table! {
-    use crate::models::exports::*;
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::NginxTemplateModes;
 
     nginx_templates (name) {
         name -> Varchar,
-        mode -> Nginx_template_modes,
+        mode -> NginxTemplateModes,
         content -> Text,
     }
 }
 
-table! {
-    use crate::models::exports::*;
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::NodeModes;
+    use super::sql_types::SshAuthModes;
 
     nodes (name) {
         name -> Varchar,
-        mode -> Node_modes,
+        mode -> NodeModes,
         ip_address -> Varchar,
-        ssh_auth_mode -> Ssh_auth_modes,
+        ssh_auth_mode -> SshAuthModes,
         ssh_user -> Varchar,
         ssh_credential -> Varchar,
     }
 }
 
-table! {
-    use crate::models::exports::*;
+diesel::joinable!(cargoes -> namespaces (namespace_name));
+diesel::joinable!(cluster_cargoes -> cargoes (cargo_key));
+diesel::joinable!(cluster_cargoes -> cluster_networks (network_key));
+diesel::joinable!(cluster_cargoes -> clusters (cluster_key));
+diesel::joinable!(cluster_networks -> clusters (cluster_key));
 
-    virtual_machine_images (key) {
-        key -> Varchar,
-        name -> Varchar,
-        path -> Varchar,
-        size -> Int8,
-        is_base -> Bool,
-        parent_key -> Nullable<Varchar>,
-    }
-}
-
-table! {
-    use crate::models::exports::*;
-
-    virtual_machines (key) {
-        key -> Varchar,
-        name -> Varchar,
-        state -> Virtual_machine_states,
-        pid_path -> Varchar,
-        image -> Varchar,
-        memory -> Varchar,
-        cpu -> Int2,
-        network -> Varchar,
-        ip_addr -> Varchar,
-        mac_addr -> Varchar,
-    }
-}
-
-joinable!(cargoes -> namespaces (namespace_name));
-joinable!(cluster_cargoes -> cargoes (cargo_key));
-joinable!(cluster_cargoes -> cluster_networks (network_key));
-joinable!(cluster_cargoes -> clusters (cluster_key));
-joinable!(cluster_networks -> clusters (cluster_key));
-joinable!(virtual_machines -> virtual_machine_images (image));
-
-allow_tables_to_appear_in_same_query!(
-    cargo_environnements,
-    cargoes,
-    cluster_cargoes,
-    cluster_networks,
-    cluster_variables,
-    clusters,
-    git_repositories,
-    git_repository_branches,
-    namespaces,
-    nginx_logs,
-    nginx_templates,
-    nodes,
-    virtual_machine_images,
-    virtual_machines,
+diesel::allow_tables_to_appear_in_same_query!(
+  cargo_environnements,
+  cargoes,
+  cluster_cargoes,
+  cluster_networks,
+  cluster_variables,
+  clusters,
+  git_repositories,
+  git_repository_branches,
+  namespaces,
+  nginx_logs,
+  nginx_templates,
+  nodes,
 );
