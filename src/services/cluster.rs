@@ -261,10 +261,8 @@ pub async fn start(
         NginxTemplateModes::Http => file_path.join("nginx/sites-enabled"),
         NginxTemplateModes::Stream => file_path.join("nginx/streams-enabled"),
       };
-      let file_path = file_path.join(format!(
-        "{name}.conf",
-        name = format!("{}.{}", &cluster.key, &template.name)
-      ));
+      let file_name = format!("{}.{}", &cluster.key, &template.name);
+      let file_path = file_path.join(format!("{file_name}.conf"));
       let template_data = TemplateData {
         vars: Some(vars.to_owned()),
         networks: Some(networks.to_owned()),

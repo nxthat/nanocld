@@ -5,6 +5,7 @@ use utoipa::Component;
 
 use crate::schema::cargoes;
 
+use super::cargo_env::CargoEnvItem;
 use super::namespace::NamespaceItem;
 
 /// Cargo partial
@@ -89,5 +90,6 @@ pub struct CargoItemWithRelation {
   pub(crate) dns_entry: Option<String>,
   pub(crate) domainname: Option<String>,
   pub(crate) hostname: Option<String>,
+  pub(crate) environnements: Option<Vec<CargoEnvItem>>,
   pub(crate) containers: Vec<bollard::models::ContainerSummary>,
 }

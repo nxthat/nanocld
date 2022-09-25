@@ -188,11 +188,20 @@ async fn inspect_cargo_by_name(
 
   let containers = services::container::list_container(qs, &docker_api).await?;
 
+  let environnements = if let Ok(envs) =
+    repositories::cargo_env::list_by_cargo_key(gen_key, &pool).await
+  {
+    Some(envs)
+  } else {
+    None
+  };
+
   let cargo = CargoItemWithRelation {
     key: res.key,
     name: res.name,
     namespace_name: res.namespace_name,
     binds: res.binds,
+    environnements,
     replicas: res.replicas,
     image_name: res.image_name,
     domainname: res.domainname,

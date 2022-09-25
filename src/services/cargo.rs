@@ -64,6 +64,9 @@ pub async fn create_containers<'a>(
     if count != 0 {
       name += &("-".to_owned() + &count.to_string());
     }
+
+    log::debug!("passing env {:#?}", &opts.environnements);
+
     let options = bollard::container::CreateContainerOptions { name };
     let config = bollard::container::Config {
       image: image.to_owned(),
