@@ -20,10 +20,10 @@ mkdir -p ${release_path}/usr/local/man/man1
 mkdir -p ${release_path}/var/lib/nanocl
 mkdir -p ${release_path}/etc
 
-# create and copy release binary
-cargo make release
+# Create and Copy release binary
+env OPENSSL_LIB_DIR=/usr/local/lib/ OPENSSL_INCLUDE_DIR=/usr/local/include OPENSSL_STATIC=yes cargo make release
 cp ./target/release/${pkg_name} ${release_path}/usr/local/bin
-# copy config files
+# Copy config files
 cp -r ./fake_path/* ${release_path}/
 
 # TODO generate man pages
@@ -33,7 +33,7 @@ cp -r ./fake_path/* ${release_path}/
 # gzip -f ../target/man/${pkg_name}.1
 # cp ../target/man/${pkg_name}.1.gz ${release_path}/usr/local/man/man1
 
-# generate DEBIAN controll
+# Generate DEBIAN control
 cat > ${release_path}/DEBIAN/control <<- EOM
 Package: ${pkg_name}
 Version: ${version}
