@@ -131,9 +131,12 @@ pub async fn build_component(
   }
   let git_url = "https://github.com/nxthat/".to_owned();
   let image_url = git_url + service_name + ".git";
-  let options = BuildImageOptions {
-    t: service_name,
-    remote: &image_url,
+  let options = BuildImageOptions::<String> {
+    dockerfile: String::from("Dockerfile"),
+    t: service_name.to_string(),
+    remote: image_url,
+    rm: true,
+    forcerm: true,
     ..Default::default()
   };
   log::info!("building service [{}]", &service_name);
@@ -191,11 +194,10 @@ pub async fn image_exists(image_name: &str, docker: &Docker) -> bool {
   false
 }
 
-/// # Install a service
-/// Install a service from docker image
+/// # Get network state
 ///
 /// # Arguments
-/// - [name](str) name of the service to install
+/// - [name](str) name of the network
 /// - [docker_api](Docker) bollard docker instance
 ///
 /// # Return

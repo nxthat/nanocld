@@ -1,21 +1,21 @@
 // @generated automatically by Diesel CLI.
 
 pub mod sql_types {
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "git_repository_source_type"))]
-  pub struct GitRepositorySourceType;
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "git_repository_source_type"))]
+    pub struct GitRepositorySourceType;
 
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "nginx_template_modes"))]
-  pub struct NginxTemplateModes;
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "nginx_template_modes"))]
+    pub struct NginxTemplateModes;
 
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "node_modes"))]
-  pub struct NodeModes;
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "node_modes"))]
+    pub struct NodeModes;
 
-  #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "ssh_auth_modes"))]
-  pub struct SshAuthModes;
+    #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "ssh_auth_modes"))]
+    pub struct SshAuthModes;
 }
 
 diesel::table! {
@@ -33,8 +33,8 @@ diesel::table! {
         namespace_name -> Varchar,
         name -> Varchar,
         image_name -> Varchar,
-        binds -> Array<Text>,
-        replicas -> Int4,
+        binds -> Array<Nullable<Text>>,
+        replicas -> Int8,
         dns_entry -> Nullable<Varchar>,
         domainname -> Nullable<Varchar>,
         hostname -> Nullable<Varchar>,
@@ -75,7 +75,7 @@ diesel::table! {
         key -> Varchar,
         name -> Varchar,
         namespace -> Varchar,
-        proxy_templates -> Array<Text>,
+        proxy_templates -> Array<Nullable<Text>>,
     }
 }
 
@@ -117,7 +117,7 @@ diesel::table! {
         server_protocol -> Varchar,
         request_method -> Varchar,
         content_length -> Int8,
-        status -> Int4,
+        status -> Int8,
         request_time -> Float8,
         body_bytes_sent -> Int8,
         proxy_host -> Nullable<Varchar>,
@@ -157,23 +157,17 @@ diesel::table! {
     }
 }
 
-diesel::joinable!(cargoes -> namespaces (namespace_name));
-diesel::joinable!(cluster_cargoes -> cargoes (cargo_key));
-diesel::joinable!(cluster_cargoes -> cluster_networks (network_key));
-diesel::joinable!(cluster_cargoes -> clusters (cluster_key));
-diesel::joinable!(cluster_networks -> clusters (cluster_key));
-
 diesel::allow_tables_to_appear_in_same_query!(
-  cargo_environnements,
-  cargoes,
-  cluster_cargoes,
-  cluster_networks,
-  cluster_variables,
-  clusters,
-  git_repositories,
-  git_repository_branches,
-  namespaces,
-  nginx_logs,
-  nginx_templates,
-  nodes,
+    cargo_environnements,
+    cargoes,
+    cluster_cargoes,
+    cluster_networks,
+    cluster_variables,
+    clusters,
+    git_repositories,
+    git_repository_branches,
+    namespaces,
+    nginx_logs,
+    nginx_templates,
+    nodes,
 );
