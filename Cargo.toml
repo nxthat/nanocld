@@ -15,7 +15,7 @@ opt-level = 3
 
 [build-dependencies]
 clap = { version = "4.0.15", features = ["derive"] }
-clap_mangen = { version = "0.1" }
+clap_mangen = { version = "0.2" }
 
 [dependencies]
 r2d2 = "0.8"
