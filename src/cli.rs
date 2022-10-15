@@ -1,13 +1,11 @@
-use clap::{AppSettings, Parser};
+use clap::Parser;
 
 /// Nanocl daemon
 /// Self Sufficient Hybrid Cloud Orchestrator
 #[derive(Debug, Clone, Parser)]
-#[clap(
-  about,
-  version,
-  global_setting = AppSettings::DeriveDisplayOrder,
-)]
+#[command(name = "Nanocl")]
+#[command(author = "nexthat team <team@next-hat.com>")]
+#[command(version)]
 pub struct Cli {
   /// Only available if nanocld have been builded with feature openapi
   #[clap(long)]
@@ -17,7 +15,7 @@ pub struct Cli {
   pub(crate) install_components: bool,
   /// Daemon host to listen to you can use tcp:// and unix://
   /// [default: unix:///run/nanocl/nanocl.sock]
-  #[clap(short = 'H', long = "--host")]
+  #[clap(short = 'H', long = "hosts")]
   pub(crate) hosts: Option<Vec<String>>,
   /// Docker daemon socket to connect
   /// [default: unix:///run/nanocl/docker.sock]

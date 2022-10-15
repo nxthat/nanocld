@@ -1,4 +1,4 @@
-use clap::IntoApp;
+use clap::*;
 use std::fs;
 
 include!("./src/cli.rs");
@@ -24,7 +24,7 @@ pub fn generate_man_command(
 
 fn main() -> std::io::Result<()> {
   fs::create_dir_all(MAN_PATH)?;
-  generate_man_command("nanocld", Cli::into_app())?;
 
+  generate_man_command("nanocld", Cli::command())?;
   Ok(())
 }
