@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 use crate::schema::cluster_networks;
 
@@ -10,7 +10,7 @@ use super::cluster::ClusterItem;
 /// Cluster network partial
 /// this structure ensure write in database
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterNetworkPartial {
   pub(crate) name: String,
 }
@@ -30,7 +30,7 @@ pub struct ClusterNetworkPartial {
 #[diesel(primary_key(key))]
 #[diesel(table_name = cluster_networks)]
 #[diesel(belongs_to(ClusterItem, foreign_key = cluster_key))]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterNetworkItem {
   pub(crate) key: String,
   pub(crate) name: String,

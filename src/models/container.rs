@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 /// Data use to filter containers by cluster cargo or namespace.
 #[derive(Serialize, Deserialize)]

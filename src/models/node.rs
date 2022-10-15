@@ -2,8 +2,8 @@ use clap::ValueEnum;
 use diesel_derive_enum::DbEnum;
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 use crate::schema::nodes;
 
@@ -12,7 +12,7 @@ use crate::schema::nodes;
 )]
 #[DieselTypePath = "crate::schema::sql_types::NodeModes"]
 #[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub enum NodeMode {
   Master,
   Worker,
@@ -22,14 +22,14 @@ pub enum NodeMode {
 #[derive(Debug, Clone, Eq, PartialEq, Serialize, Deserialize, DbEnum)]
 #[DieselTypePath = "crate::schema::sql_types::SshAuthModes"]
 #[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub enum SshAuthMode {
   Passwd,
   Rsa,
 }
 
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct NodePartial {
   pub(crate) name: String,
   pub(crate) mode: NodeMode,

@@ -47,7 +47,7 @@ async fn main() -> std::io::Result<()> {
   // if we build with openapi feature
   // with args genopenapi we print the json on output
   // in order to generate a file with a pipe.
-  #[cfg(feature = "openapi")]
+  #[cfg(feature = "dev")]
   {
     if args.genopenapi {
       let result = openapi::to_json();

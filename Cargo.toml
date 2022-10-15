@@ -5,7 +5,7 @@ edition = "2021"
 
 [features]
 default = []
-openapi = ["dep:utoipa"]
+dev = ["dep:utoipa"]
 
 [profile.dev]
 opt-level = 0
@@ -39,5 +39,5 @@ ntex = { version = "=0.5.27", features = ["rustls", "tokio"] }
 diesel-derive-enum = { version = "2.0.0-rc.0", features = ["postgres"] }
 diesel = { version = "2.0.1", features = ["postgres", "r2d2", "chrono", "uuid"] }
 
-# Dependency required with feature openapi
+# Dependency required with dev feature
 utoipa = { version = "2.2.0", features = ["uuid", "chrono"], optional = true }

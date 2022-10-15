@@ -12,7 +12,7 @@ use crate::models::{
 use crate::errors::HttpResponseError;
 
 /// List all git repository
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/git_repositories",
   responses(
@@ -29,7 +29,7 @@ async fn list_git_repository(
 }
 
 /// Create new git repository
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   path = "/git_repositories",
   request_body = GitRepositoryPartial,
@@ -82,11 +82,11 @@ async fn create_git_repository(
 }
 
 /// Delete git repository by it's name
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   delete,
   path = "/git_repositories/{name}",
   params(
-    ("id" = String, path, description = "Name of git repository"),
+    ("id" = String, Path, description = "Name of git repository"),
   ),
   responses(
     (status = 201, description = "Number of entry deleted", body = PgDeleteGeneric),
@@ -116,12 +116,12 @@ async fn delete_git_repository_by_name(
 }
 
 /// Transform a git repository into an image
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   path = "/git_repositories/{name}/build",
   params(
-    ("id" = String, path, description = "Name of git repository"),
-    ("branch" = Option<String>, query, description = "Branch to build default to main branch"),
+    ("id" = String, Path, description = "Name of git repository"),
+    ("branch" = Option<String>, Query, description = "Branch to build default to main branch"),
   ),
   responses(
     (status = 201, description = "Number of entry deleted", body = PgDeleteGeneric),

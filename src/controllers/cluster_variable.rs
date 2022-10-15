@@ -8,13 +8,13 @@ use crate::errors::HttpResponseError;
 use super::utils::gen_nsp_key_by_name;
 
 /// Create cluster variable
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   path = "/clusters/{c_name}/variables",
   request_body = ClusterVariablePartial,
   params(
-    ("c_name" = String, path, description = "name of the cluster"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
+    ("c_name" = String, Path, description = "name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
   ),
   responses(
     (status = 200, description = "Fresh cluster variable", body = ClusterVariableItem),
@@ -44,12 +44,12 @@ async fn create_cluster_variable(
 }
 
 /// List variable of a cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/clusters/{c_name}/variables",
   params(
-    ("c_name" = String, path, description = "name of the cluster"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
+    ("c_name" = String, Path, description = "name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
   ),
   responses(
     (status = 200, description = "List of variable for given cluster", body = [ClusterVariableItem]),
@@ -83,13 +83,13 @@ pub struct ClusterVariablePath {
 }
 
 /// Delete cluster variable by it's name
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   delete,
   path = "/clusters/{c_name}/variables/{v_name}",
   params(
-    ("c_name" = String, path, description = "name of the cluster"),
-    ("v_name" = String, path, description = "name of the variable"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
+    ("c_name" = String, Path, description = "name of the cluster"),
+    ("v_name" = String, Path, description = "name of the variable"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
   ),
   responses(
     (status = 200, description = "Generic delete response", body = PgDeleteGeneric),
@@ -112,13 +112,13 @@ async fn delete_cluster_variable(
 }
 
 /// Get cluster variable by it's name
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/clusters/{c_name}/variables/{v_name}",
   params(
-    ("c_name" = String, path, description = "name of the cluster"),
-    ("v_name" = String, path, description = "name of the variable"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
+    ("c_name" = String, Path, description = "name of the cluster"),
+    ("v_name" = String, Path, description = "name of the variable"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
   ),
   responses(
     (status = 200, description = "Generic delete response", body = PgDeleteGeneric),

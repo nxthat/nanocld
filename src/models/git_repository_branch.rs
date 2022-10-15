@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 use crate::schema::git_repository_branches;
 
@@ -12,7 +12,7 @@ use crate::schema::git_repository_branches;
 )]
 #[diesel(primary_key(key))]
 #[diesel(table_name = git_repository_branches)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct GitRepositoryBranchItem {
   pub(crate) key: String,
   pub(crate) name: String,
@@ -23,7 +23,7 @@ pub struct GitRepositoryBranchItem {
 /// Partial git repository branch
 /// this structure ensure write in database
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct GitRepositoryBranchPartial {
   pub(crate) name: String,
   pub(crate) last_commit_sha: String,

@@ -1,8 +1,8 @@
 use diesel_derive_enum::DbEnum;
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 use crate::schema::git_repositories;
 
@@ -16,7 +16,7 @@ use crate::schema::git_repositories;
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, DbEnum, Clone)]
 #[DieselTypePath = "crate::schema::sql_types::GitRepositorySourceType"]
 #[serde(rename_all = "snake_case")]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub enum GitRepositorySourceType {
   Github,
   Gitlab,
@@ -31,7 +31,7 @@ pub enum GitRepositorySourceType {
 )]
 #[diesel(primary_key(name))]
 #[diesel(table_name = git_repositories)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct GitRepositoryItem {
   pub(crate) name: String,
   pub(crate) url: String,
@@ -42,7 +42,7 @@ pub struct GitRepositoryItem {
 /// Partial Git repository
 /// this structure ensure write entity in database
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct GitRepositoryPartial {
   pub(crate) url: String,
   pub(crate) name: String,

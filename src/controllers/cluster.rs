@@ -18,11 +18,11 @@ use crate::errors::HttpResponseError;
 use super::utils::gen_nsp_key_by_name;
 
 /// List all cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/clusters",
   params(
-    ("namespace" = Option<String>, query, description = "Namespace to add cluster in if empty we use 'default' as value"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'default' as value"),
   ),
   responses(
     (status = 200, description = "List of cluster for given namespace", body = ClusterItem),
@@ -45,12 +45,12 @@ async fn list_cluster(
 }
 
 /// Create new cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   request_body = ClusterPartial,
   path = "/clusters",
   params(
-    ("namespace" = Option<String>, query, description = "Namespace to add cluster in if empty we use 'default' as value"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'default' as value"),
   ),
   responses(
     (status = 201, description = "Fresh created cluster", body = ClusterItem),
@@ -74,12 +74,12 @@ async fn create_cluster(
 }
 
 /// Delete cluster by it's name
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   delete,
   path = "/clusters/{name}",
   params(
-    ("name" = String, path, description = "Name of the cluster"),
-    ("namespace" = Option<String>, query, description = "Namespace to add cluster in if empty we use 'default' as value"),
+    ("name" = String, Path, description = "Name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'default' as value"),
   ),
   responses(
     (status = 201, description = "Fresh created cluster", body = ClusterItem),
@@ -135,12 +135,12 @@ async fn delete_cluster_by_name(
 }
 
 /// Inspect cluster by it's name
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/clusters/{name}/inspect",
   params(
-    ("name" = String, path, description = "Name of the cluster"),
-    ("namespace" = Option<String>, query, description = "Namespace to add cluster in if empty we use 'default' as value"),
+    ("name" = String, Path, description = "Name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'default' as value"),
   ),
   responses(
     (status = 200, description = "Cluster information", body = ClusterItemWithRelation),
@@ -186,12 +186,12 @@ async fn inspect_cluster_by_name(
 }
 
 /// Start all cargo inside cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   path = "/clusters/{name}/start",
   params(
-    ("name" = String, path, description = "Name of the cluster"),
-    ("namespace" = Option<String>, query, description = "Namespace to add cluster in if empty we use 'global' as value"),
+    ("name" = String, Path, description = "Name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'global' as value"),
   ),
   responses(
     (status = 200, description = "Cargos have been started"),
@@ -219,13 +219,13 @@ async fn start_cluster_by_name(
 }
 
 /// join cargo inside a cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   path = "/clusters/{name}/join",
   request_body = ClusterJoinBody,
   params(
-    ("name" = String, path, description = "Name of the cluster"),
-    ("namespace" = Option<String>, query, description = "Namespace to add cluster in if empty we use 'global' as value"),
+    ("name" = String, Path, description = "Name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'global' as value"),
   ),
   responses(
     (status = 200, description = "Cargo joinned successfully"),
@@ -288,11 +288,11 @@ async fn join_cargo_to_cluster(
 }
 
 /// Count cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/clusters/count",
   params(
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cargo is stored"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
   ),
   responses(
     (status = 200, description = "Generic delete", body = PgGenericCount),

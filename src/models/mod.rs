@@ -2,8 +2,8 @@ use r2d2::PooledConnection;
 use diesel::{r2d2::ConnectionManager, PgConnection};
 use serde::{Deserialize, Serialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 mod namespace;
 pub use namespace::*;
@@ -52,13 +52,13 @@ pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 
 /// Generic postgresql delete response
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct GenericDelete {
   pub(crate) count: usize,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct GenericCount {
   pub(crate) count: i64,
 }

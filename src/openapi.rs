@@ -1,17 +1,18 @@
 use ntex::web;
+#[cfg(feature = "dev")]
 use serde_json::json;
-#[cfg(feature = "openapi")]
+#[cfg(feature = "dev")]
 use utoipa::OpenApi;
-#[cfg(feature = "openapi")]
+#[cfg(feature = "dev")]
 use crate::models::*;
-#[cfg(feature = "openapi")]
+#[cfg(feature = "dev")]
 use crate::controllers::*;
-#[cfg(feature = "openapi")]
+#[cfg(feature = "dev")]
 use crate::errors::ApiError;
 
-#[cfg_attr(feature = "openapi", derive(OpenApi))]
-#[cfg_attr(feature = "openapi", openapi(
-  handlers(
+#[cfg_attr(feature = "dev", derive(OpenApi))]
+#[cfg_attr(feature = "dev", openapi(
+  paths(
     // Namespace
     namespace::list_namespace,
     namespace::create_namespace,
@@ -55,38 +56,38 @@ use crate::errors::ApiError;
     cluster_network::count_cluster_network_by_namespace,
   ),
   components(
-    ApiError,
-    PgDeleteGeneric,
-    PgGenericCount,
+    schemas(ApiError),
+    schemas(GenericDelete),
+    schemas(GenericCount),
 
     // Nginx template
-    NginxTemplateItem,
+    schemas(NginxTemplateItem),
 
     // Git repository
-    GitRepositoryItem,
-    GitRepositoryPartial,
-    GitRepositorySourceType,
+    schemas(GitRepositoryItem),
+    schemas(GitRepositoryPartial),
+    schemas(GitRepositorySourceType),
 
     // Namespace
-    NamespaceItem,
-    NamespacePartial,
+    schemas(NamespaceItem),
+    schemas(NamespacePartial),
 
     // Cargo
-    CargoItem,
-    CargoPartial,
+    schemas(CargoItem),
+    schemas(CargoPartial),
 
     // Cluster
-    ClusterItem,
-    ClusterPartial,
-    ClusterJoinBody,
+    schemas(ClusterItem),
+    schemas(ClusterPartial),
+    schemas(ClusterJoinBody),
 
     // Cluster variable
-    ClusterVariableItem,
-    ClusterVariablePartial,
+    schemas(ClusterVariableItem),
+    schemas(ClusterVariablePartial),
 
     // Cluster network
-    ClusterNetworkItem,
-    ClusterNetworkPartial,
+    schemas(ClusterNetworkItem),
+    schemas(ClusterNetworkPartial),
     // ClusterItemWithRelation,
 
     // Todo Docker network struct bindings
@@ -96,36 +97,28 @@ use crate::errors::ApiError;
     // NetworkContainer,
   )
 ))]
-#[cfg(feature = "openapi")]
+#[cfg(feature = "dev")]
 pub struct ApiDoc;
 
-#[cfg(feature = "openapi")]
+#[cfg(feature = "dev")]
 pub fn to_json() -> String {
   ApiDoc::openapi().to_pretty_json().unwrap()
 }
 
+#[cfg(feature = "dev")]
 #[web::get("/explorer/swagger.json")]
 async fn get_api_specs() -> Result<web::HttpResponse, web::Error> {
-  #[cfg(feature = "openapi")]
-  {
-    let api_spec = to_json();
-    return Ok(
-      web::HttpResponse::Ok()
-        .header("Access-Control-Allow", "*")
-        .content_type("application/json")
-        .body(api_spec),
-    );
-  }
-  #[cfg(not(feature = "openapi"))]
-  {
-    Ok(web::HttpResponse::NotImplemented().json(&json!({
-      "msg": "to use this route you must build with openapi feature"
-    })))
-  }
+  let api_spec = to_json();
+  return Ok(
+    web::HttpResponse::Ok()
+      .header("Access-Control-Allow", "*")
+      .content_type("application/json")
+      .body(api_spec),
+  );
 }
 
 pub fn ntex_config(_config: &mut web::ServiceConfig) {
-  #[cfg(feature = "openapi")]
+  #[cfg(feature = "dev")]
   {
     _config.service(get_api_specs);
   }

@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 use crate::schema::clusters;
 
@@ -13,7 +13,7 @@ use super::cluster_variable::ClusterVariableItem;
 /// Partial cluster
 /// this structure ensure write in database
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterPartial {
   pub(crate) name: String,
   pub(crate) proxy_templates: Option<Vec<String>>,
@@ -33,7 +33,7 @@ pub struct ClusterPartial {
 )]
 #[diesel(primary_key(key))]
 #[diesel(table_name = clusters)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterItem {
   pub(crate) key: String,
   pub(crate) name: String,
@@ -43,7 +43,7 @@ pub struct ClusterItem {
 
 /// Cluster item with his relations
 #[derive(Serialize, Deserialize)]
-// #[cfg_attr(feature = "openapi", derive(Component))]
+// #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterItemWithRelation {
   pub(crate) key: String,
   pub(crate) name: String,
@@ -55,7 +55,7 @@ pub struct ClusterItemWithRelation {
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterJoinBody {
   pub(crate) cargo: String,
   pub(crate) network: String,

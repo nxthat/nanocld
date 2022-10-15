@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 use crate::schema::cargoes;
 
@@ -11,7 +11,7 @@ use super::namespace::NamespaceItem;
 /// Cargo partial
 /// this structure ensure write in database
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoPartial {
   pub(crate) name: String,
   pub(crate) image_name: String,
@@ -64,7 +64,7 @@ pub struct CargoPatchItem {
 #[diesel(primary_key(key))]
 #[diesel(table_name = cargoes)]
 #[diesel(belongs_to(NamespaceItem, foreign_key = namespace_name))]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoItem {
   pub(crate) key: String,
   pub(crate) namespace_name: String,
@@ -79,7 +79,7 @@ pub struct CargoItem {
 
 /// Cargo item with his relation
 #[derive(Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoItemWithRelation {
   pub(crate) key: String,
   pub(crate) namespace_name: String,

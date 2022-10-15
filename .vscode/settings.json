@@ -8,4 +8,7 @@
   "editor.formatOnSave": true,
   "files.insertFinalNewline": true,
   "files.trimTrailingWhitespace": true,
+  "rust-analyzer.cargo.features": [
+    "dev"
+  ],
 }

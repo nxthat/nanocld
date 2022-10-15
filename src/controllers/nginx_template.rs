@@ -6,7 +6,7 @@ use crate::models::{Pool, NginxTemplateItem};
 use crate::errors::HttpResponseError;
 
 /// List all nginx template
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/nginx_templates",
   responses(
@@ -23,7 +23,7 @@ async fn list_nginx_template(
 }
 
 /// Create nginx template
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   path = "/nginx_templates",
   responses(

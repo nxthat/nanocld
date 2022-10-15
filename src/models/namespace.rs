@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "openapi")]
-use utoipa::Component;
+#[cfg(feature = "dev")]
+use utoipa::ToSchema;
 
 use crate::schema::namespaces;
 
@@ -12,14 +12,14 @@ use crate::schema::namespaces;
 )]
 #[diesel(primary_key(name))]
 #[diesel(table_name = namespaces)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct NamespaceItem {
   pub(crate) name: String,
 }
 
 /// Partial namespace
 #[derive(Serialize, Deserialize)]
-#[cfg_attr(feature = "openapi", derive(Component))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct NamespacePartial {
   pub(crate) name: String,
 }

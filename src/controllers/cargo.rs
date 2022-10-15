@@ -14,11 +14,11 @@ use crate::errors::HttpResponseError;
 use super::utils::*;
 
 /// List cargo
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/cargoes",
   params(
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cargo are stored"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo are stored"),
   ),
   responses(
     (status = 200, description = "List of cargo", body = [CargoItem]),
@@ -39,12 +39,12 @@ async fn list_cargo(
 }
 
 /// Create new cargo
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   request_body = CargoPartial,
   path = "/cargoes",
   params(
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cargo will be stored"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo will be stored"),
   ),
   responses(
     (status = 201, description = "New cargo", body = CargoItem),
@@ -94,12 +94,12 @@ async fn create_cargo(
 }
 
 /// Delete cargo by it's name
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   delete,
   path = "/cargoes/{name}",
   params(
-    ("name" = String, path, description = "Name of the cargo"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cargo is stored"),
+    ("name" = String, Path, description = "Name of the cargo"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
   ),
   responses(
     (status = 200, description = "Generic delete", body = PgDeleteGeneric),
@@ -130,11 +130,11 @@ async fn delete_cargo_by_name(
 }
 
 /// Count cargo
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/cargoes/count",
   params(
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cargo is stored"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
   ),
   responses(
     (status = 200, description = "Generic delete", body = PgGenericCount),
@@ -154,12 +154,12 @@ async fn count_cargo(
 }
 
 /// Inspect cargo by it's name
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/cargoes/{name}/inspect",
   params(
-    ("name" = String, path, description = "Name of the cargo"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cargo is stored"),
+    ("name" = String, Path, description = "Name of the cargo"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
   ),
   responses(
     (status = 200, description = "Generic delete", body = PgDeleteGeneric),

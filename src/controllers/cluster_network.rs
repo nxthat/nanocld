@@ -9,12 +9,12 @@ use crate::models::{Pool, GenericNspQuery, ClusterNetworkPartial};
 use crate::errors::HttpResponseError;
 
 /// List network for given cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/clusters/{c_name}/networks",
   params(
-    ("c_name" = String, path, description = "name of the cluster"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
+    ("c_name" = String, Path, description = "name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
   ),
   responses(
     (status = 201, description = "List of networks", body = [ClusterNetworkItem]),
@@ -42,13 +42,13 @@ async fn list_cluster_network(
 }
 
 /// Create a network for given cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   post,
   request_body = ClusterNetworkPartial,
   path = "/clusters/{c_name}/networks",
   params(
-    ("c_name" = String, path, description = "name of the cluster"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
+    ("c_name" = String, Path, description = "name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
   ),
   responses(
     (status = 201, description = "List of networks", body = ClusterNetworkItem),
@@ -160,13 +160,13 @@ struct InspectClusterNetworkPath {
 }
 
 /// Inspect network by it's name for given cluster in given namespace
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/clusters/{c_name}/networks/{n_name}/inspect",
   params(
-    ("c_name" = String, path, description = "name of the cluster"),
-    ("n_name" = String, path, description = "name of the network"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
+    ("c_name" = String, Path, description = "name of the cluster"),
+    ("n_name" = String, Path, description = "name of the network"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
   ),
   responses(
     (status = 200, description = "Network item", body = ClusterNetworkItem),
@@ -193,13 +193,13 @@ async fn inspect_cluster_network_by_name(
 }
 
 /// Delete network by it's name for given cluster in given namespace
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   delete,
   path = "/clusters/{c_name}/networks/{n_name}",
   params(
-    ("c_name" = String, path, description = "name of the cluster"),
-    ("n_name" = String, path, description = "name of the network"),
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
+    ("c_name" = String, Path, description = "name of the cluster"),
+    ("n_name" = String, Path, description = "name of the network"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
   ),
   responses(
     (status = 200, description = "Pg delete response", body = PgDeleteGeneric),
@@ -238,11 +238,11 @@ async fn delete_cluster_network_by_name(
 }
 
 /// Count cluster
-#[cfg_attr(feature = "openapi", utoipa::path(
+#[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/networks/count",
   params(
-    ("namespace" = Option<String>, query, description = "Name of the namespace where the cargo is stored"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
   ),
   responses(
     (status = 200, description = "Generic delete", body = PgGenericCount),
