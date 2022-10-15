@@ -34,7 +34,7 @@ url = { version = "2", features = ["serde"] }
 chrono = { version = "0.4.22", features = ["serde"]}
 notify = { version = "5.0.0", features = ["serde"] }
 serde = { version = "1.0.144", features = ["derive"] }
-uuid = { version = "1.1", features = ["serde", "v4"] }
+uuid = { version = "1.2", features = ["serde", "v4"] }
 ntex = { version = "=0.5.27", features = ["rustls", "tokio"] }
 diesel-derive-enum = { version = "2.0.0-rc.0", features = ["postgres"] }
 diesel = { version = "2.0.1", features = ["postgres", "r2d2", "chrono", "uuid"] }
