@@ -30,7 +30,8 @@ where
   Ok(res)
 }
 
-fn deserialize_string_to_i32<'de, D>(deserializer: D) -> Result<i32, D::Error>
+// Not more required for now
+fn _deserialize_string_to_i32<'de, D>(deserializer: D) -> Result<i32, D::Error>
 where
   D: Deserializer<'de>,
 {
