@@ -8,7 +8,7 @@ use bollard::errors::Error as DockerError;
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::config::DaemonConfig;
-use crate::{components, repositories};
+use crate::{controllers, repositories};
 use crate::models::{Pool, NamespacePartial};
 
 use crate::errors::DaemonError;
@@ -54,9 +54,9 @@ pub async fn create_default_network(
 ) -> Result<(), DockerError> {
   let network_name = "nanoclservices0";
   let state =
-    components::utils::get_network_state(network_name, docker_api).await?;
-  if state == components::utils::NetworkState::NotFound {
-    components::utils::create_network(network_name, docker_api).await?;
+    controllers::utils::get_network_state(network_name, docker_api).await?;
+  if state == controllers::utils::NetworkState::NotFound {
+    controllers::utils::create_network(network_name, docker_api).await?;
   }
   Ok(())
 }
@@ -67,11 +67,11 @@ async fn boot_docker_services(
 ) -> Result<(), DaemonError> {
   create_default_network(docker_api).await?;
   // Boot postgresql service to ensure database connection
-  components::postgresql::boot(config, docker_api).await?;
+  controllers::postgresql::boot(config, docker_api).await?;
   // Boot dnsmasq service to manage domain names
-  components::dnsmasq::boot(config, docker_api).await?;
+  controllers::dnsmasq::boot(config, docker_api).await?;
   // Boot nginx service to manage proxy
-  components::nginx::boot(config, docker_api).await?;
+  controllers::nginx::boot(config, docker_api).await?;
 
   // services::ipsec::boot(config, docker_api).await?;
   Ok(())
@@ -97,13 +97,14 @@ pub async fn boot(
 ) -> Result<BootState, DaemonError> {
   log::info!("booting");
   boot_docker_services(config, docker_api).await?;
-  let postgres_ip = components::postgresql::get_postgres_ip(docker_api).await?;
+  let postgres_ip =
+    controllers::postgresql::get_postgres_ip(docker_api).await?;
   log::info!("creating postgresql state pool");
   // Connect to postgresql
   let db_pool =
-    components::postgresql::create_pool(postgres_ip.to_owned()).await;
+    controllers::postgresql::create_pool(postgres_ip.to_owned()).await;
   let pool = web::types::State::new(db_pool.to_owned());
-  let mut conn = components::postgresql::get_pool_conn(&pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(&pool)?;
   // wrap into state to be abble to use our functions
   run_migrations(&mut conn)?;
   // Create default namesapce

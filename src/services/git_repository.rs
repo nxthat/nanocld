@@ -1,170 +1,231 @@
+//! File to handle git repository routes
 use ntex::web;
 use ntex::http::StatusCode;
-use url::Url;
 
 use crate::config::DaemonConfig;
-use crate::repositories;
+use crate::{utils, repositories};
+use crate::models::{
+  Pool, GitRepositoryPartial, GitRepositoryBranchPartial,
+  GitRepositoryBuildQuery,
+};
+
 use crate::errors::HttpResponseError;
-use crate::models::{Pool, GitRepositoryItem, GitRepositoryBranchItem};
 
-use super::{docker, github};
+/// List all git repository
+#[cfg_attr(feature = "dev", utoipa::path(
+  get,
+  path = "/git_repositories",
+  responses(
+      (status = 200, description = "Array of git_repository", body = [GitRepositoryItem]),
+  ),
+))]
+#[web::get("/git_repositories")]
+async fn list_git_repository(
+  pool: web::types::State<Pool>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let items = repositories::git_repository::list(&pool).await?;
 
-pub async fn build(
-  item: GitRepositoryItem,
-  branch_name: &str,
-  config: &web::types::State<DaemonConfig>,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
+  Ok(web::HttpResponse::Ok().json(&items))
+}
+
+/// Create new git repository
+#[cfg_attr(feature = "dev", utoipa::path(
+  post,
+  path = "/git_repositories",
+  request_body = GitRepositoryPartial,
+  responses(
+    (status = 201, description = "Fresh created git_repository", body = GitRepositoryItem),
+    (status = 400, description = "Generic database error"),
+    (status = 404, description = "Namespace name not valid"),
+    (status = 422, description = "The provided payload is not valid"),
+  ),
+))]
+#[web::post("/git_repositories")]
+async fn create_git_repository(
+  pool: web::types::State<Pool>,
+  web::types::Json(payload): web::types::Json<GitRepositoryPartial>,
+  config: web::types::State<DaemonConfig>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let github_api =
-    github::GithubApi::new(&config.github_user, &config.github_token);
-  // we find the repository by it's unique name
-  let mut url = Url::parse(&item.url).map_err(|err| HttpResponseError {
-    msg: format!("Unable to parse {} url {} {}", &item.name, &item.url, err),
-    status: StatusCode::BAD_REQUEST,
+    utils::github::GithubApi::new(&config.github_user, &config.github_token);
+  let repo =
+    github_api
+      .sync_repo(&payload)
+      .await
+      .map_err(|err| HttpResponseError {
+        msg: format!("{:?}", err),
+        status: StatusCode::BAD_REQUEST,
+      })?;
+  let branches = github_api.list_branches(&payload).await.map_err(|err| {
+    HttpResponseError {
+      msg: format!("{:?}", err),
+      status: StatusCode::BAD_REQUEST,
+    }
   })?;
 
-  url
-    .set_username(&github_api.credential.username)
-    .map_err(|_| HttpResponseError {
-      msg: String::from("Unable to set username"),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
-  url
-    .set_password(Some(&github_api.credential.password))
-    .map_err(|_| HttpResponseError {
-      msg: String::from("Unable to set password"),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
+  let item =
+    repositories::git_repository::create(payload, repo.default_branch, &pool)
+      .await?;
 
-  let live_branch = github_api
-    .inspect_branch(&item, branch_name)
-    .await
-    .map_err(|err| HttpResponseError {
-      msg: format!("{:?}", err),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
+  let branches = branches
+    .into_iter()
+    .map(|branch| GitRepositoryBranchPartial {
+      name: branch.name,
+      last_commit_sha: branch.commit.sha,
+      repository_name: item.name.clone(),
+    })
+    .collect::<Vec<GitRepositoryBranchPartial>>();
 
-  let gen_key = item.name.to_owned() + "-" + &item.default_branch;
-  let stored_branch =
-    repositories::git_repository_branch::get_by_key(gen_key, pool).await?;
-  let image_name = item.name.to_owned() + ":" + &live_branch.name;
-  let image_exist = docker_api.inspect_image(&image_name).await;
-  let new_branch = GitRepositoryBranchItem {
-    last_commit_sha: live_branch.commit.sha,
-    ..stored_branch
+  repositories::git_repository_branch::create_many(branches, &pool).await?;
+
+  Ok(web::HttpResponse::Created().json(&item))
+}
+
+/// Delete git repository by it's name
+#[cfg_attr(feature = "dev", utoipa::path(
+  delete,
+  path = "/git_repositories/{name}",
+  params(
+    ("name" = String, Path, description = "Name of git repository"),
+  ),
+  responses(
+    (status = 201, description = "Number of entry deleted", body = GenericDelete),
+    (status = 400, description = "Generic database error"),
+    (status = 404, description = "Namespace name not valid"),
+  ),
+))]
+#[web::delete("/git_repositories/{name}")]
+async fn delete_git_repository_by_name(
+  pool: web::types::State<Pool>,
+  req_path: web::types::Path<String>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let id = req_path.into_inner();
+  let repository =
+    repositories::git_repository::find_by_name(id, &pool).await?;
+  repositories::git_repository_branch::delete_by_repository_id(
+    repository.name.to_owned(),
+    &pool,
+  )
+  .await?;
+  let res = repositories::git_repository::delete_by_name(
+    repository.name.to_string(),
+    &pool,
+  )
+  .await?;
+  Ok(web::HttpResponse::Ok().json(&res))
+}
+
+/// Transform a git repository into an image
+#[cfg_attr(feature = "dev", utoipa::path(
+  post,
+  path = "/git_repositories/{name}/build",
+  params(
+    ("name" = String, Path, description = "Name of git repository"),
+    ("branch" = Option<String>, Query, description = "Branch to build default to main branch"),
+  ),
+  responses(
+    (status = 201, description = "Number of entry deleted", body = GenericDelete),
+    (status = 400, description = "Generic database error"),
+    (status = 404, description = "Namespace name not valid"),
+  ),
+))]
+#[web::post("/git_repositories/{name}/build")]
+async fn build_git_repository_by_name(
+  name: web::types::Path<String>,
+  web::types::Query(qs): web::types::Query<GitRepositoryBuildQuery>,
+  pool: web::types::State<Pool>,
+  docker_api: web::types::State<bollard::Docker>,
+  config: web::types::State<DaemonConfig>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let name = name.into_inner();
+  let git_repo =
+    repositories::git_repository::find_by_name(name, &pool).await?;
+
+  let branch_name = match qs.branch {
+    None => git_repo.default_branch.to_owned(),
+    Some(branch) => branch,
   };
-  // We update stored_branch if it's not the lasted stored commit
-  if new_branch.last_commit_sha == stored_branch.last_commit_sha {
-    repositories::git_repository_branch::update_item(
-      new_branch.to_owned(),
-      pool,
-    )
-    .await?;
+
+  utils::git_repository::build(
+    git_repo,
+    &branch_name,
+    &config,
+    &docker_api,
+    &pool,
+  )
+  .await
+}
+
+/// Configure ntex to bind our routes
+pub fn ntex_config(config: &mut web::ServiceConfig) {
+  config.service(list_git_repository);
+  config.service(create_git_repository);
+  config.service(build_git_repository_by_name);
+  config.service(delete_git_repository_by_name);
+}
+
+#[cfg(test)]
+mod test_namespace_git_repository {
+  use crate::models::GitRepositoryPartial;
+  use crate::utils::test::*;
+
+  use super::ntex_config;
+
+  // Test to list git repositories
+  async fn test_list(srv: &TestServer) -> TestReturn {
+    let resp = srv.get("/git_repositories").send().await?;
+
+    assert!(resp.status().is_success());
+    Ok(())
   }
-  let item_with_password = GitRepositoryItem {
-    url: url.to_string(),
-    ..item.to_owned()
-  };
-  match image_exist {
-    // Image not exist so we build it
-    Err(_) => {
-      log::info!("it's first build");
-      let rx_body = docker::build_git_repository(
-        image_name.to_owned(),
-        item_with_password.to_owned(),
-        new_branch.to_owned(),
-        docker_api.to_owned(),
-      )
-      .await?;
-      Ok(
-        web::HttpResponse::Ok()
-          .content_type("nanocl/streaming-v1")
-          .streaming(rx_body),
-      )
-    }
-    Ok(res) => {
-      log::info!("we found an image");
-      let image_id = res
-        .id
-        .ok_or_else(|| HttpResponseError {
-          msg: String::from("Image is found but we cannot read his id"),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        })?
-        .replace("sha256:", "");
-      let config = res.config.ok_or_else(|| HttpResponseError {
-        msg: String::from("Image is found but we cannot read his config"),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })?;
-      let labels = config.labels.ok_or_else(|| HttpResponseError {
-        msg: String::from("Image is found but we cannot read his labels"),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })?;
-      let commit = labels.get("commit").ok_or_else(|| HttpResponseError {
-        msg: String::from("Image is found but we cannot get his commit"),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })?;
-      // if image have the latest commit we are up to date.
-      // ps i love pointers
-      if *commit == new_branch.last_commit_sha {
-        log::info!("seems we are up to date!");
-        return Ok(web::HttpResponse::NotModified().into());
-      }
-      let backup_image_name = image_name.to_owned() + "-backup";
-      let backup_image_exist =
-        docker_api.inspect_image(&backup_image_name).await;
-      match backup_image_exist {
-        // No backup image so we tag current one has backup
-        Err(_) => {
-          log::info!("tagging existing image has backup {}", &image_id);
-          let tag_options = Some(bollard::image::TagImageOptions {
-            tag: new_branch.name.to_owned() + "-backup",
-            repo: item.name.to_owned(),
-          });
-          docker_api.tag_image(&image_id, tag_options).await.map_err(
-            |err| HttpResponseError {
-              msg: format!("tag error {:?}", err),
-              status: StatusCode::INTERNAL_SERVER_ERROR,
-            },
-          )?;
-        }
-        Ok(_) => {
-          // if it exist we delete the older one
-          log::info!("a backup exist deleting it");
-          docker_api
-            .remove_image(&backup_image_name, None, None)
-            .await
-            .map_err(|err| HttpResponseError {
-              msg: format!("unable to remove image {:?}", err),
-              status: StatusCode::INTERNAL_SERVER_ERROR,
-            })?;
-          log::info!("tagging existing image has backup");
-          let tag_options = Some(bollard::image::TagImageOptions {
-            tag: new_branch.name.to_owned() + "-backup",
-            repo: item.name.to_owned(),
-          });
-          docker_api.tag_image(&image_id, tag_options).await.map_err(
-            |err| HttpResponseError {
-              msg: format!("Unable to tag image {:?}", err),
-              status: StatusCode::INTERNAL_SERVER_ERROR,
-            },
-          )?;
-        }
-      }
-      // unless we build the image :O
-      let rx_body = docker::build_git_repository(
-        image_name.to_owned(),
-        item_with_password,
-        new_branch.to_owned(),
-        docker_api.to_owned(),
-      )
-      .await?;
 
-      Ok(
-        web::HttpResponse::Ok()
-          .content_type("nanocl/streaming-v1")
-          .streaming(rx_body),
-      )
-    }
+  // test to create git repository from opensource github
+  // and delete it to clean database
+  async fn test_create_and_delete_by_name(srv: &TestServer) -> TestReturn {
+    let new_repository = GitRepositoryPartial {
+      name: String::from("express-test-deploy"),
+      url: String::from("https://github.com/leon3s/express-test-deploy"),
+    };
+    let res = srv
+      .post("/git_repositories")
+      .send_json(&new_repository)
+      .await?;
+    assert!(res.status().is_success());
+
+    let res = srv
+      .delete("/git_repositories/express-test-deploy")
+      .send()
+      .await?;
+    assert!(res.status().is_success());
+    Ok(())
+  }
+
+  // test to create git repository from opensource github
+  // and delete it to clean database
+  async fn test_create_and_build_and_delete_by_name(
+    srv: &TestServer,
+  ) -> TestReturn {
+    let new_repository = GitRepositoryPartial {
+      name: String::from("express-test"),
+      url: String::from("https://github.com/leon3s/express-test-deploy"),
+    };
+    let res = srv
+      .post("/git_repositories")
+      .send_json(&new_repository)
+      .await?;
+    assert!(res.status().is_success());
+    let res = srv.delete("/git_repositories/express-test").send().await?;
+    assert!(res.status().is_success());
+    Ok(())
+  }
+
+  #[ntex::test]
+  async fn main() -> TestReturn {
+    let _srv = generate_server(ntex_config).await;
+
+    // test_list(&srv).await?;
+    // test_create_and_delete_by_name(&srv).await?;
+    // test_create_and_build_and_delete_by_name(&srv).await?;
+    Ok(())
   }
 }

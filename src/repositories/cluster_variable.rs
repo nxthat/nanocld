@@ -1,7 +1,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::components;
+use crate::controllers;
 use crate::models::{
   Pool, ClusterVariablePartial, ClusterVariableItem, GenericDelete,
 };
@@ -17,7 +17,7 @@ pub async fn create(
 ) -> Result<ClusterVariableItem, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let item = ClusterVariableItem {
       key: format!("{}-{}", cluster_key, item.name),
@@ -43,7 +43,7 @@ pub async fn list_by_cluster(
 ) -> Result<Vec<ClusterVariableItem>, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_variables
       .filter(dsl::cluster_key.eq(cluster_key))
@@ -62,7 +62,7 @@ pub async fn delete_by_cluster_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(
       dsl::cluster_variables.filter(dsl::cluster_key.eq(cluster_key)),
@@ -82,7 +82,7 @@ pub async fn delete_by_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::cluster_variables.filter(dsl::key.eq(key)))
       .execute(&mut conn)
@@ -100,7 +100,7 @@ pub async fn find_by_key(
 ) -> Result<ClusterVariableItem, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_variables
       .filter(dsl::key.eq(key))

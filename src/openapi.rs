@@ -6,7 +6,7 @@ use utoipa::OpenApi;
 #[cfg(feature = "dev")]
 use crate::models::*;
 #[cfg(feature = "dev")]
-use crate::controllers::*;
+use crate::services::*;
 #[cfg(feature = "dev")]
 use crate::errors::ApiError;
 

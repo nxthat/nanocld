@@ -2,10 +2,10 @@ use ntex::web;
 use futures::{stream, StreamExt};
 
 use crate::config::DaemonConfig;
-use crate::{services, repositories};
+use crate::{utils, repositories};
 use crate::models::{Pool, GenericNspQuery, ClusterCargoPatchPath};
 use crate::errors::HttpResponseError;
-use crate::services::cluster::JoinCargoOptions;
+use crate::utils::cluster::JoinCargoOptions;
 
 use super::utils::gen_nsp_key_by_name;
 
@@ -37,7 +37,7 @@ async fn update_cluster_cargo_by_name(
   let cargo =
     repositories::cargo::find_by_key(cargo_key.to_owned(), &pool).await?;
   let cnt_to_remove =
-    services::cluster::list_containers(&cluster_key, &cargo_key, &docker_api)
+    utils::cluster::list_containers(&cluster_key, &cargo_key, &docker_api)
       .await?;
 
   let opts = JoinCargoOptions {
@@ -47,10 +47,9 @@ async fn update_cluster_cargo_by_name(
     is_creating_relation: false,
   };
 
-  services::cluster::join_cargo(&opts, &docker_api, &pool).await?;
+  utils::cluster::join_cargo(&opts, &docker_api, &pool).await?;
 
-  services::cluster::start(&cluster, &daemon_config, &pool, &docker_api)
-    .await?;
+  utils::cluster::start(&cluster, &daemon_config, &pool, &docker_api).await?;
 
   let mut stream = stream::iter(cnt_to_remove);
 

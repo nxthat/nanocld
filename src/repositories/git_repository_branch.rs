@@ -1,7 +1,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::components;
+use crate::controllers;
 use crate::models::{
   Pool, GitRepositoryBranchPartial, GitRepositoryBranchItem, GenericDelete,
 };
@@ -33,17 +33,15 @@ pub async fn create_many(
 ) -> Result<Vec<GitRepositoryBranchItem>, HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let branches = items
       .into_iter()
-      .map(|item| {
-        GitRepositoryBranchItem {
-          key: item.repository_name.to_owned() + "-" + &item.name,
-          name: item.name,
-          last_commit_sha: item.last_commit_sha,
-          repository_name: item.repository_name,
-        }
+      .map(|item| GitRepositoryBranchItem {
+        key: item.repository_name.to_owned() + "-" + &item.name,
+        name: item.name,
+        last_commit_sha: item.last_commit_sha,
+        repository_name: item.repository_name,
       })
       .collect::<Vec<GitRepositoryBranchItem>>();
     diesel::insert_into(dsl::git_repository_branches)
@@ -78,7 +76,7 @@ pub async fn delete_by_repository_id(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::git_repository_branches)
       .filter(dsl::repository_name.eq(repository_name))
@@ -98,7 +96,7 @@ pub async fn get_by_key(
 ) -> Result<GitRepositoryBranchItem, HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::git_repository_branches
       .filter(dsl::key.eq(key))
@@ -118,7 +116,7 @@ pub async fn update_item(
 ) -> Result<(), HttpResponseError> {
   use crate::schema::git_repository_branches::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::update(dsl::git_repository_branches.filter(dsl::key.eq(item.key)))
       .set(dsl::last_commit_sha.eq(item.last_commit_sha))

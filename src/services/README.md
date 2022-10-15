@@ -1,9 +1,9 @@
 # Services
 
-Services are function helpers relative to an external api or to wrap
-repositories with other actions
+Services are set of functions to handle http request
 
-- dnsmasq handle dns queries
-- nginx proxy http request
-- postgresql for persistant data
-- github for github api call
+We will have function like
+- get_by_id
+- patch_by_id
+...
+and others

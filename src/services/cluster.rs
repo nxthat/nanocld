@@ -1,431 +1,456 @@
+//! File to handle cluster routes
 use ntex::web;
+use futures::stream;
+use futures::StreamExt;
 use ntex::http::StatusCode;
-use std::collections::HashMap;
-use std::path::Path;
-use serde::{Serialize, Deserialize};
-use futures::{StreamExt, stream};
-use futures::stream::FuturesUnordered;
+use serde::{Deserialize, Serialize};
 
 use crate::config::DaemonConfig;
-use crate::utils::render_template;
-use crate::{services, components, repositories};
+use crate::{utils, repositories};
+use crate::utils::cluster::JoinCargoOptions;
 use crate::models::{
-  Pool, ClusterItem, CargoItem, ClusterNetworkItem, ClusterCargoPartial,
-  CargoEnvItem, NginxTemplateModes, ClusterCargoItem,
+  Pool, GenericNspQuery, ClusterJoinBody, ClusterPartial,
+  ClusterItemWithRelation, ContainerFilterQuery,
 };
 
-use crate::errors::{HttpResponseError, IntoHttpResponseError};
+use crate::errors::HttpResponseError;
 
-use super::cargo::CreateCargoContainerOpts;
+use super::utils::gen_nsp_key_by_name;
 
-#[derive(Debug)]
-pub struct JoinCargoOptions {
-  pub(crate) cluster: ClusterItem,
-  pub(crate) cargo: CargoItem,
-  pub(crate) network: ClusterNetworkItem,
-  pub(crate) is_creating_relation: bool,
+/// List all cluster
+#[cfg_attr(feature = "dev", utoipa::path(
+  get,
+  path = "/clusters",
+  params(
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'default' as value"),
+  ),
+  responses(
+    (status = 200, description = "List of cluster for given namespace", body = ClusterItem),
+    (status = 400, description = "Generic database error"),
+    (status = 404, description = "Namespace name not valid"),
+  ),
+))]
+#[web::get("/clusters")]
+async fn list_cluster(
+  pool: web::types::State<Pool>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let nsp = match qs.namespace {
+    None => String::from("global"),
+    Some(namespace) => namespace,
+  };
+
+  let items = repositories::cluster::find_by_namespace(nsp, &pool).await?;
+  Ok(web::HttpResponse::Ok().json(&items))
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct NetworkTemplateData {
-  pub(crate) gateway: String,
+/// Create new cluster
+#[cfg_attr(feature = "dev", utoipa::path(
+  post,
+  request_body = ClusterPartial,
+  path = "/clusters",
+  params(
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'default' as value"),
+  ),
+  responses(
+    (status = 201, description = "Fresh created cluster", body = ClusterItem),
+    (status = 400, description = "Generic database error"),
+    (status = 404, description = "Namespace name not valid"),
+  ),
+))]
+#[web::post("/clusters")]
+async fn create_cluster(
+  pool: web::types::State<Pool>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+  web::types::Json(json): web::types::Json<ClusterPartial>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let nsp = match qs.namespace {
+    None => String::from("global"),
+    Some(namespace) => namespace,
+  };
+  let res =
+    repositories::cluster::create_for_namespace(nsp, json, &pool).await?;
+  Ok(web::HttpResponse::Created().json(&res))
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TemplateData {
-  vars: Option<HashMap<String, String>>,
-  cargoes: HashMap<String, CargoTemplateData>,
-  networks: Option<HashMap<String, NetworkTemplateData>>,
+/// Delete cluster by it's name
+#[cfg_attr(feature = "dev", utoipa::path(
+  delete,
+  path = "/clusters/{name}",
+  params(
+    ("name" = String, Path, description = "Name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'default' as value"),
+  ),
+  responses(
+    (status = 201, description = "Fresh created cluster", body = ClusterItem),
+    (status = 400, description = "Generic database error", body = ApiError),
+    (status = 404, description = "Namespace name not valid", body = ApiError),
+  ),
+))]
+#[web::delete("clusters/{name}")]
+async fn delete_cluster_by_name(
+  pool: web::types::State<Pool>,
+  docker_api: web::types::State<bollard::Docker>,
+  name: web::types::Path<String>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let name = name.into_inner();
+  let nsp = match qs.namespace {
+    None => String::from("global"),
+    Some(namespace) => namespace,
+  };
+  let gen_key = nsp.to_owned() + "-" + &name;
+
+  let item =
+    repositories::cluster::find_by_key(gen_key.to_owned(), &pool).await?;
+
+  repositories::cluster_variable::delete_by_cluster_key(
+    gen_key.to_owned(),
+    &pool,
+  )
+  .await?;
+  let qs = ContainerFilterQuery {
+    cluster: Some(name),
+    namespace: Some(nsp),
+    cargo: None,
+  };
+
+  repositories::cluster_cargo::delete_by_key(gen_key.to_owned(), &pool).await?;
+  let containers = utils::container::list_container(qs, &docker_api).await?;
+  let mut stream = stream::iter(containers);
+  while let Some(container) = stream.next().await {
+    let options = bollard::container::RemoveContainerOptions {
+      force: true,
+      ..Default::default()
+    };
+    docker_api
+      .remove_container(&container.id.unwrap(), Some(options))
+      .await?;
+  }
+
+  utils::cluster::delete_networks(item, &docker_api, &pool).await?;
+  log::debug!("deleting cluster cargo");
+  let res = repositories::cluster::delete_by_key(gen_key, &pool).await?;
+  Ok(web::HttpResponse::Ok().json(&res))
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct CargoTemplateData {
-  name: String,
-  target_ip: String,
-  dns_entry: Option<String>,
-  target_ips: Vec<String>,
-}
-
-pub async fn delete_networks(
-  cluster: ClusterItem,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
-) -> Result<(), HttpResponseError> {
+/// Inspect cluster by it's name
+#[cfg_attr(feature = "dev", utoipa::path(
+  get,
+  path = "/clusters/{name}/inspect",
+  params(
+    ("name" = String, Path, description = "Name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'default' as value"),
+  ),
+  responses(
+    (status = 200, description = "Cluster information", body = ClusterItemWithRelation),
+    (status = 400, description = "Generic database error", body = ApiError),
+    (status = 404, description = "id name or namespace name not valid", body = ApiError),
+  ),
+))]
+#[web::get("/clusters/{name}/inspect")]
+async fn inspect_cluster_by_name(
+  pool: web::types::State<Pool>,
+  name: web::types::Path<String>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let name = name.into_inner();
+  let nsp = match qs.namespace {
+    None => String::from("global"),
+    Some(namespace) => namespace,
+  };
+  let gen_key = nsp.to_owned() + "-" + &name;
+  let item =
+    repositories::cluster::find_by_key(gen_key.to_owned(), &pool).await?;
+  let proxy_templates = item.proxy_templates.to_owned();
   let networks =
-    repositories::cluster_network::list_for_cluster(cluster, pool).await?;
+    repositories::cluster_network::list_for_cluster(item, &pool).await?;
 
-  networks
-    .into_iter()
-    .map(|network| async move {
-      let _ = docker_api
-        .remove_network(&network.docker_network_id)
-        .await
-        .map_err(|err| HttpResponseError {
-          msg: format!("unable to remove network {:#?}", err),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        });
-      repositories::cluster_network::delete_by_key(network.key, pool).await?;
-      Ok::<_, HttpResponseError>(())
-    })
-    .collect::<FuturesUnordered<_>>()
-    .collect::<Vec<_>>()
-    .await
-    .into_iter()
-    .collect::<Result<Vec<_>, HttpResponseError>>()?;
+  let cargoes =
+    repositories::cluster::list_cargo(gen_key.to_owned(), &pool).await?;
 
-  Ok(())
+  let variables =
+    repositories::cluster::list_variable(gen_key.to_owned(), &pool).await?;
+
+  let res = ClusterItemWithRelation {
+    name,
+    key: gen_key,
+    namespace: nsp,
+    proxy_templates,
+    variables,
+    // cargoes: Some(cargoes),
+    networks: Some(networks),
+  };
+
+  Ok(web::HttpResponse::Ok().json(&res))
 }
 
-pub async fn list_containers(
-  cluster_key: &str,
-  cargo_key: &str,
-  docker_api: &web::types::State<bollard::Docker>,
-) -> Result<Vec<bollard::models::ContainerSummary>, HttpResponseError> {
-  let target_cluster = &format!("cluster={}", &cluster_key);
-  let target_cargo = &format!("cargo={}", &cargo_key);
-  let mut filters = HashMap::new();
-  filters.insert(
-    "label",
-    vec![target_cluster.as_str(), target_cargo.as_str()],
-  );
-  let options = Some(bollard::container::ListContainersOptions {
-    all: true,
-    filters,
-    ..Default::default()
-  });
-  let containers = docker_api.list_containers(options).await?;
-
-  Ok(containers)
+/// Start all cargo inside cluster
+#[cfg_attr(feature = "dev", utoipa::path(
+  post,
+  path = "/clusters/{name}/start",
+  params(
+    ("name" = String, Path, description = "Name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'global' as value"),
+  ),
+  responses(
+    (status = 200, description = "Cargos have been started"),
+    (status = 400, description = "Generic database error", body = ApiError),
+    (status = 404, description = "Cluster name of namespace invalid", body = ApiError),
+  ),
+))]
+#[web::post("/clusters/{name}/start")]
+async fn start_cluster_by_name(
+  name: web::types::Path<String>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+  pool: web::types::State<Pool>,
+  config: web::types::State<DaemonConfig>,
+  docker_api: web::types::State<bollard::Docker>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let name = name.into_inner();
+  let nsp = match qs.namespace {
+    None => String::from("global"),
+    Some(namespace) => namespace,
+  };
+  let gen_key = nsp.to_owned() + "-" + &name;
+  let cluster = repositories::cluster::find_by_key(gen_key, &pool).await?;
+  utils::cluster::start(&cluster, &config, &pool, &docker_api).await?;
+  Ok(web::HttpResponse::Ok().into())
 }
 
-async fn start_containers(
-  containers: Vec<bollard::models::ContainerSummary>,
-  network_key: &str,
-  docker_api: &web::types::State<bollard::Docker>,
-) -> Result<Vec<String>, HttpResponseError> {
-  log::info!("Starting cargoes");
-  let target_ips = containers
-    .into_iter()
-    .map(|container| async move {
-      let container_id = container.id.unwrap_or_default();
-      log::info!("starting container {}", &container_id);
-      let state = container.state.unwrap_or_default();
-      if state != "running" {
-        docker_api
-          .start_container(
-            &container_id,
-            None::<bollard::container::StartContainerOptions<String>>,
-          )
-          .await?;
-      }
-      log::info!("successfully started container {}", &container_id);
-      let container = docker_api.inspect_container(&container_id, None).await?;
-      let networks = container
-        .network_settings
-        .ok_or(HttpResponseError {
-          msg: format!(
-            "unable to get network settings for container {:#?}",
-            &container_id,
-          ),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        })?
-        .networks
-        .ok_or(HttpResponseError {
-          msg: format!(
-            "unable to get networks for container {:#?}",
-            &container_id
-          ),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        })?;
-      let network = networks.get(network_key).ok_or(HttpResponseError {
-        msg: format!(
-          "unable to get network {} for container {}",
-          &network_key, &container_id
-        ),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })?;
-      let ip_address =
-        network.ip_address.as_ref().ok_or(HttpResponseError {
-          msg: format!(
-            "unable to get ip_address of container {}",
-            &container_id
-          ),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        })?;
-      Ok::<String, HttpResponseError>(ip_address.into())
-    })
-    .collect::<FuturesUnordered<_>>()
-    .collect::<Vec<_>>()
-    .await
-    .into_iter()
-    .collect::<Result<Vec<String>, HttpResponseError>>()?;
-  log::info!("all cargo started");
-  Ok(target_ips)
-}
+/// join cargo inside a cluster
+#[cfg_attr(feature = "dev", utoipa::path(
+  post,
+  path = "/clusters/{name}/join",
+  request_body = ClusterJoinBody,
+  params(
+    ("name" = String, Path, description = "Name of the cluster"),
+    ("namespace" = Option<String>, Query, description = "Namespace to add cluster in if empty we use 'global' as value"),
+  ),
+  responses(
+    (status = 200, description = "Cargo joinned successfully"),
+    (status = 400, description = "Generic database error", body = ApiError),
+    (status = 404, description = "Cluster name of namespace invalid", body = ApiError),
+  ),
+))]
+#[web::post("/clusters/{name}/join")]
+async fn join_cargo_to_cluster(
+  pool: web::types::State<Pool>,
+  docker_api: web::types::State<bollard::Docker>,
+  name: web::types::Path<String>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+  web::types::Json(payload): web::types::Json<ClusterJoinBody>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let name = name.into_inner();
+  let nsp = match qs.namespace {
+    None => String::from("global"),
+    Some(namespace) => namespace,
+  };
+  let cluster_key = nsp.to_owned() + "-" + &name;
+  let cargo_key = nsp.to_owned() + "-" + &payload.cargo;
 
-async fn start_cluster_cargoes(
-  cluster_cargoes: Vec<ClusterCargoItem>,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
-) -> Result<Vec<CargoTemplateData>, HttpResponseError> {
-  cluster_cargoes
-    .into_iter()
-    .map(|cluster_cargo| async move {
-      let cargo_key = &cluster_cargo.cargo_key;
-      let network_key = &cluster_cargo.network_key;
-      let containers = list_containers(
-        &cluster_cargo.cluster_key,
-        &cluster_cargo.cargo_key,
-        docker_api,
-      )
-      .await?;
-
-      let cargo =
-        repositories::cargo::find_by_key(cargo_key.to_owned(), pool).await?;
-
-      let mut target_ips =
-        start_containers(containers, network_key, docker_api).await?;
-      target_ips.reverse();
-      let target_ip = match target_ips.get(0) {
-        None => String::new(),
-        Some(target_ip) => target_ip.to_owned(),
-      };
-      let cargo_template_data = CargoTemplateData {
-        name: cargo.name,
-        dns_entry: cargo.dns_entry,
-        target_ip,
-        target_ips,
-      };
-      Ok::<CargoTemplateData, HttpResponseError>(cargo_template_data)
-    })
-    .collect::<FuturesUnordered<_>>()
-    .collect::<Vec<_>>()
-    .await
-    .into_iter()
-    .collect::<Result<Vec<CargoTemplateData>, HttpResponseError>>()
-}
-
-pub async fn start(
-  cluster: &ClusterItem,
-  config: &DaemonConfig,
-  pool: &web::types::State<Pool>,
-  docker_api: &web::types::State<bollard::Docker>,
-) -> Result<(), HttpResponseError> {
-  let cluster_cargoes = repositories::cluster_cargo::get_by_cluster_key(
-    cluster.key.to_owned(),
-    pool,
+  if (repositories::cluster_cargo::get_by_key(
+    format!("{}-{}", &cluster_key, &cargo_key),
+    &pool,
   )
-  .await?;
-
-  let cargoes = start_cluster_cargoes(cluster_cargoes, docker_api, pool)
-    .await?
-    .into_iter()
-    .fold(HashMap::new(), |mut acc, item| {
-      acc.insert(item.name.to_owned(), item);
-      acc
+  .await)
+    .is_ok()
+  {
+    return Err(HttpResponseError {
+      msg: format!(
+        "Unable to join cargo {} to cluster {} in network {}, already exists",
+        &payload.cargo, &name, &payload.network
+      ),
+      status: StatusCode::CONFLICT,
     });
+  }
 
-  if !cluster.proxy_templates.is_empty() {
-    let cluster_vars = repositories::cluster_variable::list_by_cluster(
-      cluster.key.to_owned(),
-      pool,
-    )
+  let cluster = repositories::cluster::find_by_key(cluster_key, &pool).await?;
+  let cargo = repositories::cargo::find_by_key(cargo_key, &pool).await?;
+  let network_key = cluster.key.to_owned() + "-" + &payload.network;
+  let network =
+    repositories::cluster_network::find_by_key(network_key, &pool).await?;
+
+  log::debug!(
+    "joining cargo {:?} into cluster {:?}",
+    cargo.key,
+    cluster.key
+  );
+  let join_cargo_opts = JoinCargoOptions {
+    cluster,
+    cargo,
+    network,
+    is_creating_relation: true,
+  };
+  utils::cluster::join_cargo(&join_cargo_opts, &docker_api, &pool).await?;
+  log::debug!("join success.");
+  Ok(web::HttpResponse::Ok().into())
+}
+
+/// Count cluster
+#[cfg_attr(feature = "dev", utoipa::path(
+  get,
+  path = "/clusters/count",
+  params(
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
+  ),
+  responses(
+    (status = 200, description = "Generic delete", body = GenericCount),
+    (status = 400, description = "Generic database error", body = ApiError),
+    (status = 404, description = "Namespace name not valid", body = ApiError),
+  ),
+))]
+#[web::get("/clusters/count")]
+async fn count_cluster(
+  pool: web::types::State<Pool>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let nsp = match qs.namespace {
+    None => String::from("global"),
+    Some(nsp) => nsp,
+  };
+  let res = repositories::cluster::count(nsp, &pool).await?;
+
+  Ok(web::HttpResponse::Ok().json(&res))
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct ClusterTemplatePartial {
+  name: String,
+}
+
+/// Add nginx template to cluster
+#[web::post("/clusters/{name}/nginx_templates")]
+async fn add_cluster_template(
+  name: web::types::Path<String>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+  web::types::Json(payload): web::types::Json<ClusterTemplatePartial>,
+  pool: web::types::State<Pool>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let gen_id = gen_nsp_key_by_name(&qs.namespace, &name.into_inner());
+  repositories::nginx_template::get_by_name(payload.name.to_owned(), &pool)
     .await?;
-    let vars =
-      services::cluster_variable::cluster_vars_to_hashmap(cluster_vars);
 
-    let networks =
-      repositories::cluster_network::list_for_cluster(cluster.to_owned(), pool)
-        .await?
-        .into_iter()
-        .fold(HashMap::new(), |mut acc, network| {
-          acc.insert(
-            network.name.to_owned(),
-            NetworkTemplateData {
-              gateway: network.default_gateway,
-            },
-          );
-          acc
-        });
+  let cluster =
+    repositories::cluster::find_by_key(gen_id.to_owned(), &pool).await?;
 
-    let mut templates = stream::iter(&cluster.proxy_templates);
+  let mut proxy_templates = cluster.proxy_templates.to_owned();
 
-    while let Some(template_name) = templates.next().await {
-      let template = repositories::nginx_template::get_by_name(
-        template_name.to_owned(),
-        pool,
-      )
-      .await?;
-      let file_path = Path::new(&config.state_dir);
-      let file_path = match template.mode {
-        NginxTemplateModes::Http => file_path.join("nginx/sites-enabled"),
-        NginxTemplateModes::Stream => file_path.join("nginx/streams-enabled"),
-      };
-      let file_name = format!("{}.{}", &cluster.key, &template.name);
-      let file_path = file_path.join(format!("{file_name}.conf"));
-      let template_data = TemplateData {
-        vars: Some(vars.to_owned()),
-        networks: Some(networks.to_owned()),
-        cargoes: cargoes.to_owned(),
-      };
+  proxy_templates.push(payload.name);
 
-      let config_file = render_template(template.content, &template_data)?;
-      std::fs::write(&file_path, config_file).map_err(|err| {
-        HttpResponseError {
-          msg: format!(
-            "Unable to write config file {} {}",
-            &file_path.display(),
-            err
-          ),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        }
-      })?;
+  repositories::cluster::patch_proxy_templates(gen_id, proxy_templates, &pool)
+    .await?;
 
-      let mut cargoes = stream::iter(&cargoes);
-
-      while let Some((_, item)) = cargoes.next().await {
-        if None == item.dns_entry {
-          continue;
-        }
-        let item_string =
-          serde_json::to_string(&item).map_err(|err| HttpResponseError {
-            msg: format!("{}", err),
-            status: StatusCode::INTERNAL_SERVER_ERROR,
-          })?;
-
-        let item: CargoTemplateData =
-          serde_json::from_str(&render_template(item_string, &template_data)?)
-            .map_err(|err| HttpResponseError {
-              msg: format!("{}", err),
-              status: StatusCode::INTERNAL_SERVER_ERROR,
-            })?;
-
-        let domain = item.dns_entry.ok_or(HttpResponseError {
-          msg: String::from("Unexpected error domain should not be null"),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        })?;
-
-        let dns_settings = domain.split(':').collect::<Vec<_>>();
-
-        if dns_settings.len() != 2 {
-          return Err(HttpResponseError {
-            msg: String::from("Error dns settings have incorrect format"),
-            status: StatusCode::BAD_REQUEST,
-          });
-        }
-
-        components::dnsmasq::add_dns_entry(
-          dns_settings[1],
-          dns_settings[0],
-          &config.state_dir,
-        )
-        .map_err(|err| err.to_http_error())?;
-      }
-
-      components::dnsmasq::restart(docker_api)
-        .await
-        .map_err(|err| err.to_http_error())?;
-      components::nginx::reload_config(docker_api).await?;
-    }
-  }
-  Ok(())
+  Ok(web::HttpResponse::Created().into())
 }
 
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MustacheData {
-  pub vars: HashMap<String, String>,
+#[derive(Serialize, Deserialize)]
+pub struct DeleteClusterTemplatePath {
+  cl_name: String,
+  nt_name: String,
 }
 
-pub async fn join_cargo(
-  opts: &JoinCargoOptions,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
-) -> Result<Vec<String>, HttpResponseError> {
-  let cluster_cargo = ClusterCargoPartial {
-    cluster_key: opts.cluster.key.to_owned(),
-    cargo_key: opts.cargo.key.to_owned(),
-    network_key: opts.network.key.to_owned(),
-  };
-  let mut labels: HashMap<String, String> = HashMap::new();
-  labels.insert(String::from("cluster"), opts.cluster.key.to_owned());
+/// Delete nginx template to cluster
+#[web::delete("/clusters/{cl_name}/nginx_templates/{nt_name}")]
+async fn delete_cluster_template(
+  req_path: web::types::Path<DeleteClusterTemplatePath>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+  pool: web::types::State<Pool>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let gen_id = gen_nsp_key_by_name(&qs.namespace, &req_path.cl_name);
+  repositories::nginx_template::get_by_name(req_path.nt_name.to_owned(), &pool)
+    .await?;
 
-  let vars = repositories::cluster_variable::list_by_cluster(
-    opts.cluster.key.to_owned(),
-    pool,
-  )
-  .await?;
-  let envs =
-    repositories::cargo_env::list_by_cargo_key(opts.cargo.key.to_owned(), pool)
-      .await?;
+  let cluster =
+    repositories::cluster::find_by_key(gen_id.to_owned(), &pool).await?;
 
-  let env_string =
-    serde_json::to_string(&envs).map_err(|err| HttpResponseError {
-      msg: format!("unable to format cargo env items {:#?}", err),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
-
-  let template =
-    mustache::compile_str(&env_string).map_err(|err| HttpResponseError {
-      msg: format!("unable to compile env_string {:#?}", err),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
-
-  let vars = services::cluster_variable::cluster_vars_to_hashmap(vars);
-  let template_data = MustacheData { vars };
-  let env_string_with_vars = template
-    .render_to_string(&template_data)
-    .map_err(|err| HttpResponseError {
-      msg: format!("unable to populate env with cluster variables: {:#?}", err),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
-  let envs = serde_json::from_str::<Vec<CargoEnvItem>>(&env_string_with_vars)
-    .map_err(|err| HttpResponseError {
-    msg: format!("unable to reserialize environements : {:#?}", err),
-    status: StatusCode::INTERNAL_SERVER_ERROR,
-  })?;
-  // template.render_data_to_string(template_data);
-  let mut fold_init: Vec<String> = Vec::new();
-  let environnements = envs
+  let proxy_templates = cluster
+    .proxy_templates
     .into_iter()
-    .fold(&mut fold_init, |acc, item| {
-      let s = format!("{}={}", item.name, item.value);
-      acc.push(s);
-      acc
-    })
-    .to_vec();
-  let create_opts = CreateCargoContainerOpts {
-    cargo: &opts.cargo,
-    network_key: &opts.network.key,
-    cluster_name: &opts.cluster.name,
-    labels: Some(&mut labels),
-    environnements,
-  };
+    .filter(|name| name != &req_path.nt_name)
+    .collect::<Vec<String>>();
 
-  let container_ids =
-    services::cargo::create_containers(create_opts, docker_api).await?;
+  repositories::cluster::patch_proxy_templates(gen_id, proxy_templates, &pool)
+    .await?;
 
-  container_ids
-    .clone()
-    .into_iter()
-    .map(|container_name| async move {
-      let config = bollard::network::ConnectNetworkOptions {
-        container: container_name.to_owned(),
-        ..Default::default()
-      };
-      docker_api
-        .connect_network(&opts.network.key, config)
-        .await?;
-      Ok::<(), HttpResponseError>(())
-    })
-    .collect::<FuturesUnordered<_>>()
-    .collect::<Vec<_>>()
-    .await
-    .into_iter()
-    .collect::<Result<Vec<()>, HttpResponseError>>()?;
+  Ok(web::HttpResponse::Accepted().into())
+}
 
-  if opts.is_creating_relation {
-    repositories::cluster_cargo::create(cluster_cargo, pool).await?;
+/// # ntex config
+/// Bind namespace routes to ntex http server
+///
+/// # Arguments
+/// [config](web::ServiceConfig) mutable service config
+///
+/// # Examples
+/// ```rust,norun
+/// use ntex::web;
+/// use crate::controllers;
+///
+/// web::App::new().configure(controllers::cluster::ntex_config)
+/// ```
+pub fn ntex_config(config: &mut web::ServiceConfig) {
+  config.service(list_cluster);
+  config.service(create_cluster);
+  config.service(inspect_cluster_by_name);
+  config.service(delete_cluster_by_name);
+  config.service(start_cluster_by_name);
+  config.service(join_cargo_to_cluster);
+  config.service(count_cluster);
+  config.service(add_cluster_template);
+  config.service(delete_cluster_template);
+}
+
+#[cfg(test)]
+mod test_namespace_cluster {
+  use crate::utils::test::*;
+
+  use super::*;
+
+  async fn test_list(srv: &TestServer) -> TestReturn {
+    let resp = srv.get("/clusters").send().await?;
+
+    assert!(resp.status().is_success());
+    Ok(())
   }
 
-  Ok(container_ids)
+  async fn test_list_with_nsp(srv: &TestServer) -> TestReturn {
+    let resp = srv
+      .get("/clusters")
+      .query(&GenericNspQuery {
+        namespace: Some(String::from("test")),
+      })?
+      .send()
+      .await?;
+
+    assert!(resp.status().is_success());
+    Ok(())
+  }
+
+  async fn test_create(srv: &TestServer) -> TestReturn {
+    let item = ClusterPartial {
+      name: String::from("test_cluster"),
+      proxy_templates: None,
+    };
+    let resp = srv.post("/clusters").send_json(&item).await?;
+
+    assert!(resp.status().is_success());
+    Ok(())
+  }
+
+  async fn test_delete(srv: &TestServer) -> TestReturn {
+    let resp = srv.delete("/clusters/test_cluster").send().await?;
+    assert!(resp.status().is_success());
+    Ok(())
+  }
+
+  #[ntex::test]
+  async fn main() -> TestReturn {
+    let srv = generate_server(ntex_config).await;
+    test_list(&srv).await?;
+    test_list_with_nsp(&srv).await?;
+    test_create(&srv).await?;
+    test_delete(&srv).await?;
+    Ok(())
+  }
 }

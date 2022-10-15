@@ -1,7 +1,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::components;
+use crate::controllers;
 use crate::models::{Pool, NodeItem, NodePartial};
 
 use crate::errors::HttpResponseError;
@@ -26,7 +26,7 @@ pub async fn _list(
 ) -> Result<Vec<NodeItem>, HttpResponseError> {
   use crate::schema::nodes::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || dsl::nodes.load(&mut conn)).await;
 
   match res {
@@ -59,7 +59,7 @@ pub async fn _create(
 ) -> Result<NodeItem, HttpResponseError> {
   use crate::schema::nodes::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     let node: NodeItem = node.into();
     diesel::insert_into(dsl::nodes)

@@ -22,7 +22,7 @@ use crate::errors::{HttpResponseError, IntoHttpResponseError};
 
 use super::utils::*;
 
-use crate::services::errors::docker_error_ref;
+use crate::utils::errors::docker_error_ref;
 
 #[derive(Debug, Error)]
 pub enum DnsmasqError {

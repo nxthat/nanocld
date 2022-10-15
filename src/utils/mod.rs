@@ -1,3 +1,14 @@
+pub mod errors;
+
+pub mod node;
+pub mod cargo;
+pub mod docker;
+pub mod github;
+pub mod cluster;
+pub mod container;
+pub mod git_repository;
+pub mod cluster_variable;
+
 use std::{fs, io::Read};
 use serde::Serialize;
 use ntex::http::StatusCode;
@@ -11,7 +22,8 @@ pub fn render_template<T, D>(
 ) -> Result<String, HttpResponseError>
 where
   T: ToString,
-  D: Serialize, {
+  D: Serialize,
+{
   let compiled =
     mustache::compile_str(&template.to_string()).map_err(|err| {
       HttpResponseError {
@@ -20,12 +32,13 @@ where
       }
     })?;
 
-  let result = compiled.render_to_string(&data).map_err(|err| {
-    HttpResponseError {
-      msg: format!("{}", err),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    }
-  })?;
+  let result =
+    compiled
+      .render_to_string(&data)
+      .map_err(|err| HttpResponseError {
+        msg: format!("{}", err),
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+      })?;
 
   Ok(result)
 }
@@ -57,21 +70,20 @@ pub fn _get_free_port() -> Result<u16, HttpResponseError> {
 // Should not be needed anymore
 pub fn _generate_mac_addr() -> Result<String, HttpResponseError> {
   let mut mac: [u8; 6] = [0; 6];
-  let mut urandom = fs::File::open("/dev/urandom").map_err(|err| {
-    HttpResponseError {
+  let mut urandom =
+    fs::File::open("/dev/urandom").map_err(|err| HttpResponseError {
       msg: format!(
         "Unable to open /dev/urandom to generate a mac addr {:?}",
         &err
       ),
       status: StatusCode::INTERNAL_SERVER_ERROR,
-    }
-  })?;
-  urandom.read_exact(&mut mac).map_err(|err| {
-    HttpResponseError {
+    })?;
+  urandom
+    .read_exact(&mut mac)
+    .map_err(|err| HttpResponseError {
       msg: format!("Unable to read /dev/urandom to generate a mac addr ${err}"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
-    }
-  })?;
+    })?;
   let mac_addr = format!(
     "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
@@ -85,7 +97,7 @@ pub mod test {
   use ntex::web::*;
 
   use std::env;
-  use crate::components;
+  use crate::controllers;
   use crate::config::DaemonConfig;
   use crate::models::Pool;
 
@@ -108,11 +120,11 @@ pub mod test {
 
   pub async fn gen_postgre_pool() -> Pool {
     let docker = gen_docker_client();
-    let ip_addr = components::postgresql::get_postgres_ip(&docker)
+    let ip_addr = controllers::postgresql::get_postgres_ip(&docker)
       .await
       .unwrap();
 
-    components::postgresql::create_pool(ip_addr).await
+    controllers::postgresql::create_pool(ip_addr).await
   }
 
   pub async fn generate_server(config: Config) -> test::TestServer {

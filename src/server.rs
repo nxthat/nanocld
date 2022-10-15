@@ -1,7 +1,7 @@
 use ntex::web;
 
 use crate::openapi;
-use crate::controllers;
+use crate::services;
 use crate::boot::BootState;
 use crate::config::DaemonConfig;
 
@@ -25,27 +25,27 @@ pub async fn start<'a>(
       // bind /explorer
       .configure(openapi::ntex_config)
       // bind controller system
-      .configure(controllers::system::ntex_config)
+      .configure(services::system::ntex_config)
       // bind controller namespace
-      .configure(controllers::namespace::ntex_config)
+      .configure(services::namespace::ntex_config)
       // bind controller git repository
-      .configure(controllers::git_repository::ntex_config)
+      .configure(services::git_repository::ntex_config)
       // bind controller container_image
-      .configure(controllers::container_image::ntex_config)
+      .configure(services::container_image::ntex_config)
       // bind controller cluster
-      .configure(controllers::cluster::ntex_config)
+      .configure(services::cluster::ntex_config)
       // bind controller cluster variables
-      .configure(controllers::cluster_variable::ntex_config)
+      .configure(services::cluster_variable::ntex_config)
       // bind controller cluster network
-      .configure(controllers::cluster_network::ntex_config)
+      .configure(services::cluster_network::ntex_config)
       // bind controller cluster cargo
-      .configure(controllers::cluster_cargo::ntex_config)
+      .configure(services::cluster_cargo::ntex_config)
       // bind controller nginx template
-      .configure(controllers::nginx_template::ntex_config)
+      .configure(services::nginx_template::ntex_config)
       // bind controller container
-      .configure(controllers::container::ntex_config)
+      .configure(services::container::ntex_config)
       // bind controller cargo
-      .configure(controllers::cargo::ntex_config)
+      .configure(services::cargo::ntex_config)
   });
   let mut count = 0;
   let len = hosts.len();

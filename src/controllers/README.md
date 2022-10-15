@@ -1,9 +1,8 @@
 # Controllers
 
-Controllers are set of functions to handle http request
+Controllers are helpers function to manipulate basic controller plugins
+It's come with a specific norme for each type :
 
-We will have function like
-- get_by_id
-- patch_by_id
-...
-and others
+- dns
+- proxy
+- store

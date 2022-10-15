@@ -2,7 +2,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::components;
+use crate::controllers;
 use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
 use crate::models::{
@@ -36,7 +36,7 @@ pub async fn create_for_namespace(
   pool: &web::types::State<Pool>,
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     let k = nsp.to_owned() + "-" + &item.name;
@@ -66,7 +66,7 @@ pub async fn count(
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::clusters
       .filter(dsl::namespace.eq(namespace))
@@ -102,7 +102,7 @@ pub async fn find_by_key(
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::clusters.filter(dsl::key.eq(key)).get_result(&mut conn)
   })
@@ -135,7 +135,7 @@ pub async fn find_by_namespace(
 ) -> Result<Vec<ClusterItem>, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::clusters.filter(dsl::namespace.eq(nsp)).load(&mut conn)
   })
@@ -167,7 +167,7 @@ pub async fn delete_by_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::clusters)
       .filter(dsl::key.eq(key))
@@ -188,7 +188,7 @@ pub async fn patch_proxy_templates(
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
 
   let cluster = web::block(move || {
     diesel::update(dsl::clusters.filter(dsl::key.eq(key)))
@@ -207,7 +207,7 @@ pub async fn list_cargo(
 ) -> Result<Vec<(ClusterCargoItem, CargoItem)>, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
   use crate::schema::cargoes;
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
 
   let cargoes = web::block(move || {
     let data: Vec<(ClusterCargoItem, CargoItem)> = dsl::cluster_cargoes
@@ -227,7 +227,7 @@ pub async fn list_variable(
 ) -> Result<Vec<ClusterVariableItem>, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
-  let mut conn = components::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
 
   let res = web::block(move || {
     dsl::cluster_variables

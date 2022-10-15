@@ -13,7 +13,7 @@ use clap::Parser;
 mod cli;
 mod boot;
 mod version;
-mod components;
+mod controllers;
 
 mod utils;
 mod errors;
@@ -24,7 +24,6 @@ mod schema;
 mod models;
 mod openapi;
 mod services;
-mod controllers;
 mod repositories;
 
 /// nanocld is the daemon to manage your self hosted instranet

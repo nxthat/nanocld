@@ -6,7 +6,7 @@ use ntex::channel::mpsc;
 use futures::{StreamExt, stream};
 
 use crate::config::DaemonConfig;
-use crate::{services, repositories};
+use crate::{utils, repositories};
 
 use crate::models::{ContainerImagePartial, Pool};
 use crate::errors::HttpResponseError;
@@ -125,7 +125,7 @@ async fn deploy_container_image(
 
   let mut cargoes_stream = stream::iter(cargoes);
   while let Some(cargo) = cargoes_stream.next().await {
-    services::cargo::update_containers(
+    utils::cargo::update_containers(
       cargo.key,
       &daemon_config,
       &docker_api,
