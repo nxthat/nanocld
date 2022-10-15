@@ -37,22 +37,17 @@ async fn create_postgre_container(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let image = Some("postgres:alpine3.16");
-  let env = Some(vec![
-    "POSTGRES_USER=root",
-    "POSTGRES_PASSWORD=root",
-    "POSTGRES_DB=nanocl",
-  ]);
+  let image = Some("cockroachdb/cockroach:v21.2.16");
   let labels = Some(gen_labels_with_namespace("nanocl"));
   let host_config = Some(gen_postgre_host_conf(config));
   let options = Some(CreateContainerOptions { name });
   let config = Config {
     image,
-    env,
     labels,
     host_config,
     hostname: Some(name),
     domainname: Some(name),
+    cmd: Some(vec!["start-single-node", "--insecure"]),
     ..Default::default()
   };
   docker_api.create_container(options, config).await?;
@@ -71,7 +66,8 @@ async fn create_postgre_container(
 /// ```
 pub async fn create_pool(host: String) -> Pool {
   web::block(move || {
-    let db_url = "postgres://root:root@".to_owned() + &host + "/nanocl";
+    let db_url =
+      "postgres://root:root@".to_owned() + &host + ":26257/defaultdb";
     let manager = ConnectionManager::<PgConnection>::new(db_url);
     r2d2::Pool::builder().build(manager)
   })

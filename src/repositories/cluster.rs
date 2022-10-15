@@ -21,15 +21,14 @@ use crate::models::{
 ///
 /// # Examples
 ///
-/// ```
-/// // Create a simple cluster
-///
+/// ```rust,norun
 /// use crate::repositories::cluster;
+
 /// let nsp = String::from("default");
 /// let new_cluster = ClusterCreate {
 ///  name: String::from("test-cluster")
 /// }
-/// cluster::create_for_namespace(nsp, new_cluster, &pool).await;
+/// let res = cluster::create_for_namespace(nsp, new_cluster, &pool).await;
 /// ```
 pub async fn create_for_namespace(
   nsp: String,
@@ -82,7 +81,8 @@ pub async fn count(
   }
 }
 
-/// Return found cluster or an error otherwise
+/// # Find by ID
+/// Return found cluster related to his ID or an error otherwise
 ///
 /// # Arguments
 ///
@@ -92,10 +92,9 @@ pub async fn count(
 /// # Examples
 ///
 /// ```rust,norun
-/// // Find cluster by id
-///
 /// use crate::repositories::cluster;
-/// cluster::find_by_key(gen_id, &pool).await;
+///
+/// let res = cluster::find_by_key(gen_id, &pool).await;
 /// ```
 pub async fn find_by_key(
   key: String,
@@ -115,7 +114,8 @@ pub async fn find_by_key(
   }
 }
 
-/// Return list of cluster of given namespace
+/// # Find by namespace
+/// Return list of cluster for given namespace
 ///
 /// # Arguments
 ///
@@ -125,10 +125,9 @@ pub async fn find_by_key(
 /// # Examples
 ///
 /// ```rust,norun
-/// // List cluster by namespace
-///
 /// use crate::repositories::cluster;
-/// cluster::find_by_namespace(gen_id, &pool).await;
+
+/// let res = cluster::find_by_namespace(gen_id, &pool).await;
 /// ```
 pub async fn find_by_namespace(
   nsp: String,
@@ -215,7 +214,6 @@ pub async fn list_cargo(
       .filter(dsl::cluster_key.eq(key))
       .inner_join(cargoes::table)
       .load(&mut conn)?;
-    // let cargoes = data.into_iter().map(|d| d.1).collect::<Vec<CargoItem>>();
     Ok(data)
   })
   .await

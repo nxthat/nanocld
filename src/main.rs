@@ -68,6 +68,7 @@ async fn main() -> std::io::Result<()> {
   let daemon_config: config::DaemonConfig =
     config::merge_config(&args, &file_config);
 
+  log::debug!("Daemon Config {:?}", &daemon_config.docker_host);
   // Connect to docker daemon
   let docker_api = match bollard::Docker::connect_with_unix(
     &daemon_config.docker_host,

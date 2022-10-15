@@ -23,6 +23,8 @@ pub async fn build_git_repository(
     t: image_name,
     labels,
     remote: image_url,
+    rm: true,
+    forcerm: true,
     ..Default::default()
   };
   let (tx, rx_body) = mpsc::channel();

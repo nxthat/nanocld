@@ -5,7 +5,7 @@ create table "cargoes" (
   "name" VARCHAR NOT NULL,
   "image_name" VARCHAR NOT NULL,
   "binds" TEXT[] NOT NULL,
-  "replicas" INT NOT NULL DEFAULT 1 CHECK (replicas >= 0),
+  "replicas" BIGINT NOT NULL DEFAULT 1 CHECK (replicas >= 0),
   "dns_entry" VARCHAR,
   "domainname" VARCHAR,
   "hostname" VARCHAR
