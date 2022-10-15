@@ -43,7 +43,7 @@ pub struct ClusterItem {
 
 /// Cluster item with his relations
 #[derive(Serialize, Deserialize)]
-// #[cfg_attr(feature = "dev", derive(ToSchema))]
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterItemWithRelation {
   pub(crate) key: String,
   pub(crate) name: String,
@@ -51,7 +51,7 @@ pub struct ClusterItemWithRelation {
   pub(crate) proxy_templates: Vec<String>,
   pub(crate) variables: Vec<ClusterVariableItem>,
   pub(crate) networks: Option<Vec<ClusterNetworkItem>>,
-  pub(crate) cargoes: Option<Vec<(ClusterCargoItem, CargoItem)>>,
+  // pub(crate) cargoes: Option<Vec<(ClusterCargoItem, CargoItem)>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

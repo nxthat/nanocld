@@ -202,7 +202,7 @@ async fn inspect_cluster_network_by_name(
     ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is if empty we use 'default' as value"),
   ),
   responses(
-    (status = 200, description = "Pg delete response", body = PgDeleteGeneric),
+    (status = 200, description = "Pg delete response", body = GenericDelete),
     (status = 400, description = "Generic database error", body = ApiError),
     (status = 404, description = "Cluster network not found", body = ApiError),
   ),
@@ -245,7 +245,7 @@ async fn delete_cluster_network_by_name(
     ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
   ),
   responses(
-    (status = 200, description = "Generic delete", body = PgGenericCount),
+    (status = 200, description = "Generic delete", body = GenericCount),
     (status = 400, description = "Generic database error", body = ApiError),
     (status = 404, description = "Namespace name not valid", body = ApiError),
   ),

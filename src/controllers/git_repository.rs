@@ -86,15 +86,15 @@ async fn create_git_repository(
   delete,
   path = "/git_repositories/{name}",
   params(
-    ("id" = String, Path, description = "Name of git repository"),
+    ("name" = String, Path, description = "Name of git repository"),
   ),
   responses(
-    (status = 201, description = "Number of entry deleted", body = PgDeleteGeneric),
+    (status = 201, description = "Number of entry deleted", body = GenericDelete),
     (status = 400, description = "Generic database error"),
     (status = 404, description = "Namespace name not valid"),
   ),
 ))]
-#[web::delete("/git_repositories/{id}")]
+#[web::delete("/git_repositories/{name}")]
 async fn delete_git_repository_by_name(
   pool: web::types::State<Pool>,
   req_path: web::types::Path<String>,
@@ -120,25 +120,26 @@ async fn delete_git_repository_by_name(
   post,
   path = "/git_repositories/{name}/build",
   params(
-    ("id" = String, Path, description = "Name of git repository"),
+    ("name" = String, Path, description = "Name of git repository"),
     ("branch" = Option<String>, Query, description = "Branch to build default to main branch"),
   ),
   responses(
-    (status = 201, description = "Number of entry deleted", body = PgDeleteGeneric),
+    (status = 201, description = "Number of entry deleted", body = GenericDelete),
     (status = 400, description = "Generic database error"),
     (status = 404, description = "Namespace name not valid"),
   ),
 ))]
-#[web::post("/git_repositories/{id}/build")]
+#[web::post("/git_repositories/{name}/build")]
 async fn build_git_repository_by_name(
-  id: web::types::Path<String>,
+  name: web::types::Path<String>,
   web::types::Query(qs): web::types::Query<GitRepositoryBuildQuery>,
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
   config: web::types::State<DaemonConfig>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let id = id.into_inner();
-  let git_repo = repositories::git_repository::find_by_name(id, &pool).await?;
+  let name = name.into_inner();
+  let git_repo =
+    repositories::git_repository::find_by_name(name, &pool).await?;
 
   let branch_name = match qs.branch {
     None => git_repo.default_branch.to_owned(),

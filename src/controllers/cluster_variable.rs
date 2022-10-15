@@ -92,7 +92,7 @@ pub struct ClusterVariablePath {
     ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
   ),
   responses(
-    (status = 200, description = "Generic delete response", body = PgDeleteGeneric),
+    (status = 200, description = "Generic delete response", body = GenericDelete),
     (status = 400, description = "Generic database error", body = ApiError),
     (status = 404, description = "Cluster name or Namespace not valid", body = ApiError),
   ),
@@ -121,7 +121,7 @@ async fn delete_cluster_variable(
     ("namespace" = Option<String>, Query, description = "Name of the namespace where the cluster is stored is empty we use 'global' as value"),
   ),
   responses(
-    (status = 200, description = "Generic delete response", body = PgDeleteGeneric),
+    (status = 200, description = "Generic delete response", body = GenericDelete),
     (status = 400, description = "Generic database error", body = ApiError),
     (status = 404, description = "Cluster name or Namespace not valid", body = ApiError),
   ),

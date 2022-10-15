@@ -178,7 +178,7 @@ async fn inspect_cluster_by_name(
     namespace: nsp,
     proxy_templates,
     variables,
-    cargoes: Some(cargoes),
+    // cargoes: Some(cargoes),
     networks: Some(networks),
   };
 
@@ -295,7 +295,7 @@ async fn join_cargo_to_cluster(
     ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
   ),
   responses(
-    (status = 200, description = "Generic delete", body = PgGenericCount),
+    (status = 200, description = "Generic delete", body = GenericCount),
     (status = 400, description = "Generic database error", body = ApiError),
     (status = 404, description = "Namespace name not valid", body = ApiError),
   ),

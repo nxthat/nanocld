@@ -62,6 +62,7 @@ use crate::errors::ApiError;
 
     // Nginx template
     schemas(NginxTemplateItem),
+    schemas(NginxTemplateModes),
 
     // Git repository
     schemas(GitRepositoryItem),
@@ -84,6 +85,7 @@ use crate::errors::ApiError;
     // Cluster variable
     schemas(ClusterVariableItem),
     schemas(ClusterVariablePartial),
+    schemas(ClusterItemWithRelation),
 
     // Cluster network
     schemas(ClusterNetworkItem),

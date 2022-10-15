@@ -160,7 +160,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgGenericCount"
+                  "$ref": "#/components/schemas/GenericCount"
                 }
               }
             }
@@ -225,7 +225,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgDeleteGeneric"
+                  "$ref": "#/components/schemas/GenericDelete"
                 }
               }
             }
@@ -370,7 +370,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgGenericCount"
+                  "$ref": "#/components/schemas/GenericCount"
                 }
               }
             }
@@ -586,7 +586,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgDeleteGeneric"
+                  "$ref": "#/components/schemas/GenericDelete"
                 }
               }
             }
@@ -877,7 +877,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgDeleteGeneric"
+                  "$ref": "#/components/schemas/GenericDelete"
                 }
               }
             }
@@ -1238,7 +1238,7 @@
         "operationId": "delete_git_repository_by_name",
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "in": "path",
             "description": "Name of git repository",
             "required": true,
@@ -1254,7 +1254,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgDeleteGeneric"
+                  "$ref": "#/components/schemas/GenericDelete"
                 }
               }
             }
@@ -1279,7 +1279,7 @@
         "operationId": "build_git_repository_by_name",
         "parameters": [
           {
-            "name": "id",
+            "name": "name",
             "in": "path",
             "description": "Name of git repository",
             "required": true,
@@ -1305,7 +1305,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgDeleteGeneric"
+                  "$ref": "#/components/schemas/GenericDelete"
                 }
               }
             }
@@ -1423,7 +1423,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgDeleteGeneric"
+                  "$ref": "#/components/schemas/GenericDelete"
                 }
               }
             }
@@ -1503,7 +1503,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/PgGenericCount"
+                  "$ref": "#/components/schemas/GenericCount"
                 }
               }
             }
@@ -1682,6 +1682,46 @@
             "type": "array",
             "items": {
               "type": "string"
+            }
+          }
+        }
+      },
+      "ClusterItemWithRelation": {
+        "type": "object",
+        "description": "Cluster item with his relations",
+        "required": [
+          "key",
+          "name",
+          "namespace",
+          "proxy_templates",
+          "variables"
+        ],
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "namespace": {
+            "type": "string"
+          },
+          "networks": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClusterNetworkItem"
+            }
+          },
+          "proxy_templates": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "variables": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ClusterVariableItem"
             }
           }
         }
@@ -1916,7 +1956,20 @@
             "type": "string"
           }
         }
+      },
+      "NginxTemplateModes": {
+        "type": "string",
+        "description": "Nginx template mode",
+        "enum": [
+          "http",
+          "stream"
+        ]
       }
     }
-  }
+  },
+  "servers": [
+    {
+      "url": "http://localhost"
+    }
+  ]
 }

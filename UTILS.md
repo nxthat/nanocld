@@ -1,13 +1,19 @@
 # Usefull command
 
-# lsns - list namespaces
+## lsns - list namespaces
 
 ```sh
 lsns
 ```
 
-# nsenter - run program in different namespaces
+##  nsenter - run program in different namespaces
 
 ```sh
 sudo nsenter -t 12267 -n ss -ltu
+```
+
+## Generate a nanocld client
+
+```sh
+docker run --rm -v $(pwd):/local openapitools/openapi-generator-cli generate -g rust -i /local/specs/v1/swagger.json -o /local/client
 ```

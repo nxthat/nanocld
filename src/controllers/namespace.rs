@@ -49,7 +49,7 @@ async fn create_namespace(
     delete,
     path = "/namespaces/{name}",
     responses(
-        (status = 200, description = "database generic delete response", body = PgDeleteGeneric),
+        (status = 200, description = "database generic delete response", body = GenericDelete),
     ),
     params(
         ("name" = String, Path, description = "name of the namespace"),
