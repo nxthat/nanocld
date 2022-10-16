@@ -1,4 +1,4 @@
 pub mod utils;
-pub mod nginx;
-pub mod dnsmasq;
-pub mod postgresql;
+pub mod proxy;
+pub mod dns;
+pub mod store;

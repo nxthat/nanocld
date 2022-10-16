@@ -13,7 +13,7 @@ pub async fn create(
 ) -> Result<ClusterCargoItem, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     let item = ClusterCargoItem {
       key: format!("{}-{}", item.cluster_key, item.cargo_key),
@@ -39,7 +39,7 @@ pub async fn get_by_cluster_key(
 ) -> Result<Vec<ClusterCargoItem>, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_cargoes
       .filter(dsl::cluster_key.eq(cluster_key))
@@ -58,7 +58,7 @@ pub async fn delete_by_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::cluster_cargoes.filter(dsl::cluster_key.eq(key)))
       .execute(&mut conn)
@@ -76,7 +76,7 @@ pub async fn delete_by_cargo_key(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::cluster_cargoes.filter(dsl::cargo_key.eq(cargo_key)))
       .execute(&mut conn)
@@ -94,7 +94,7 @@ pub async fn find_by_cargo_key(
 ) -> Result<Vec<ClusterCargoItem>, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_cargoes
       .filter(dsl::cargo_key.eq(cargo_key))
@@ -114,7 +114,7 @@ pub async fn get_by_key(
 ) -> Result<ClusterCargoItem, HttpResponseError> {
   use crate::schema::cluster_cargoes::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::cluster_cargoes
       .filter(dsl::key.eq(key))

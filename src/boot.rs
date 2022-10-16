@@ -67,11 +67,11 @@ async fn boot_docker_services(
 ) -> Result<(), DaemonError> {
   create_default_network(docker_api).await?;
   // Boot postgresql service to ensure database connection
-  controllers::postgresql::boot(config, docker_api).await?;
+  controllers::store::boot(config, docker_api).await?;
   // Boot dnsmasq service to manage domain names
-  controllers::dnsmasq::boot(config, docker_api).await?;
+  controllers::dns::boot(config, docker_api).await?;
   // Boot nginx service to manage proxy
-  controllers::nginx::boot(config, docker_api).await?;
+  controllers::proxy::boot(config, docker_api).await?;
 
   // services::ipsec::boot(config, docker_api).await?;
   Ok(())
@@ -97,14 +97,12 @@ pub async fn boot(
 ) -> Result<BootState, DaemonError> {
   log::info!("booting");
   boot_docker_services(config, docker_api).await?;
-  let postgres_ip =
-    controllers::postgresql::get_postgres_ip(docker_api).await?;
+  let postgres_ip = controllers::store::get_postgres_ip(docker_api).await?;
   log::info!("creating postgresql state pool");
   // Connect to postgresql
-  let db_pool =
-    controllers::postgresql::create_pool(postgres_ip.to_owned()).await;
+  let db_pool = controllers::store::create_pool(postgres_ip.to_owned()).await;
   let pool = web::types::State::new(db_pool.to_owned());
-  let mut conn = controllers::postgresql::get_pool_conn(&pool)?;
+  let mut conn = controllers::store::get_pool_conn(&pool)?;
   // wrap into state to be abble to use our functions
   run_migrations(&mut conn)?;
   // Create default namesapce

@@ -1,15 +1,14 @@
 use regex::Regex;
 use ntex::http::StatusCode;
 use std::{
+  fs,
   io::Write,
   path::{Path, PathBuf},
-  fs,
-  collections::HashMap,
 };
 
 use bollard::{
   Docker,
-  models::{HostConfig, PortBinding},
+  models::HostConfig,
   errors::Error as DockerError,
   container::{Config, CreateContainerOptions},
 };
@@ -23,10 +22,10 @@ use crate::errors::{HttpResponseError, IntoHttpResponseError};
 
 use super::utils::*;
 
-use crate::services::errors::docker_error_ref;
+use crate::utils::errors::docker_error_ref;
 
 #[derive(Debug, Error)]
-pub enum DnsmasqError {
+pub enum DnsError {
   #[error("dnsmasq io error")]
   Io(#[from] IoError),
   #[error("dnsmasq regex error")]
@@ -35,18 +34,18 @@ pub enum DnsmasqError {
   Docker(#[from] DockerError),
 }
 
-impl IntoHttpResponseError for DnsmasqError {
+impl IntoHttpResponseError for DnsError {
   fn to_http_error(&self) -> HttpResponseError {
     match self {
-      DnsmasqError::Io(err) => HttpResponseError {
+      DnsError::Io(err) => HttpResponseError {
         msg: format!("dnsmasq io error {:#?}", err),
         status: StatusCode::INTERNAL_SERVER_ERROR,
       },
-      DnsmasqError::Regex(err) => HttpResponseError {
+      DnsError::Regex(err) => HttpResponseError {
         msg: format!("dnsmasq regex error {:#?}", err),
         status: StatusCode::INTERNAL_SERVER_ERROR,
       },
-      DnsmasqError::Docker(err) => docker_error_ref(err),
+      DnsError::Docker(err) => docker_error_ref(err),
     }
   }
 }
@@ -61,11 +60,14 @@ fn write_dns_entry_conf(path: &PathBuf, content: &str) -> std::io::Result<()> {
 /// # Add or Update a dns entry on dnsmasq
 ///
 /// # Arguments
+/// - [domain_name] The domain name to add
+/// - [ip_address] The ip address the domain target
+/// - [state_dir] Daemon state dir to know where to store the information
 pub fn add_dns_entry(
   domain_name: &str,
   ip_address: &str,
   state_dir: &str,
-) -> Result<(), DnsmasqError> {
+) -> Result<(), DnsError> {
   let file_path = Path::new(state_dir).join("dnsmasq/dnsmasq.d/dns_entry.conf");
   let content = fs::read_to_string(&file_path)?;
   let reg_expr = r"address=/.".to_owned() + domain_name + "/.*";
@@ -91,7 +93,7 @@ pub fn add_dns_entry(
   Ok(())
 }
 
-pub async fn restart(docker_api: &Docker) -> Result<(), DnsmasqError> {
+pub async fn restart(docker_api: &Docker) -> Result<(), DnsError> {
   docker_api
     .restart_container("nanocl-dns-dnsmasq", None)
     .await?;
@@ -106,27 +108,10 @@ pub fn gen_dnsmasq_host_conf(config: &DaemonConfig) -> HostConfig {
     format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
     format!("{}:/etc/dnsmasq.d/", dir_path.display()),
   ]);
-  let mut port_bindings: HashMap<String, Option<Vec<PortBinding>>> =
-    HashMap::new();
-  port_bindings.insert(
-    String::from("53/udp"),
-    Some(vec![PortBinding {
-      host_ip: None,
-      host_port: Some(String::from("53/udp")),
-    }]),
-  );
-  port_bindings.insert(
-    String::from("53/tcp"),
-    Some(vec![PortBinding {
-      host_ip: None,
-      host_port: Some(String::from("53/tcp")),
-    }]),
-  );
   HostConfig {
     binds,
     cap_add: Some(vec![String::from("NET_ADMIN")]),
     network_mode: Some(String::from("host")),
-    // port_bindings: Some(port_bindings),
     ..Default::default()
   }
 }
@@ -158,13 +143,13 @@ pub async fn boot(
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
   let container_name = "nanocl-dns-dnsmasq";
-  let s_state = get_service_state(container_name, docker_api).await;
+  let s_state = get_component_state(container_name, docker_api).await;
 
-  if s_state == ServiceState::Uninstalled {
+  if s_state == ComponentState::Uninstalled {
     create_dnsmasq_container(container_name, config, docker_api).await?;
   }
-  if s_state != ServiceState::Running {
-    if let Err(err) = start_service(container_name, docker_api).await {
+  if s_state != ComponentState::Running {
+    if let Err(err) = start_component(container_name, docker_api).await {
       log::error!("error while starting {} {}", container_name, err);
     }
   }
@@ -185,7 +170,7 @@ mod tests {
 
   #[ntex::test]
   async fn test_add_dns_entry() -> TestReturn {
-    const STATE_DIR: &str = "/var/lib/nanocl";
+    const STATE_DIR: &str = "./fake_path/var/lib/nanocl";
     let file_path =
       Path::new(STATE_DIR).join("dnsmasq/dnsmasq.d/dns_entry.conf");
     let saved_content = fs::read_to_string(&file_path)?;

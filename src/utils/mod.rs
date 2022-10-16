@@ -120,11 +120,9 @@ pub mod test {
 
   pub async fn gen_postgre_pool() -> Pool {
     let docker = gen_docker_client();
-    let ip_addr = controllers::postgresql::get_postgres_ip(&docker)
-      .await
-      .unwrap();
+    let ip_addr = controllers::store::get_postgres_ip(&docker).await.unwrap();
 
-    controllers::postgresql::create_pool(ip_addr).await
+    controllers::store::create_pool(ip_addr).await
   }
 
   pub async fn generate_server(config: Config) -> test::TestServer {

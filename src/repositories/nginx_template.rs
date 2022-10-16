@@ -12,7 +12,7 @@ pub async fn list(
 ) -> Result<Vec<NginxTemplateItem>, HttpResponseError> {
   use crate::schema::nginx_templates::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || dsl::nginx_templates.load(&mut conn)).await;
 
   match res {
@@ -27,7 +27,7 @@ pub async fn create(
 ) -> Result<NginxTemplateItem, HttpResponseError> {
   use crate::schema::nginx_templates::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::insert_into(dsl::nginx_templates)
       .values(&item)
@@ -47,7 +47,7 @@ pub async fn get_by_name(
 ) -> Result<NginxTemplateItem, HttpResponseError> {
   use crate::schema::nginx_templates::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     dsl::nginx_templates
       .filter(dsl::name.eq(name))
@@ -67,7 +67,7 @@ pub async fn delete_by_name(
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::nginx_templates::dsl;
 
-  let mut conn = controllers::postgresql::get_pool_conn(pool)?;
+  let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::nginx_templates.filter(dsl::name.eq(name)))
       .execute(&mut conn)

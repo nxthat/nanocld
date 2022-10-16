@@ -313,7 +313,7 @@ pub async fn start(
           });
         }
 
-        controllers::dnsmasq::add_dns_entry(
+        controllers::dns::add_dns_entry(
           dns_settings[1],
           dns_settings[0],
           &config.state_dir,
@@ -321,10 +321,10 @@ pub async fn start(
         .map_err(|err| err.to_http_error())?;
       }
 
-      controllers::dnsmasq::restart(docker_api)
+      controllers::dns::restart(docker_api)
         .await
         .map_err(|err| err.to_http_error())?;
-      controllers::nginx::reload_config(docker_api).await?;
+      controllers::proxy::reload_config(docker_api).await?;
     }
   }
   Ok(())
