@@ -7,9 +7,6 @@ use clap::Parser;
 #[command(author = "nexthat team <team@next-hat.com>")]
 #[command(version)]
 pub struct Cli {
-  /// Only available if nanocld have been builded with feature openapi
-  #[clap(long)]
-  pub(crate) genopenapi: bool,
   /// Only install required components this have to be called after fresh installation.
   #[clap(long)]
   pub(crate) install_components: bool,

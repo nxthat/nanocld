@@ -26,7 +26,7 @@ mod openapi;
 mod services;
 mod repositories;
 
-/// nanocld is the daemon to manage your self hosted instranet
+/// nanocld is the daemon to manage your containers
 ///
 /// # Example
 /// ```sh
@@ -43,18 +43,6 @@ async fn main() -> std::io::Result<()> {
   }
   env_logger::Builder::new().parse_env("LOG_LEVEL").init();
 
-  // if we build with openapi feature
-  // with args genopenapi we print the json on output
-  // in order to generate a file with a pipe.
-  #[cfg(feature = "dev")]
-  {
-    if args.genopenapi {
-      let result = openapi::to_json();
-      println!("{}", result);
-      std::process::exit(0);
-    }
-  }
-
   let file_config = match config::read_config_file(&args.config_dir) {
     Err(err) => {
       log::error!("{}", err);
@@ -63,11 +51,10 @@ async fn main() -> std::io::Result<()> {
     Ok(file_config) => file_config,
   };
 
-  // Merge cli args and config file
+  // Merge cli args and config file with priority to args
   let daemon_config: config::DaemonConfig =
     config::merge_config(&args, &file_config);
 
-  log::debug!("Daemon Config {:?}", &daemon_config.docker_host);
   // Connect to docker daemon
   let docker_api = match bollard::Docker::connect_with_unix(
     &daemon_config.docker_host,
@@ -90,7 +77,7 @@ async fn main() -> std::io::Result<()> {
     if let Err(err) = boot::boot(&daemon_config, &docker_api).await {
       let exit_code = errors::parse_main_error(&args, &daemon_config, err);
       std::process::exit(exit_code);
-    };
+    }
     return Ok(());
   }
 
