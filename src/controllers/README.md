@@ -6,3 +6,4 @@ It's come with a specific norme for each type :
 - dns
 - proxy
 - store
+- vpn

@@ -22,11 +22,6 @@ Nanocl is builds upon `Rust` to have the best perfomance and the smallest footpr
 It's use the best ideas and practices from the community. <br />
 You can see it as a `Kubernetes` alternative.
 
-Nanocl can be considered as an (HCO) Hybrid Cloud Orchestrator. <br />
-You can build an entire CI/CD pipeline from tests to high availability production.
-
-<img src="https://download.next-hat.com/ressources/images/infra.png" />
-
 ## ✨ Features
 - [x] Manage clusters (CRUD)
 - [x] Manage networks (CRUD)
