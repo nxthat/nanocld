@@ -92,6 +92,6 @@ async fn main() -> std::io::Result<()> {
 
   // start ntex http server
   server::start(daemon_config, boot_state).await?;
-  log::info!("kill received exiting.");
+  log::info!("shutdown");
   Ok(())
 }
