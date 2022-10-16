@@ -179,7 +179,7 @@ async fn inspect_cluster_by_name(
     namespace: nsp,
     proxy_templates,
     variables,
-    // cargoes: Some(cargoes),
+    cargoes: Some(cargoes),
     networks: Some(networks),
   };
 

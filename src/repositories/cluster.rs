@@ -204,7 +204,7 @@ pub async fn patch_proxy_templates(
 pub async fn list_cargo(
   key: String,
   pool: &web::types::State<Pool>,
-) -> Result<Vec<(CargoInstanceItem, CargoItem)>, HttpResponseError> {
+) -> Result<Vec<CargoItem>, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
   use crate::schema::cargoes;
   let mut conn = controllers::store::get_pool_conn(pool)?;
@@ -214,6 +214,10 @@ pub async fn list_cargo(
       .filter(dsl::cluster_key.eq(key))
       .inner_join(cargoes::table)
       .load(&mut conn)?;
+    let data = data
+      .into_iter()
+      .map(|item| item.1)
+      .collect::<Vec<CargoItem>>();
     Ok(data)
   })
   .await

@@ -6,7 +6,6 @@ use utoipa::ToSchema;
 use crate::schema::clusters;
 
 use super::cargo::CargoItem;
-use super::cargo_instance::CargoInstanceItem;
 use super::cluster_network::ClusterNetworkItem;
 use super::cluster_variable::ClusterVariableItem;
 
@@ -51,7 +50,7 @@ pub struct ClusterItemWithRelation {
   pub(crate) proxy_templates: Vec<String>,
   pub(crate) variables: Vec<ClusterVariableItem>,
   pub(crate) networks: Option<Vec<ClusterNetworkItem>>,
-  // pub(crate) cargoes: Option<Vec<(ClusterCargoItem, CargoItem)>>,
+  pub(crate) cargoes: Option<Vec<CargoItem>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
