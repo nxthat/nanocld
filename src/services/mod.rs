@@ -17,11 +17,11 @@ pub mod nginx_template;
 pub mod cluster_variable;
 /// Manage container_image
 pub mod container_image;
-
+/// Manage system
 pub mod system;
-
-pub mod cluster_cargo;
-
+/// Mange cargo instance
+pub mod cargo_instance;
+/// Manage containers
 pub mod container;
-
+/// Manage nodes
 pub mod node;

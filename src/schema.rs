@@ -28,6 +28,15 @@ diesel::table! {
 }
 
 diesel::table! {
+    cargo_instances (key) {
+        key -> Varchar,
+        cargo_key -> Varchar,
+        cluster_key -> Varchar,
+        network_key -> Varchar,
+    }
+}
+
+diesel::table! {
     cargoes (key) {
         key -> Varchar,
         namespace_name -> Varchar,
@@ -38,15 +47,6 @@ diesel::table! {
         dns_entry -> Nullable<Varchar>,
         domainname -> Nullable<Varchar>,
         hostname -> Nullable<Varchar>,
-    }
-}
-
-diesel::table! {
-    cluster_cargoes (key) {
-        key -> Varchar,
-        cargo_key -> Varchar,
-        cluster_key -> Varchar,
-        network_key -> Varchar,
     }
 }
 
@@ -158,15 +158,15 @@ diesel::table! {
 }
 
 diesel::joinable!(cargoes -> namespaces (namespace_name));
-diesel::joinable!(cluster_cargoes -> cargoes (cargo_key));
-diesel::joinable!(cluster_cargoes -> cluster_networks (network_key));
-diesel::joinable!(cluster_cargoes -> clusters (cluster_key));
+diesel::joinable!(cargo_instances -> cargoes (cargo_key));
+diesel::joinable!(cargo_instances -> cluster_networks (network_key));
+diesel::joinable!(cargo_instances -> clusters (cluster_key));
 diesel::joinable!(cluster_networks -> clusters (cluster_key));
 
 diesel::allow_tables_to_appear_in_same_query!(
   cargo_environnements,
+  cargo_instances,
   cargoes,
-  cluster_cargoes,
   cluster_networks,
   cluster_variables,
   clusters,

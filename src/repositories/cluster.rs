@@ -7,7 +7,7 @@ use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
 use crate::models::{
   Pool, ClusterItem, ClusterPartial, GenericDelete, GenericCount, CargoItem,
-  ClusterCargoItem, ClusterVariableItem,
+  CargoInstanceItem, ClusterVariableItem,
 };
 
 /// # Create cluster for namespace
@@ -115,7 +115,7 @@ pub async fn find_by_key(
 }
 
 /// # Find by namespace
-/// Return list of cluster for given namespace
+/// Return from store a list of cluster for given namespace
 ///
 /// # Arguments
 ///
@@ -204,13 +204,13 @@ pub async fn patch_proxy_templates(
 pub async fn list_cargo(
   key: String,
   pool: &web::types::State<Pool>,
-) -> Result<Vec<(ClusterCargoItem, CargoItem)>, HttpResponseError> {
-  use crate::schema::cluster_cargoes::dsl;
+) -> Result<Vec<(CargoInstanceItem, CargoItem)>, HttpResponseError> {
+  use crate::schema::cargo_instances::dsl;
   use crate::schema::cargoes;
   let mut conn = controllers::store::get_pool_conn(pool)?;
 
   let cargoes = web::block(move || {
-    let data: Vec<(ClusterCargoItem, CargoItem)> = dsl::cluster_cargoes
+    let data: Vec<(CargoInstanceItem, CargoItem)> = dsl::cargo_instances
       .filter(dsl::cluster_key.eq(key))
       .inner_join(cargoes::table)
       .load(&mut conn)?;

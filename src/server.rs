@@ -39,7 +39,7 @@ pub async fn start<'a>(
       // bind controller cluster network
       .configure(services::cluster_network::ntex_config)
       // bind controller cluster cargo
-      .configure(services::cluster_cargo::ntex_config)
+      .configure(services::cargo_instance::ntex_config)
       // bind controller nginx template
       .configure(services::nginx_template::ntex_config)
       // bind controller container

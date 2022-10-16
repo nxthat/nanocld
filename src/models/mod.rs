@@ -23,8 +23,8 @@ pub use cluster::*;
 mod cluster_network;
 pub use cluster_network::*;
 
-mod cluster_cargo;
-pub use cluster_cargo::*;
+mod cargo_instance;
+pub use cargo_instance::*;
 
 mod cluster_variable;
 pub use cluster_variable::*;

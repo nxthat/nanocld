@@ -2,26 +2,26 @@ use ntex::web;
 use diesel::prelude::*;
 
 use crate::controllers;
-use crate::models::{Pool, ClusterCargoPartial, ClusterCargoItem, GenericDelete};
+use crate::models::{Pool, CargoInstancePartial, CargoInstanceItem, GenericDelete};
 
 use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
 
 pub async fn create(
-  item: ClusterCargoPartial,
+  item: CargoInstancePartial,
   pool: &web::types::State<Pool>,
-) -> Result<ClusterCargoItem, HttpResponseError> {
-  use crate::schema::cluster_cargoes::dsl;
+) -> Result<CargoInstanceItem, HttpResponseError> {
+  use crate::schema::cargo_instances::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    let item = ClusterCargoItem {
+    let item = CargoInstanceItem {
       key: format!("{}-{}", item.cluster_key, item.cargo_key),
       network_key: item.network_key,
       cluster_key: item.cluster_key,
       cargo_key: item.cargo_key,
     };
-    diesel::insert_into(dsl::cluster_cargoes)
+    diesel::insert_into(dsl::cargo_instances)
       .values(&item)
       .execute(&mut conn)?;
     Ok(item)
@@ -36,12 +36,12 @@ pub async fn create(
 pub async fn get_by_cluster_key(
   cluster_key: String,
   pool: &web::types::State<Pool>,
-) -> Result<Vec<ClusterCargoItem>, HttpResponseError> {
-  use crate::schema::cluster_cargoes::dsl;
+) -> Result<Vec<CargoInstanceItem>, HttpResponseError> {
+  use crate::schema::cargo_instances::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    dsl::cluster_cargoes
+    dsl::cargo_instances
       .filter(dsl::cluster_key.eq(cluster_key))
       .get_results(&mut conn)
   })
@@ -56,11 +56,11 @@ pub async fn delete_by_key(
   key: String,
   pool: &web::types::State<Pool>,
 ) -> Result<GenericDelete, HttpResponseError> {
-  use crate::schema::cluster_cargoes::dsl;
+  use crate::schema::cargo_instances::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    diesel::delete(dsl::cluster_cargoes.filter(dsl::cluster_key.eq(key)))
+    diesel::delete(dsl::cargo_instances.filter(dsl::cluster_key.eq(key)))
       .execute(&mut conn)
   })
   .await;
@@ -74,11 +74,11 @@ pub async fn delete_by_cargo_key(
   cargo_key: String,
   pool: &web::types::State<Pool>,
 ) -> Result<GenericDelete, HttpResponseError> {
-  use crate::schema::cluster_cargoes::dsl;
+  use crate::schema::cargo_instances::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    diesel::delete(dsl::cluster_cargoes.filter(dsl::cargo_key.eq(cargo_key)))
+    diesel::delete(dsl::cargo_instances.filter(dsl::cargo_key.eq(cargo_key)))
       .execute(&mut conn)
   })
   .await;
@@ -91,12 +91,12 @@ pub async fn delete_by_cargo_key(
 pub async fn find_by_cargo_key(
   cargo_key: String,
   pool: &web::types::State<Pool>,
-) -> Result<Vec<ClusterCargoItem>, HttpResponseError> {
-  use crate::schema::cluster_cargoes::dsl;
+) -> Result<Vec<CargoInstanceItem>, HttpResponseError> {
+  use crate::schema::cargo_instances::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    dsl::cluster_cargoes
+    dsl::cargo_instances
       .filter(dsl::cargo_key.eq(cargo_key))
       .load(&mut conn)
   })
@@ -111,12 +111,12 @@ pub async fn find_by_cargo_key(
 pub async fn get_by_key(
   key: String,
   pool: &web::types::State<Pool>,
-) -> Result<ClusterCargoItem, HttpResponseError> {
-  use crate::schema::cluster_cargoes::dsl;
+) -> Result<CargoInstanceItem, HttpResponseError> {
+  use crate::schema::cargo_instances::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    dsl::cluster_cargoes
+    dsl::cargo_instances
       .filter(dsl::key.eq(key))
       .get_result(&mut conn)
   })

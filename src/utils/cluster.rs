@@ -10,8 +10,8 @@ use crate::config::DaemonConfig;
 use crate::utils::render_template;
 use crate::{utils, controllers, repositories};
 use crate::models::{
-  Pool, ClusterItem, CargoItem, ClusterNetworkItem, ClusterCargoPartial,
-  CargoEnvItem, NginxTemplateModes, ClusterCargoItem,
+  Pool, ClusterItem, CargoItem, ClusterNetworkItem, CargoInstancePartial,
+  CargoEnvItem, NginxTemplateModes, CargoInstanceItem,
 };
 
 use crate::errors::{HttpResponseError, IntoHttpResponseError};
@@ -164,7 +164,7 @@ async fn start_containers(
 }
 
 async fn start_cluster_cargoes(
-  cluster_cargoes: Vec<ClusterCargoItem>,
+  cluster_cargoes: Vec<CargoInstanceItem>,
   docker_api: &web::types::State<bollard::Docker>,
   pool: &web::types::State<Pool>,
 ) -> Result<Vec<CargoTemplateData>, HttpResponseError> {
@@ -211,7 +211,7 @@ pub async fn start(
   pool: &web::types::State<Pool>,
   docker_api: &web::types::State<bollard::Docker>,
 ) -> Result<(), HttpResponseError> {
-  let cluster_cargoes = repositories::cluster_cargo::get_by_cluster_key(
+  let cluster_cargoes = repositories::cargo_instance::get_by_cluster_key(
     cluster.key.to_owned(),
     pool,
   )
@@ -340,7 +340,7 @@ pub async fn join_cargo(
   docker_api: &web::types::State<bollard::Docker>,
   pool: &web::types::State<Pool>,
 ) -> Result<Vec<String>, HttpResponseError> {
-  let cluster_cargo = ClusterCargoPartial {
+  let cluster_cargo = CargoInstancePartial {
     cluster_key: opts.cluster.key.to_owned(),
     cargo_key: opts.cargo.key.to_owned(),
     network_key: opts.network.key.to_owned(),
@@ -423,7 +423,7 @@ pub async fn join_cargo(
     .collect::<Result<Vec<()>, HttpResponseError>>()?;
 
   if opts.is_creating_relation {
-    repositories::cluster_cargo::create(cluster_cargo, pool).await?;
+    repositories::cargo_instance::create(cluster_cargo, pool).await?;
   }
 
   Ok(container_ids)

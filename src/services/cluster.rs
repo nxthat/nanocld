@@ -115,7 +115,8 @@ async fn delete_cluster_by_name(
     cargo: None,
   };
 
-  repositories::cluster_cargo::delete_by_key(gen_key.to_owned(), &pool).await?;
+  repositories::cargo_instance::delete_by_key(gen_key.to_owned(), &pool)
+    .await?;
   let containers = utils::container::list_container(qs, &docker_api).await?;
   let mut stream = stream::iter(containers);
   while let Some(container) = stream.next().await {
@@ -249,7 +250,7 @@ async fn join_cargo_to_cluster(
   let cluster_key = nsp.to_owned() + "-" + &name;
   let cargo_key = nsp.to_owned() + "-" + &payload.cargo;
 
-  if (repositories::cluster_cargo::get_by_key(
+  if (repositories::cargo_instance::get_by_key(
     format!("{}-{}", &cluster_key, &cargo_key),
     &pool,
   )

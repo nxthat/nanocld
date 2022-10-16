@@ -3,15 +3,15 @@ use futures::{stream, StreamExt};
 
 use crate::config::DaemonConfig;
 use crate::{utils, repositories};
-use crate::models::{Pool, GenericNspQuery, ClusterCargoPatchPath};
+use crate::models::{Pool, GenericNspQuery, CargoInstancePatchPath};
 use crate::errors::HttpResponseError;
 use crate::utils::cluster::JoinCargoOptions;
 
 use super::utils::gen_nsp_key_by_name;
 
 #[web::patch("/clusters/{cluster_name}/cargoes/{cargo_name}")]
-async fn update_cluster_cargo_by_name(
-  req_path: web::types::Path<ClusterCargoPatchPath>,
+async fn update_cargo_instance_by_name(
+  req_path: web::types::Path<CargoInstancePatchPath>,
   daemon_config: web::types::State<DaemonConfig>,
   pool: web::types::State<Pool>,
   docker_api: web::types::State<bollard::Docker>,
@@ -20,7 +20,7 @@ async fn update_cluster_cargo_by_name(
   let cluster_key = gen_nsp_key_by_name(&qs.namespace, &req_path.cluster_name);
   let cargo_key = gen_nsp_key_by_name(&qs.namespace, &req_path.cargo_name);
 
-  let cluster_cargo = repositories::cluster_cargo::get_by_key(
+  let cluster_cargo = repositories::cargo_instance::get_by_key(
     format!("{}-{}", &cluster_key, &cargo_key),
     &pool,
   )
@@ -67,5 +67,5 @@ async fn update_cluster_cargo_by_name(
 }
 
 pub fn ntex_config(config: &mut web::ServiceConfig) {
-  config.service(update_cluster_cargo_by_name);
+  config.service(update_cargo_instance_by_name);
 }

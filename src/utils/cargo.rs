@@ -159,7 +159,7 @@ pub async fn update_containers(
   pool: &web::types::State<Pool>,
 ) -> Result<(), HttpResponseError> {
   let cluster_cargoes =
-    repositories::cluster_cargo::find_by_cargo_key(cargo_key, pool).await?;
+    repositories::cargo_instance::find_by_cargo_key(cargo_key, pool).await?;
   let mut cluster_cargoes_stream = stream::iter(cluster_cargoes);
   while let Some(cluster_cargo) = cluster_cargoes_stream.next().await {
     let network = repositories::cluster_network::find_by_key(

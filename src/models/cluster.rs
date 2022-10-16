@@ -6,7 +6,7 @@ use utoipa::ToSchema;
 use crate::schema::clusters;
 
 use super::cargo::CargoItem;
-use super::cluster_cargo::ClusterCargoItem;
+use super::cargo_instance::CargoInstanceItem;
 use super::cluster_network::ClusterNetworkItem;
 use super::cluster_variable::ClusterVariableItem;
 

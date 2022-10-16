@@ -119,7 +119,7 @@ async fn delete_cargo_by_name(
   let gen_key = nsp + "-" + &name.into_inner();
 
   repositories::cargo::find_by_key(gen_key.clone(), &pool).await?;
-  repositories::cluster_cargo::delete_by_cargo_key(gen_key.to_owned(), &pool)
+  repositories::cargo_instance::delete_by_cargo_key(gen_key.to_owned(), &pool)
     .await?;
   let res =
     repositories::cargo::delete_by_key(gen_key.to_owned(), &pool).await?;
