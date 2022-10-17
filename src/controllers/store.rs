@@ -10,6 +10,7 @@ use bollard::{
   models::HostConfig,
   errors::Error as DockerError,
   container::{CreateContainerOptions, Config},
+  service::{RestartPolicy, RestartPolicyNameEnum},
 };
 
 use crate::{
@@ -21,12 +22,16 @@ use crate::errors::HttpResponseError;
 use super::utils::*;
 
 fn gen_postgre_host_conf(config: &DaemonConfig) -> HostConfig {
-  let path = Path::new(&config.state_dir).join("postgresql/data");
+  let path = Path::new(&config.state_dir).join("store/data");
 
-  let binds = vec![format!("{}:/var/lib/postgresql/data", path.display())];
+  let binds = vec![format!("{}:/cockroach/cockroach-data", path.display())];
 
   HostConfig {
     binds: Some(binds),
+    restart_policy: Some(RestartPolicy {
+      name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
+      maximum_retry_count: None,
+    }),
     network_mode: Some(String::from("nanoclservices0")),
     ..Default::default()
   }
@@ -62,7 +67,7 @@ async fn create_postgre_container(
 ///
 /// # Examples
 /// ```
-/// let pool = create_pool();
+/// let pool = create_pool(String::from("localhost"));
 /// ```
 pub async fn create_pool(host: String) -> Pool {
   web::block(move || {
@@ -98,32 +103,30 @@ pub fn get_pool_conn(
 pub async fn get_postgres_ip(
   docker_api: &Docker,
 ) -> Result<String, HttpResponseError> {
-  let container = docker_api
-    .inspect_container("nanocl-db-postgre", None)
-    .await?;
+  let container = docker_api.inspect_container("nstore", None).await?;
 
   let networks = container
     .network_settings
     .ok_or(HttpResponseError {
-      msg: String::from("unable to get nanocl-db-postgre network nettings"),
+      msg: String::from("unable to get nstore network nettings"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?
     .networks
     .ok_or(HttpResponseError {
-      msg: String::from("unable to get nanocl-db-postgre networks"),
+      msg: String::from("unable to get nstore networks"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
 
   let ip_address = networks
     .get("nanoclservices0")
     .ok_or(HttpResponseError {
-      msg: String::from("unable to get nanocl-db-postgre network nanocl"),
+      msg: String::from("unable to get nstore network nanocl"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?
     .ip_address
     .as_ref()
     .ok_or(HttpResponseError {
-      msg: String::from("unable to get nanocl-db-postgre network nanocl"),
+      msg: String::from("unable to get nstore network nanocl"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
 
@@ -134,7 +137,7 @@ pub async fn boot(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let container_name = "nanocl-db-postgre";
+  let container_name = "nstore";
   let s_state = get_component_state(container_name, docker_api).await;
 
   if s_state == ComponentState::Uninstalled {

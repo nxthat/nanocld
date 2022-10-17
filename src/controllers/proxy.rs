@@ -6,6 +6,7 @@ use bollard::{
   errors::Error as DockerError,
   container::{CreateContainerOptions, Config},
   exec::{CreateExecOptions, StartExecOptions},
+  service::{RestartPolicy, RestartPolicyNameEnum},
 };
 
 use crate::config::DaemonConfig;
@@ -13,7 +14,7 @@ use crate::config::DaemonConfig;
 use super::utils::*;
 
 pub async fn reload_config(docker_api: &Docker) -> Result<(), DockerError> {
-  let container_name = "nanocl-proxy-nginx";
+  let container_name = "nproxy";
   let config = CreateExecOptions {
     cmd: Some(vec!["nginx", "-s", "reload"]),
     attach_stdout: Some(true),
@@ -49,6 +50,10 @@ fn gen_nginx_host_conf(config: &DaemonConfig) -> HostConfig {
   HostConfig {
     binds,
     network_mode,
+    restart_policy: Some(RestartPolicy {
+      name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
+      maximum_retry_count: None,
+    }),
     ..Default::default()
   }
 }
@@ -79,7 +84,7 @@ pub async fn boot(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let container_name = "nanocl-proxy-nginx";
+  let container_name = "nproxy";
   let s_state = get_component_state(container_name, docker_api).await;
   if s_state == ComponentState::Uninstalled {
     create_nginx_container(container_name, config, docker_api).await?;

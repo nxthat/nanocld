@@ -11,6 +11,7 @@ use bollard::{
   models::HostConfig,
   errors::Error as DockerError,
   container::{Config, CreateContainerOptions},
+  service::{RestartPolicy, RestartPolicyNameEnum},
 };
 
 use thiserror::Error;
@@ -94,9 +95,7 @@ pub fn add_dns_entry(
 }
 
 pub async fn restart(docker_api: &Docker) -> Result<(), DnsError> {
-  docker_api
-    .restart_container("nanocl-dns-dnsmasq", None)
-    .await?;
+  docker_api.restart_container("ndns", None).await?;
   Ok(())
 }
 
@@ -110,6 +109,10 @@ pub fn gen_dnsmasq_host_conf(config: &DaemonConfig) -> HostConfig {
   ]);
   HostConfig {
     binds,
+    restart_policy: Some(RestartPolicy {
+      name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
+      maximum_retry_count: None,
+    }),
     cap_add: Some(vec![String::from("NET_ADMIN")]),
     network_mode: Some(String::from("host")),
     ..Default::default()
@@ -142,7 +145,7 @@ pub async fn boot(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let container_name = "nanocl-dns-dnsmasq";
+  let container_name = "ndns";
   let s_state = get_component_state(container_name, docker_api).await;
 
   if s_state == ComponentState::Uninstalled {

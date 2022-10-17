@@ -1,3 +1,4 @@
+use bollard::service::{RestartPolicy, RestartPolicyNameEnum};
 use ntex::web;
 use ntex::http::StatusCode;
 use std::collections::HashMap;
@@ -78,6 +79,10 @@ pub async fn create_containers<'a>(
       attach_stdout: Some(true),
       attach_stderr: Some(true),
       host_config: Some(bollard::models::HostConfig {
+        restart_policy: Some(RestartPolicy {
+          name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
+          maximum_retry_count: None,
+        }),
         binds: Some(opts.cargo.binds.to_owned()),
         network_mode: Some(opts.network_key.to_owned()),
         ..Default::default()

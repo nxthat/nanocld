@@ -55,7 +55,7 @@ pub fn gen_labels_with_namespace(namespace: &str) -> HashMap<&str, &str> {
 /// ```rust,norun
 /// use crate::services;
 ///
-/// services::utils::start_service(&docker, "nanocl-proxy-nginx").await;
+/// services::utils::start_service(&docker, "nproxy").await;
 /// ```
 pub async fn start_component(
   name: &str,
@@ -120,7 +120,7 @@ fn parse_create_output(
 /// ```rust,norun
 /// use crate::services;
 ///
-/// services::utils::build_component(&docker, "nanocl-proxy-nginx").await;
+/// services::utils::build_component(&docker, "nproxy").await;
 /// ```
 pub async fn build_component(
   service_name: &'static str,
@@ -290,7 +290,7 @@ pub async fn create_network(
 /// ```rust,norun
 /// use crate::services;
 ///
-/// services::utils::get_component_state(&docker, "nanocl-proxy-nginx").await;
+/// services::utils::get_component_state(&docker, "nproxy").await;
 /// ```
 pub async fn get_component_state(
   container_name: &'static str,
