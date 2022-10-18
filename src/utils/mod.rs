@@ -1,10 +1,12 @@
 pub mod errors;
 
+pub mod key;
 pub mod node;
 pub mod cargo;
 pub mod docker;
 pub mod github;
 pub mod cluster;
+pub mod cluster_network;
 pub mod container;
 pub mod git_repository;
 pub mod cluster_variable;
@@ -120,7 +122,9 @@ pub mod test {
 
   pub async fn gen_postgre_pool() -> Pool {
     let docker = gen_docker_client();
-    let ip_addr = controllers::store::get_postgres_ip(&docker).await.unwrap();
+    let ip_addr = controllers::store::get_store_ip_addr(&docker)
+      .await
+      .unwrap();
 
     controllers::store::create_pool(ip_addr).await
   }

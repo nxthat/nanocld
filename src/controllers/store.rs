@@ -21,7 +21,7 @@ use crate::errors::HttpResponseError;
 
 use super::utils::*;
 
-fn gen_postgre_host_conf(config: &DaemonConfig) -> HostConfig {
+fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
   let path = Path::new(&config.state_dir).join("store/data");
 
   let binds = vec![format!("{}:/cockroach/cockroach-data", path.display())];
@@ -37,14 +37,14 @@ fn gen_postgre_host_conf(config: &DaemonConfig) -> HostConfig {
   }
 }
 
-async fn create_postgre_container(
+async fn create_store_container(
   name: &str,
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
   let image = Some("cockroachdb/cockroach:v21.2.16");
   let labels = Some(gen_labels_with_namespace("nanocl"));
-  let host_config = Some(gen_postgre_host_conf(config));
+  let host_config = Some(gen_store_host_conf(config));
   let options = Some(CreateContainerOptions { name });
   let config = Config {
     image,
@@ -100,11 +100,10 @@ pub fn get_pool_conn(
   Ok(conn)
 }
 
-pub async fn get_postgres_ip(
+pub async fn get_store_ip_addr(
   docker_api: &Docker,
 ) -> Result<String, HttpResponseError> {
   let container = docker_api.inspect_container("nstore", None).await?;
-
   let networks = container
     .network_settings
     .ok_or(HttpResponseError {
@@ -116,7 +115,6 @@ pub async fn get_postgres_ip(
       msg: String::from("unable to get nstore networks"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
-
   let ip_address = networks
     .get("nanoclservices0")
     .ok_or(HttpResponseError {
@@ -129,7 +127,6 @@ pub async fn get_postgres_ip(
       msg: String::from("unable to get nstore network nanocl"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
-
   Ok(ip_address.to_owned())
 }
 
@@ -141,7 +138,7 @@ pub async fn boot(
   let s_state = get_component_state(container_name, docker_api).await;
 
   if s_state == ComponentState::Uninstalled {
-    create_postgre_container(container_name, config, docker_api).await?;
+    create_store_container(container_name, config, docker_api).await?;
   }
   if s_state != ComponentState::Running {
     if let Err(err) = start_component(container_name, docker_api).await {

@@ -21,15 +21,18 @@ pub enum NetworkState {
   Ready,
 }
 
-/// # Generate labels with a namespace
+type DockerBuildOutput = Result<bollard::models::BuildInfo, DockerError>;
+type DockerCreateOutput = Result<bollard::models::CreateImageInfo, DockerError>;
+
+/// ## Generate labels with a namespace
 ///
-/// # Arguments
+/// ## Arguments
 /// - [namespace](str) the name of the namespace
 ///
-/// # Return
+/// ## Return
 /// [labels](HashMap) a hashmap of strings with namespace key as given value
 ///
-/// # Examples
+/// ## Examples
 /// ```rust,norun
 /// use crate::services;
 ///
@@ -41,17 +44,17 @@ pub fn gen_labels_with_namespace(namespace: &str) -> HashMap<&str, &str> {
   labels
 }
 
-/// # Start a service
+/// ## Start a service
 /// Start service by it's name
 ///
-/// # Arguments
+/// ## Arguments
 /// - [name](str) name of the service to start
 /// - [docker_api](Docker) bollard docker instance
 ///
-/// # Return
+/// ## Return
 /// if sucess return nothing a [docker error](DockerError) is returned if an error occur
 ///
-/// # Examples
+/// ## Examples
 /// ```rust,norun
 /// use crate::services;
 ///
@@ -67,9 +70,18 @@ pub async fn start_component(
   Ok(())
 }
 
+/// ## Parse docker build output
+/// Print parsed docker build output
+///
+/// ## Arguments
+/// - [service_name](str) The name of the service being builded
+/// - [output](DockerBuildOutput) The output to parse
+///
+/// ## Return
+/// Ok in any case
 fn parse_build_output(
   service_name: &'static str,
-  output: Result<bollard::models::BuildInfo, DockerError>,
+  output: DockerBuildOutput,
 ) -> Result<(), DockerError> {
   match output {
     Err(err) => return Err(err),
@@ -86,9 +98,18 @@ fn parse_build_output(
   Ok(())
 }
 
+/// ## Parse docker create output
+/// Print parsed docker create output
+///
+/// ## Arguments
+/// - [service_name](str) The name of the service being builded
+/// - [output](DockerCreateOutput) The output to parse
+///
+/// ## Return
+/// CreateImageInfo or DockerError
 fn parse_create_output(
   service_name: &'static str,
-  output: Result<bollard::models::CreateImageInfo, DockerError>,
+  output: DockerCreateOutput,
 ) -> Result<bollard::models::CreateImageInfo, DockerError> {
   let output = match output {
     Err(err) => return Err(err),
@@ -194,17 +215,17 @@ pub async fn image_exists(image_name: &str, docker: &Docker) -> bool {
   false
 }
 
-/// # Get network state
+/// ## Get network state
 ///
-/// # Arguments
+/// ## Arguments
 /// - [name](str) name of the network
 /// - [docker_api](Docker) bollard docker instance
 ///
-/// # Return
+/// ## Return
 /// /// if success return [network state](NetworkState)
 /// a [docker error](DockerError) is returned if an error occur
 ///
-/// /// # Examples
+/// ## Examples
 /// ```rust,norun
 /// use crate::services;
 ///
@@ -240,17 +261,17 @@ pub async fn get_network_state(
   Ok(NetworkState::Ready)
 }
 
-/// # Create a network
+/// ## Create a network
 /// Create a network by name with default settings using docker api
 ///
-/// # Arguments
+/// ## Arguments
 /// - [name](str) name of the network to create
 /// - [docker_api](Docker) bollard docker instance
 ///
-/// # Return
+/// ## Return
 /// if sucess return nothing a [docker error](DockerError) is returned if an error occur
 ///
-/// /// # Examples
+/// ## Examples
 /// ```rust,norun
 /// use crate::services;
 ///
@@ -275,18 +296,18 @@ pub async fn create_network(
   Ok(())
 }
 
-/// # Get service state
+/// ## Get service state
 /// Get state of a service by his name
 ///
-/// # Arguments
+/// ## Arguments
 /// - [name](str) name of the service
 /// - [docker_api](Docker) bollard docker instance
 ///
-/// # Return
+/// ## Return
 /// if success return [service state](ServiceState)
 /// a [docker error](DockerError) is returned if an error occur
 ///
-/// # Examples
+/// ## Examples
 /// ```rust,norun
 /// use crate::services;
 ///
@@ -311,4 +332,11 @@ pub async fn get_component_state(
     }
   }
   ComponentState::Stopped
+}
+
+pub async fn register_controller(
+  name: &'static str,
+  r#type: &str,
+) -> Result<(), DockerError> {
+  Ok(())
 }

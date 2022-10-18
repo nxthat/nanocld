@@ -39,3 +39,9 @@ pub struct ClusterNetworkItem {
   pub(crate) default_gateway: String,
   pub(crate) cluster_key: String,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct InspectClusterNetworkPath {
+  pub(crate) c_name: String,
+  pub(crate) n_name: String,
+}
