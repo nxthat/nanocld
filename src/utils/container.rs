@@ -1,6 +1,7 @@
 use ntex::web;
 use std::collections::HashMap;
 
+use crate::utils::key;
 use crate::models::ContainerFilterQuery;
 use crate::errors::HttpResponseError;
 
@@ -8,10 +9,7 @@ pub async fn list_container(
   qs: ContainerFilterQuery,
   docker_api: &web::types::State<bollard::Docker>,
 ) -> Result<Vec<bollard::models::ContainerSummary>, HttpResponseError> {
-  let namespace = match qs.namespace {
-    None => String::from("global"),
-    Some(namespace) => namespace,
-  };
+  let namespace = key::resolve_nsp(&qs.namespace);
   let mut filters = HashMap::new();
   let default_label = format!("namespace={}", &namespace);
   let mut labels = vec![default_label];

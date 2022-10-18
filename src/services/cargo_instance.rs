@@ -7,8 +7,6 @@ use crate::models::{Pool, GenericNspQuery, CargoInstancePatchPath};
 use crate::errors::HttpResponseError;
 use crate::utils::cluster::JoinCargoOptions;
 
-use super::utils::gen_nsp_key_by_name;
-
 #[web::patch("/clusters/{cluster_name}/cargoes/{cargo_name}")]
 async fn update_cargo_instance_by_name(
   req_path: web::types::Path<CargoInstancePatchPath>,
@@ -17,8 +15,10 @@ async fn update_cargo_instance_by_name(
   docker_api: web::types::State<bollard::Docker>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let cluster_key = gen_nsp_key_by_name(&qs.namespace, &req_path.cluster_name);
-  let cargo_key = gen_nsp_key_by_name(&qs.namespace, &req_path.cargo_name);
+  let cluster_key =
+    utils::key::gen_key_from_nsp(&qs.namespace, &req_path.cluster_name);
+  let cargo_key =
+    utils::key::gen_key_from_nsp(&qs.namespace, &req_path.cargo_name);
 
   let cluster_cargo = repositories::cargo_instance::get_by_key(
     format!("{}-{}", &cluster_key, &cargo_key),

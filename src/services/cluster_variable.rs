@@ -1,11 +1,9 @@
 use ntex::web;
 use serde::{Serialize, Deserialize};
 
-use crate::repositories;
+use crate::{utils, repositories};
 use crate::models::{Pool, GenericNspQuery, ClusterVariablePartial};
 use crate::errors::HttpResponseError;
-
-use super::utils::gen_nsp_key_by_name;
 
 /// Create cluster variable
 #[cfg_attr(feature = "dev", utoipa::path(
@@ -30,7 +28,7 @@ async fn create_cluster_variable(
   web::types::Json(payload): web::types::Json<ClusterVariablePartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = c_name.into_inner();
-  let cluster_key = gen_nsp_key_by_name(&qs.namespace, &name);
+  let cluster_key = utils::key::gen_key_from_nsp(&qs.namespace, &name);
 
   repositories::cluster::find_by_key(cluster_key.to_owned(), &pool).await?;
   let cluster_var = repositories::cluster_variable::create(
@@ -65,7 +63,7 @@ async fn list_cluster_variable(
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = c_name.into_inner();
 
-  let cluster_key = gen_nsp_key_by_name(&qs.namespace, &name);
+  let cluster_key = utils::key::gen_key_from_nsp(&qs.namespace, &name);
 
   let cluster_variables = repositories::cluster_variable::list_by_cluster(
     cluster_key.to_owned(),
@@ -104,7 +102,7 @@ async fn delete_cluster_variable(
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let var_name = format!("{}-{}", &url_path.c_name, &url_path.v_name);
-  let var_key = gen_nsp_key_by_name(&qs.namespace, &var_name);
+  let var_key = utils::key::gen_key_from_nsp(&qs.namespace, &var_name);
 
   let res =
     repositories::cluster_variable::delete_by_key(var_key, &pool).await?;
@@ -132,8 +130,8 @@ async fn get_cluster_variable_by_name(
   url_path: web::types::Path<ClusterVariablePath>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let var_name = format!("{}-{}", &url_path.c_name, &url_path.v_name);
-  let var_key = gen_nsp_key_by_name(&qs.namespace, &var_name);
+  let var_name = utils::key::gen_key(&url_path.c_name, &url_path.v_name);
+  let var_key = utils::key::gen_key_from_nsp(&qs.namespace, &var_name);
 
   let res = repositories::cluster_variable::find_by_key(var_key, &pool).await?;
   Ok(web::HttpResponse::Ok().json(&res))

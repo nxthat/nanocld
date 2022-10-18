@@ -17,10 +17,10 @@
 /// ```rust,norun
 /// let nsp = resolve_nsp(None); // return "global"
 /// ```
-pub fn resolve_nsp(nsp: Option<String>) -> String {
+pub fn resolve_nsp(nsp: &Option<String>) -> String {
   match nsp {
     None => String::from("global"),
-    Some(nsp) => nsp,
+    Some(nsp) => nsp.to_owned(),
   }
 }
 
@@ -38,11 +38,8 @@ pub fn resolve_nsp(nsp: Option<String>) -> String {
 /// ```rust,norun
 /// let key = gen_key_from_nsp(None, "prod");
 /// ```
-pub fn gen_key_from_nsp(nsp: Option<String>, m: &str) -> String {
-  let nsp = match nsp {
-    None => String::from("default"),
-    Some(nsp) => nsp,
-  };
+pub fn gen_key_from_nsp(nsp: &Option<String>, m: &str) -> String {
+  let nsp = resolve_nsp(nsp);
   nsp + "-" + m
 }
 

@@ -53,9 +53,23 @@ pub struct ClusterItemWithRelation {
   pub(crate) cargoes: Option<Vec<CargoItem>>,
 }
 
+/// Body used to make a cargo join a cluster
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterJoinBody {
   pub(crate) cargo: String,
   pub(crate) network: String,
+}
+
+/// Body to used to add a template to a cluster
+#[derive(Serialize, Deserialize)]
+pub struct ClusterTemplatePartial {
+  pub(crate) name: String,
+}
+
+/// Struct used to parse path of delete cluster template
+#[derive(Serialize, Deserialize)]
+pub struct DeleteClusterTemplatePath {
+  pub(crate) cl_name: String,
+  pub(crate) nt_name: String,
 }

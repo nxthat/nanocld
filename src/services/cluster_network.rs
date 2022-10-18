@@ -28,7 +28,7 @@ async fn list_cluster_network(
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let c_name = c_name.into_inner();
-  let key = utils::key::gen_key_from_nsp(qs.namespace, &c_name);
+  let key = utils::key::gen_key_from_nsp(&qs.namespace, &c_name);
   let item = repositories::cluster::find_by_key(key, &pool).await?;
   let items =
     repositories::cluster_network::list_for_cluster(item, &pool).await?;
@@ -59,7 +59,7 @@ async fn create_cluster_network(
   web::types::Json(payload): web::types::Json<ClusterNetworkPartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let c_name = c_name.into_inner();
-  let nsp = utils::key::resolve_nsp(qs.namespace);
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
   let key = utils::key::gen_key(&nsp, &c_name);
   // Verify if the repository exist
   // NOTE: Should use a is_exist method instead.
@@ -100,7 +100,7 @@ async fn inspect_cluster_network_by_name(
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let c_name = url_path.c_name.to_owned();
   let n_name = url_path.n_name.to_owned();
-  let nsp = utils::key::resolve_nsp(qs.namespace);
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
   let gen_key = nsp + "-" + &c_name + "-" + &n_name;
   let network =
     repositories::cluster_network::find_by_key(gen_key, &pool).await?;
@@ -131,7 +131,7 @@ async fn delete_cluster_network_by_name(
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let c_name = url_path.c_name.to_owned();
   let n_name = url_path.n_name.to_owned();
-  let nsp = utils::key::resolve_nsp(qs.namespace);
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
   let gen_key = nsp + "-" + &c_name + "-" + &n_name;
   let network =
     repositories::cluster_network::find_by_key(gen_key, &pool).await?;
@@ -167,7 +167,7 @@ async fn count_cluster_network_by_namespace(
   pool: web::types::State<Pool>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let nsp = utils::key::resolve_nsp(qs.namespace);
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
   let res =
     repositories::cluster_network::count_by_namespace(nsp, &pool).await?;
 

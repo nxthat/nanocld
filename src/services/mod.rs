@@ -1,6 +1,4 @@
-//! File to export controller
-/// Some utils
-pub mod utils;
+//! File to export services
 /// Manage namespace
 pub mod namespace;
 /// Manage cluster

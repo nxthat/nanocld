@@ -11,8 +11,6 @@ use crate::models::{
 
 use crate::errors::HttpResponseError;
 
-use super::utils::*;
-
 /// List cargo
 #[cfg_attr(feature = "dev", utoipa::path(
   get,
@@ -31,7 +29,7 @@ async fn list_cargo(
   pool: web::types::State<Pool>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let nsp = ensure_namespace(&qs.namespace);
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
 
   let nsp = repositories::namespace::find_by_name(nsp, &pool).await?;
   let items = repositories::cargo::find_by_namespace(nsp, &pool).await?;
@@ -58,7 +56,7 @@ async fn create_cargo(
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
   web::types::Json(payload): web::types::Json<CargoPartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let nsp = ensure_namespace(&qs.namespace);
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
   log::info!(
     "creating cargo for namespace {} with payload {:?}",
     &nsp,
@@ -115,17 +113,14 @@ async fn delete_cargo_by_name(
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   log::info!("asking cargo deletion {}", &name);
-  let nsp = ensure_namespace(&qs.namespace);
-  let gen_key = nsp + "-" + &name.into_inner();
+  let key = utils::key::gen_key_from_nsp(&qs.namespace, &name.into_inner());
 
-  repositories::cargo::find_by_key(gen_key.clone(), &pool).await?;
-  repositories::cargo_instance::delete_by_cargo_key(gen_key.to_owned(), &pool)
+  repositories::cargo::find_by_key(key.clone(), &pool).await?;
+  repositories::cargo_instance::delete_by_cargo_key(key.to_owned(), &pool)
     .await?;
-  let res =
-    repositories::cargo::delete_by_key(gen_key.to_owned(), &pool).await?;
-  repositories::cargo_env::delete_by_cargo_key(gen_key.to_owned(), &pool)
-    .await?;
-  utils::cargo::delete_container(gen_key.to_owned(), &docker_api).await?;
+  let res = repositories::cargo::delete_by_key(key.to_owned(), &pool).await?;
+  repositories::cargo_env::delete_by_cargo_key(key.to_owned(), &pool).await?;
+  utils::cargo::delete_container(key.to_owned(), &docker_api).await?;
   Ok(web::HttpResponse::Ok().json(&res))
 }
 
@@ -147,7 +142,7 @@ async fn count_cargo(
   pool: web::types::State<Pool>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let nsp = ensure_namespace(&qs.namespace);
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
   let res = repositories::cargo::count(nsp, &pool).await?;
 
   Ok(web::HttpResponse::Ok().json(&res))
@@ -176,20 +171,16 @@ async fn inspect_cargo_by_name(
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
   log::info!("asking cargo inspection {}", &name);
-  let nsp = ensure_namespace(&qs.namespace);
-  let gen_key = nsp + "-" + &name;
-  let res = repositories::cargo::find_by_key(gen_key.to_owned(), &pool).await?;
-
+  let key = utils::key::gen_key_from_nsp(&qs.namespace, &name);
+  let res = repositories::cargo::find_by_key(key.to_owned(), &pool).await?;
   let qs = ContainerFilterQuery {
     cargo: Some(name.to_owned()),
     cluster: None,
     namespace: qs.namespace.to_owned(),
   };
-
   let containers = utils::container::list_container(qs, &docker_api).await?;
-
   let environnements = if let Ok(envs) =
-    repositories::cargo_env::list_by_cargo_key(gen_key, &pool).await
+    repositories::cargo_env::list_by_cargo_key(key, &pool).await
   {
     Some(envs)
   } else {
@@ -223,11 +214,10 @@ async fn patch_cargo_by_name(
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
-  let namespace = ensure_namespace(&qs.namespace);
-  let gen_key = format_key(&namespace, &name);
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
+  let key = utils::key::gen_key(&nsp, &name);
 
-  let cargo =
-    repositories::cargo::find_by_key(gen_key.to_owned(), &pool).await?;
+  let cargo = repositories::cargo::find_by_key(key.to_owned(), &pool).await?;
 
   // Add environement variables
   let mut env_stream =
@@ -243,13 +233,13 @@ async fn patch_cargo_by_name(
     let name = arr[0].to_owned();
     let value = arr[1].to_owned();
     let env = CargoEnvPartial {
-      cargo_key: gen_key.to_owned(),
+      cargo_key: key.to_owned(),
       name: name.to_owned(),
       value: value.to_owned(),
     };
     let env_exists = repositories::cargo_env::exist_in_cargo(
       name.to_owned(),
-      gen_key.to_owned(),
+      key.to_owned(),
       &pool,
     )
     .await?;
@@ -257,7 +247,7 @@ async fn patch_cargo_by_name(
       // Update env variable if it exists
       repositories::cargo_env::patch_for_cargo(
         name.to_owned(),
-        gen_key.to_owned(),
+        key.to_owned(),
         value,
         &pool,
       )
@@ -277,10 +267,10 @@ async fn patch_cargo_by_name(
 
   // Update entity
   let updated_cargo =
-    repositories::cargo::update_by_key(namespace, name, payload, &pool).await?;
+    repositories::cargo::update_by_key(nsp, name, payload, &pool).await?;
 
   // Update containers
-  utils::cargo::update_containers(gen_key, &daemon_config, &docker_api, &pool)
+  utils::cargo::update_containers(key, &daemon_config, &docker_api, &pool)
     .await?;
   Ok(web::HttpResponse::Accepted().json(&updated_cargo))
 }
