@@ -1,5 +1,6 @@
 //! File used to describe daemon boot
 use std::error::Error;
+use std::{thread, time};
 
 use ntex::web;
 
@@ -9,7 +10,7 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::config::DaemonConfig;
 use crate::{controllers, repositories};
-use crate::models::{Pool, NamespacePartial};
+use crate::models::{Pool, NamespacePartial, ClusterItem, ClusterPartial};
 
 use crate::errors::DaemonError;
 
@@ -29,18 +30,16 @@ pub struct BootState {
 ///
 /// # Examples
 /// ```rust,norun
-/// create_default_nsp(&pool).await;
+/// ensure_namespace(&pool).await;
 /// ```
-async fn create_default_nsp(
+async fn ensure_namespace(
+  name: &str,
   pool: &web::types::State<Pool>,
 ) -> Result<(), DaemonError> {
-  const NSP_NAME: &str = "global";
-  match repositories::namespace::inspect_by_name(NSP_NAME.to_string(), pool)
-    .await
-  {
+  match repositories::namespace::inspect_by_name(name.to_owned(), pool).await {
     Err(_err) => {
       let new_nsp = NamespacePartial {
-        name: NSP_NAME.to_string(),
+        name: name.to_owned(),
       };
       repositories::namespace::create(new_nsp, pool).await?;
       Ok(())
@@ -49,7 +48,7 @@ async fn create_default_nsp(
   }
 }
 
-pub async fn create_default_network(
+pub async fn create_system_network(
   docker_api: &bollard::Docker,
 ) -> Result<(), DockerError> {
   let network_name = "nanoclservices0";
@@ -61,31 +60,55 @@ pub async fn create_default_network(
   Ok(())
 }
 
-async fn boot_docker_services(
+async fn boot_controllers(
   config: &DaemonConfig,
   docker_api: &bollard::Docker,
 ) -> Result<(), DaemonError> {
-  create_default_network(docker_api).await?;
+  create_system_network(docker_api).await?;
   // Boot postgresql service to ensure database connection
-  controllers::store::boot(config, docker_api).await?;
+  // controllers::store::boot(config, docker_api).await?;
   // Boot dnsmasq service to manage domain names
   controllers::dns::boot(config, docker_api).await?;
   // Boot nginx service to manage proxy
   controllers::proxy::boot(config, docker_api).await?;
-
   // services::ipsec::boot(config, docker_api).await?;
   Ok(())
 }
 
+async fn boot_store(
+  config: &DaemonConfig,
+  docker_api: &bollard::Docker,
+) -> Result<(), DaemonError> {
+  controllers::store::boot(config, docker_api).await?;
+  // We wait 100ms to ensure store is booted
+  // It's a tricky wait to avoid some error printed by postgresql connector.
+  let sleep_time = time::Duration::from_millis(500);
+  thread::sleep(sleep_time);
+  Ok(())
+}
+
+/// ## Run diesel migration
+/// This function ensure our store have correct datastructure based on our `migrations` folder
 fn run_migrations(
   connection: &mut impl MigrationHarness<diesel::pg::Pg>,
 ) -> Result<(), Box<dyn Error + Send + Sync + 'static>> {
   // This will run the necessary migrations.
   // See the documentation for `MigrationHarness` for
   // all available methods.
-
-  log::info!("runing migration");
   connection.run_pending_migrations(MIGRATIONS)?;
+  Ok(())
+}
+
+async fn create_system_cluster(
+  sys_nsp: String,
+  pool: &web::types::State<Pool>,
+  docker_api: &bollard::Docker,
+) -> Result<(), DaemonError> {
+  let cluster = ClusterPartial {
+    name: String::from(""),
+    proxy_templates: None,
+  };
+  repositories::cluster::create_for_namespace(sys_nsp, cluster, pool).await?;
   Ok(())
 }
 
@@ -95,20 +118,25 @@ pub async fn boot(
   config: &DaemonConfig,
   docker_api: &bollard::Docker,
 ) -> Result<BootState, DaemonError> {
-  log::info!("booting");
-  boot_docker_services(config, docker_api).await?;
+  const DEFAULT_NSP: &str = "global";
+  const SYSTEM_NSP: &str = "system";
+  log::info!("Booting store");
+  boot_store(config, docker_api).await?;
+  log::info!("Store booted");
   let postgres_ip = controllers::store::get_store_ip_addr(docker_api).await?;
-  log::info!("creating postgresql state pool");
+  log::info!("Connecting to store");
   // Connect to postgresql
   let db_pool = controllers::store::create_pool(postgres_ip.to_owned()).await;
   let pool = web::types::State::new(db_pool.to_owned());
   let mut conn = controllers::store::get_pool_conn(&pool)?;
-  // wrap into state to be abble to use our functions
+  log::info!("Store connected");
+  log::info!("Running migrations");
   run_migrations(&mut conn)?;
-  // Create default namesapce
-  create_default_nsp(&pool).await?;
-
-  log::info!("booted");
+  // Ensure required namespace to exists
+  ensure_namespace(DEFAULT_NSP, &pool).await?;
+  ensure_namespace(SYSTEM_NSP, &pool).await?;
+  log::info!("Migrations success");
+  log::info!("Booted");
   // Return state
   Ok(BootState {
     pool: db_pool,

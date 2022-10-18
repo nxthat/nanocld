@@ -9,6 +9,7 @@ pub async fn start<'a>(
   config: DaemonConfig,
   boot_state: BootState,
 ) -> std::io::Result<()> {
+  log::info!("Preparing server");
   let hosts = config.hosts.to_owned();
   let mut server = web::HttpServer::new(move || {
     web::App::new()
@@ -55,32 +56,35 @@ pub async fn start<'a>(
       let addr = host.replace("unix://", "");
       server = match server.bind_uds(&addr) {
         Err(err) => {
-          log::error!("unable to bind server on {} got error {}", &addr, &err);
+          log::error!("Unable to bind server on {} got error {}", &addr, &err);
           std::process::exit(1);
         }
         Ok(server) => server,
       };
-      log::info!("listening on {}", &host);
+      log::info!("Listening on {}", &host);
     } else if host.starts_with("tcp://") {
       let addr = host.replace("tcp://", "");
       server = match server.bind(&addr) {
         Err(err) => {
-          log::error!("unable to bind server on {} got error {}", &addr, &err);
+          log::error!("Unable to bind server on {} got error {}", &addr, &err);
           std::process::exit(1);
         }
         Ok(server) => server,
       };
-      log::info!("listening on {}", &host);
+      log::info!("Listening on {}", &host);
     } else {
-      log::warn!("{} is not valid use tcp:// or unix:// as protocol", host);
+      log::warn!(
+        "Warning {} is not valid use tcp:// or unix:// as protocol",
+        host
+      );
     }
     count += 1;
   }
   #[cfg(debug_assertions)]
   {
     server = server.bind("0.0.0.0:8383")?;
-    log::info!("listening on http://0.0.0.0:8383");
+    log::info!("Listening on http://0.0.0.0:8383");
   }
-  log::info!("http server started");
+  log::info!("Server ready");
   server.run().await
 }

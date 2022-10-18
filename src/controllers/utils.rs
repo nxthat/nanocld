@@ -7,6 +7,11 @@ use bollard::{
   network::{CreateNetworkOptions, InspectNetworkOptions},
   container::StartContainerOptions,
 };
+use ntex::web;
+
+use crate::models::Pool;
+
+use super::specs::ControllerType;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ComponentState {
@@ -336,7 +341,8 @@ pub async fn get_component_state(
 
 pub async fn register_controller(
   name: &'static str,
-  r#type: &str,
+  r#type: ControllerType,
+  pool: &web::types::State<Pool>,
 ) -> Result<(), DockerError> {
   Ok(())
 }
