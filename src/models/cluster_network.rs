@@ -40,6 +40,7 @@ pub struct ClusterNetworkItem {
   pub(crate) cluster_key: String,
 }
 
+/// Structure used to parse inspect cluster network route path
 #[derive(Serialize, Deserialize)]
 pub struct InspectClusterNetworkPath {
   pub(crate) c_name: String,

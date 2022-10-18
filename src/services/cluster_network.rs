@@ -1,7 +1,7 @@
 use ntex::web;
 use ntex::http::StatusCode;
 
-use crate::{repositories, utils};
+use crate::{utils, repositories};
 use crate::models::{
   Pool, GenericNspQuery, ClusterNetworkPartial, InspectClusterNetworkPath,
 };
