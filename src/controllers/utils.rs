@@ -4,14 +4,9 @@ use bollard::{
   Docker,
   errors::Error as DockerError,
   image::{CreateImageOptions, BuildImageOptions},
-  network::{CreateNetworkOptions, InspectNetworkOptions},
+  network::InspectNetworkOptions,
   container::StartContainerOptions,
 };
-use ntex::web;
-
-use crate::models::Pool;
-
-use super::specs::ControllerType;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ComponentState {
@@ -266,41 +261,6 @@ pub async fn get_network_state(
   Ok(NetworkState::Ready)
 }
 
-/// ## Create a network
-/// Create a network by name with default settings using docker api
-///
-/// ## Arguments
-/// - [name](str) name of the network to create
-/// - [docker_api](Docker) bollard docker instance
-///
-/// ## Return
-/// if sucess return nothing a [docker error](DockerError) is returned if an error occur
-///
-/// ## Examples
-/// ```rust,norun
-/// use crate::services;
-///
-/// services::utils::create_network(&docker, "network-name").await;
-/// ```
-pub async fn create_network(
-  network_name: &str,
-  docker_api: &Docker,
-) -> Result<(), DockerError> {
-  let mut options: HashMap<String, String> = HashMap::new();
-  options.insert(
-    String::from("com.docker.network.bridge.name"),
-    network_name.to_owned(),
-  );
-  let config = CreateNetworkOptions {
-    name: network_name.to_owned(),
-    driver: String::from("bridge"),
-    options,
-    ..Default::default()
-  };
-  docker_api.create_network(config).await?;
-  Ok(())
-}
-
 /// ## Get service state
 /// Get state of a service by his name
 ///
@@ -337,12 +297,4 @@ pub async fn get_component_state(
     }
   }
   ComponentState::Stopped
-}
-
-pub async fn register_controller(
-  name: &'static str,
-  r#type: ControllerType,
-  pool: &web::types::State<Pool>,
-) -> Result<(), DockerError> {
-  Ok(())
 }

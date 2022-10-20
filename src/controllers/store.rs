@@ -32,23 +32,25 @@ fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
       name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
       maximum_retry_count: None,
     }),
-    network_mode: Some(String::from("nanoclservices0")),
+    network_mode: Some(String::from("nanoclinternal0")),
     ..Default::default()
   }
 }
 
-async fn create_store_container(
+async fn create_system_store(
   name: &str,
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let image = Some("cockroachdb/cockroach:v21.2.16");
-  let labels = Some(gen_labels_with_namespace("nanocl"));
+  let image = Some("cockroachdb/cockroach:v21.2.17");
+  let mut labels = gen_labels_with_namespace("system");
+  labels.insert("cluster", "system-nano");
+  labels.insert("cargo", "system-nstore");
   let host_config = Some(gen_store_host_conf(config));
   let options = Some(CreateContainerOptions { name });
   let config = Config {
     image,
-    labels,
+    labels: Some(labels),
     host_config,
     hostname: Some(name),
     domainname: Some(name),
@@ -116,7 +118,7 @@ pub async fn get_store_ip_addr(
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
   let ip_address = networks
-    .get("nanoclservices0")
+    .get("nanoclinternal0")
     .ok_or(HttpResponseError {
       msg: String::from("unable to get nstore network nanocl"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
@@ -138,7 +140,7 @@ pub async fn boot(
   let s_state = get_component_state(container_name, docker_api).await;
 
   if s_state == ComponentState::Uninstalled {
-    create_store_container(container_name, config, docker_api).await?;
+    create_system_store(container_name, config, docker_api).await?;
   }
   if s_state != ComponentState::Running {
     if let Err(err) = start_component(container_name, docker_api).await {

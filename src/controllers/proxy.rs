@@ -9,7 +9,7 @@ use bollard::{
   service::{RestartPolicy, RestartPolicyNameEnum},
 };
 
-use crate::config::DaemonConfig;
+use crate::{config::DaemonConfig, errors::DaemonError, models::CargoPartial};
 
 use super::utils::*;
 

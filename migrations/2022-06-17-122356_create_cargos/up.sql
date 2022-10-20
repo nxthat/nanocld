@@ -8,5 +8,7 @@ create table "cargoes" (
   "replicas" BIGINT NOT NULL DEFAULT 1 CHECK (replicas >= 0),
   "dns_entry" VARCHAR,
   "domainname" VARCHAR,
-  "hostname" VARCHAR
+  "hostname" VARCHAR,
+  "network_mode" VARCHAR,
+  "restart_policy" VARCHAR
 );
