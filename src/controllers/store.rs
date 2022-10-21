@@ -14,12 +14,11 @@ use bollard::{
 };
 
 use crate::{
+  utils,
   models::{Pool, DBConn},
   config::DaemonConfig,
 };
 use crate::errors::HttpResponseError;
-
-use super::utils::*;
 
 fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
   let path = Path::new(&config.state_dir).join("store/data");
@@ -43,7 +42,7 @@ async fn create_system_store(
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
   let image = Some("cockroachdb/cockroach:v21.2.17");
-  let mut labels = gen_labels_with_namespace("system");
+  let mut labels = utils::docker::gen_labels_with_namespace("system");
   labels.insert("cluster", "system-nano");
   labels.insert("cargo", "system-nstore");
   let host_config = Some(gen_store_host_conf(config));
@@ -137,13 +136,16 @@ pub async fn boot(
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
   let container_name = "nstore";
-  let s_state = get_component_state(container_name, docker_api).await;
+  let s_state =
+    utils::docker::get_component_state(container_name, docker_api).await;
 
-  if s_state == ComponentState::Uninstalled {
+  if s_state == utils::docker::ComponentState::Uninstalled {
     create_system_store(container_name, config, docker_api).await?;
   }
-  if s_state != ComponentState::Running {
-    if let Err(err) = start_component(container_name, docker_api).await {
+  if s_state != utils::docker::ComponentState::Running {
+    if let Err(err) =
+      utils::docker::start_component(container_name, docker_api).await
+    {
       log::error!("error while starting {} {}", container_name, err);
     }
   }

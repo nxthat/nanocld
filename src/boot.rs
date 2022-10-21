@@ -11,7 +11,6 @@ use bollard::network::{CreateNetworkOptions, InspectNetworkOptions};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::config::DaemonConfig;
-use crate::controllers::utils::NetworkState;
 use crate::{controllers, repositories, utils};
 use crate::models::{
   Pool, NamespacePartial, ClusterPartial, CargoPartial, ClusterNetworkPartial,
@@ -87,8 +86,8 @@ async fn create_system_network(
   docker_api: &Docker,
 ) -> Result<(), DaemonError> {
   let network_state =
-    controllers::utils::get_network_state(network_name, docker_api).await?;
-  if network_state == NetworkState::Ready {
+    utils::docker::get_network_state(network_name, docker_api).await?;
+  if network_state == utils::docker::NetworkState::Ready {
     return Ok(());
   }
   let mut options: HashMap<String, String> = HashMap::new();
@@ -331,8 +330,7 @@ async fn register_system_network(
         status: StatusCode::INTERNAL_SERVER_ERROR,
       }))?;
 
-  let default_gateway =
-    controllers::utils::get_default_gateway(&docker_network)?;
+  let default_gateway = utils::docker::get_default_gateway(&docker_network)?;
 
   repositories::cluster_network::create_for_cluster(
     boot_config.sys_namespace.to_owned(),
