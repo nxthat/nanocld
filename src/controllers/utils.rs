@@ -6,7 +6,11 @@ use bollard::{
   image::{CreateImageOptions, BuildImageOptions},
   network::InspectNetworkOptions,
   container::StartContainerOptions,
+  models::Network,
 };
+use ntex::http::StatusCode;
+
+use crate::errors::HttpResponseError;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ComponentState {
@@ -297,4 +301,37 @@ pub async fn get_component_state(
     }
   }
   ComponentState::Stopped
+}
+
+pub fn get_default_gateway(
+  docker_network: &Network,
+) -> Result<String, HttpResponseError> {
+  let ipam_config = docker_network
+    .to_owned()
+    .ipam
+    .ok_or(HttpResponseError {
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+      msg: String::from("Unable to get ipam config from network"),
+    })?
+    .config
+    .ok_or(HttpResponseError {
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+      msg: String::from("Unable to get ipam config"),
+    })?;
+
+  let default_gateway = ipam_config
+    .get(0)
+    .ok_or(HttpResponseError {
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+      msg: String::from("Unable to get ipam config"),
+    })?
+    .gateway
+    .as_ref()
+    .ok_or(HttpResponseError {
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+      msg: String::from("Unable to get ipam config gateway"),
+    })?
+    .to_owned();
+
+  Ok(default_gateway)
 }

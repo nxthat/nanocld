@@ -6,22 +6,13 @@ use std::{
   path::{Path, PathBuf},
 };
 
-use bollard::{
-  Docker,
-  models::HostConfig,
-  errors::Error as DockerError,
-  container::{Config, CreateContainerOptions},
-  service::{RestartPolicy, RestartPolicyNameEnum},
-};
+use bollard::{Docker, errors::Error as DockerError};
 
 use thiserror::Error;
 use regex::Error as RegexError;
 use std::io::Error as IoError;
 
-use crate::config::DaemonConfig;
 use crate::errors::{HttpResponseError, IntoHttpResponseError};
-
-use super::utils::*;
 
 use crate::utils::errors::docker_error_ref;
 
@@ -96,66 +87,6 @@ pub fn add_dns_entry(
 
 pub async fn restart(docker_api: &Docker) -> Result<(), DnsError> {
   docker_api.restart_container("ndns", None).await?;
-  Ok(())
-}
-
-pub fn gen_dnsmasq_host_conf(config: &DaemonConfig) -> HostConfig {
-  let config_file_path =
-    Path::new(&config.state_dir).join("dnsmasq/dnsmasq.conf");
-  let dir_path = Path::new(&config.state_dir).join("dnsmasq/dnsmasq.d/");
-  let binds = Some(vec![
-    format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
-    format!("{}:/etc/dnsmasq.d/", dir_path.display()),
-  ]);
-  HostConfig {
-    binds,
-    restart_policy: Some(RestartPolicy {
-      name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
-      maximum_retry_count: None,
-    }),
-    cap_add: Some(vec![String::from("NET_ADMIN")]),
-    network_mode: Some(String::from("host")),
-    ..Default::default()
-  }
-}
-
-async fn create_dnsmasq_container(
-  name: &str,
-  config: &DaemonConfig,
-  docker_api: &Docker,
-) -> Result<(), DockerError> {
-  let image = Some("nanocl-dns-dnsmasq:latest");
-  let labels = Some(gen_labels_with_namespace("nanocl"));
-  let host_config = Some(gen_dnsmasq_host_conf(config));
-  let options = Some(CreateContainerOptions { name });
-  let config = Config {
-    image,
-    labels,
-    host_config,
-    tty: Some(true),
-    attach_stdout: Some(true),
-    attach_stderr: Some(true),
-    ..Default::default()
-  };
-  docker_api.create_container(options, config).await?;
-  Ok(())
-}
-
-pub async fn boot(
-  config: &DaemonConfig,
-  docker_api: &Docker,
-) -> Result<(), DockerError> {
-  let container_name = "ndns";
-  let s_state = get_component_state(container_name, docker_api).await;
-
-  if s_state == ComponentState::Uninstalled {
-    create_dnsmasq_container(container_name, config, docker_api).await?;
-  }
-  if s_state != ComponentState::Running {
-    if let Err(err) = start_component(container_name, docker_api).await {
-      log::error!("error while starting {} {}", container_name, err);
-    }
-  }
   Ok(())
 }
 

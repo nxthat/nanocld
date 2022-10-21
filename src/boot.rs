@@ -12,11 +12,10 @@ use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::config::DaemonConfig;
 use crate::controllers::utils::NetworkState;
-use crate::utils::cluster::JoinCargoOptions;
 use crate::{controllers, repositories, utils};
 use crate::models::{
-  Pool, NamespacePartial, ClusterPartial, CargoPartial, ClusterNetworkItem,
-  ClusterNetworkPartial, CargoInstancePartial,
+  Pool, NamespacePartial, ClusterPartial, CargoPartial, ClusterNetworkPartial,
+  CargoInstancePartial,
 };
 
 use crate::errors::{DaemonError, HttpResponseError};
@@ -259,6 +258,48 @@ async fn create_proxy_cargo(
   Ok(())
 }
 
+async fn create_dns_cargo(boot_config: &BootConfig) -> Result<(), DaemonError> {
+  let key = utils::key::gen_key(&boot_config.sys_namespace, "ndns");
+
+  if repositories::cargo::find_by_key(key, &boot_config.s_pool)
+    .await
+    .is_ok()
+  {
+    return Ok(());
+  }
+
+  let config_file_path =
+    Path::new(&boot_config.config.state_dir).join("dnsmasq/dnsmasq.conf");
+  let dir_path =
+    Path::new(&boot_config.config.state_dir).join("dnsmasq/dnsmasq.d/");
+  let binds = Some(vec![
+    format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
+    format!("{}:/etc/dnsmasq.d/", dir_path.display()),
+  ]);
+  let dns_cargo = CargoPartial {
+    name: String::from("ndns"),
+    image_name: String::from("nanocl-dns-dnsmasq"),
+    environnements: None,
+    binds,
+    replicas: Some(1),
+    dns_entry: None,
+    domainname: Some(String::from("ndns")),
+    hostname: Some(String::from("ndns")),
+    network_mode: Some(String::from("host")),
+    restart_policy: Some(String::from("unless-stopped")),
+    cap_add: Some(vec![String::from("NET_ADMIN")]),
+  };
+
+  repositories::cargo::create(
+    boot_config.sys_namespace.to_owned(),
+    dns_cargo,
+    &boot_config.s_pool,
+  )
+  .await?;
+
+  Ok(())
+}
+
 async fn register_system_network(
   boot_config: &BootConfig,
 ) -> Result<(), DaemonError> {
@@ -283,36 +324,15 @@ async fn register_system_network(
 
   let docker_network_id =
     docker_network
+      .to_owned()
       .id
       .ok_or(DaemonError::HttpResponse(HttpResponseError {
         msg: String::from("Unable to get network ID of nanoclinternal0"),
         status: StatusCode::INTERNAL_SERVER_ERROR,
       }))?;
 
-  let ipam_config = docker_network
-    .ipam
-    .ok_or(HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: String::from("Unable to get ipam config from network"),
-    })?
-    .config
-    .ok_or(HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: String::from("Unable to get ipam config"),
-    })?;
-
-  let default_gateway = ipam_config
-    .get(0)
-    .ok_or(HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: String::from("Unable to get ipam config"),
-    })?
-    .gateway
-    .as_ref()
-    .ok_or(HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: String::from("Unable to get ipam config gateway"),
-    })?;
+  let default_gateway =
+    controllers::utils::get_default_gateway(&docker_network)?;
 
   repositories::cluster_network::create_for_cluster(
     boot_config.sys_namespace.to_owned(),
@@ -343,6 +363,7 @@ async fn prepare_system(boot_config: &BootConfig) -> Result<(), DaemonError> {
     &boot_config.s_pool,
   )
   .await?;
+  create_dns_cargo(boot_config).await?;
   Ok(())
 }
 
