@@ -68,6 +68,11 @@ pub async fn create_containers<'a>(
 
     log::debug!("passing env {:#?}", &opts.environnements);
 
+    let mut network_mode = Some(opts.network_key.to_owned());
+    if let Some(net_mode) = &opts.cargo.network_mode {
+      network_mode = Some(net_mode.to_owned());
+    }
+
     let options = bollard::container::CreateContainerOptions { name };
     let config = bollard::container::Config {
       image: image.to_owned(),
@@ -84,7 +89,8 @@ pub async fn create_containers<'a>(
           maximum_retry_count: None,
         }),
         binds: Some(opts.cargo.binds.to_owned()),
-        network_mode: Some(opts.network_key.to_owned()),
+        cap_add: opts.cargo.cap_add.to_owned(),
+        network_mode,
         ..Default::default()
       }),
       ..Default::default()

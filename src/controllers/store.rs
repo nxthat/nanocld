@@ -31,7 +31,7 @@ fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
       name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
       maximum_retry_count: None,
     }),
-    network_mode: Some(String::from("nanoclinternal0")),
+    network_mode: Some(String::from("system-nano-internal0")),
     ..Default::default()
   }
 }
@@ -117,7 +117,7 @@ pub async fn get_store_ip_addr(
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
   let ip_address = networks
-    .get("nanoclinternal0")
+    .get("system-nano-internal0")
     .ok_or(HttpResponseError {
       msg: String::from("unable to get nstore network nanocl"),
       status: StatusCode::INTERNAL_SERVER_ERROR,

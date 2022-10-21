@@ -42,9 +42,9 @@ pub struct CargoInstancePartial {
   pub(crate) network_key: String,
 }
 
-/// Structure used to parse path parameter of cluster cargo patch method
+/// Structure used to parse path parameter of cargo instance
 #[derive(Debug, Serialize, Deserialize)]
-pub struct CargoInstancePatchPath {
+pub struct CargoInstancePath {
   pub(crate) cluster_name: String,
   pub(crate) cargo_name: String,
 }

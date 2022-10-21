@@ -52,7 +52,7 @@ pub async fn get_by_cluster_key(
   }
 }
 
-pub async fn delete_by_key(
+pub async fn delete_by_cluster_key(
   key: String,
   pool: &web::types::State<Pool>,
 ) -> Result<GenericDelete, HttpResponseError> {
@@ -61,6 +61,24 @@ pub async fn delete_by_key(
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
     diesel::delete(dsl::cargo_instances.filter(dsl::cluster_key.eq(key)))
+      .execute(&mut conn)
+  })
+  .await;
+  match res {
+    Err(err) => Err(db_blocking_error(err)),
+    Ok(result) => Ok(GenericDelete { count: result }),
+  }
+}
+
+pub async fn delete_by_key(
+  key: String,
+  pool: &web::types::State<Pool>,
+) -> Result<GenericDelete, HttpResponseError> {
+  use crate::schema::cargo_instances::dsl;
+
+  let mut conn = controllers::store::get_pool_conn(pool)?;
+  let res = web::block(move || {
+    diesel::delete(dsl::cargo_instances.filter(dsl::key.eq(key)))
       .execute(&mut conn)
   })
   .await;

@@ -137,22 +137,19 @@ async fn start_containers(
           ),
           status: StatusCode::INTERNAL_SERVER_ERROR,
         })?;
-      let network = networks.get(network_key).ok_or(HttpResponseError {
-        msg: format!(
-          "unable to get network {} for container {}",
-          &network_key, &container_id
-        ),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })?;
-      let ip_address =
-        network.ip_address.as_ref().ok_or(HttpResponseError {
-          msg: format!(
-            "unable to get ip_address of container {}",
-            &container_id
-          ),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        })?;
-      Ok::<String, HttpResponseError>(ip_address.into())
+      return if let Some(network) = networks.get(network_key) {
+        let ip_address =
+          network.ip_address.as_ref().ok_or(HttpResponseError {
+            msg: format!(
+              "unable to get ip_address of container {}",
+              &container_id
+            ),
+            status: StatusCode::INTERNAL_SERVER_ERROR,
+          })?;
+        Ok::<String, HttpResponseError>(ip_address.into())
+      } else {
+        Ok::<String, HttpResponseError>(String::from("127.0.0.1"))
+      };
     })
     .collect::<FuturesUnordered<_>>()
     .collect::<Vec<_>>()
@@ -403,6 +400,17 @@ pub async fn join_cargo(
   let container_ids =
     utils::cargo::create_containers(create_opts, docker_api).await?;
 
+  if let Some(net_mode) = &opts.cargo.network_mode {
+    // if netmod is host we cannot join any other network so we skip this part
+    if net_mode == "host" {
+      if opts.is_creating_relation {
+        repositories::cargo_instance::create(cluster_cargo, pool).await?;
+      }
+      return Ok(container_ids);
+    }
+  }
+
+  // Join container to specified network
   container_ids
     .clone()
     .into_iter()

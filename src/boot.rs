@@ -83,6 +83,7 @@ async fn ensure_namespace(
 /// ```
 async fn create_system_network(
   network_name: &str,
+  interface_name: &str,
   docker_api: &Docker,
 ) -> Result<(), DaemonError> {
   let network_state =
@@ -93,7 +94,7 @@ async fn create_system_network(
   let mut options: HashMap<String, String> = HashMap::new();
   options.insert(
     String::from("com.docker.network.bridge.name"),
-    network_name.to_owned(),
+    interface_name.to_owned(),
   );
   let config = CreateNetworkOptions {
     name: network_name.to_owned(),
@@ -187,7 +188,7 @@ async fn create_store_cargo(
     dns_entry: None,
     domainname: Some(String::from("nstore")),
     hostname: Some(String::from("nstore")),
-    network_mode: Some(String::from("internal0")),
+    network_mode: None,
     restart_policy: Some(String::from("unless-stopped")),
     cap_add: None,
   };
@@ -246,7 +247,7 @@ async fn create_proxy_cargo(
     dns_entry: None,
     domainname: Some(String::from("nproxy")),
     hostname: Some(String::from("nproxy")),
-    network_mode: Some(String::from("internal0")),
+    network_mode: Some(String::from("host")),
     restart_policy: Some(String::from("unless-stopped")),
     cap_add: None,
   };
@@ -315,7 +316,10 @@ async fn register_system_network(
 
   let docker_network = boot_config
     .docker_api
-    .inspect_network("nanoclinternal0", None::<InspectNetworkOptions<&str>>)
+    .inspect_network(
+      "system-nano-internal0",
+      None::<InspectNetworkOptions<&str>>,
+    )
     .await?;
   let network = ClusterNetworkPartial {
     name: boot_config.sys_network.to_owned(),
@@ -326,7 +330,7 @@ async fn register_system_network(
       .to_owned()
       .id
       .ok_or(DaemonError::HttpResponse(HttpResponseError {
-        msg: String::from("Unable to get network ID of nanoclinternal0"),
+        msg: String::from("Unable to get network ID of system-nano-internal0"),
         status: StatusCode::INTERNAL_SERVER_ERROR,
       }))?;
 
@@ -371,8 +375,9 @@ pub async fn boot(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<BootState, DaemonError> {
+  const SYSTEM_NETWORK_KEY: &str = "system-nano-internal0";
   const SYSTEM_NETWORK: &str = "nanoclinternal0";
-  create_system_network(SYSTEM_NETWORK, docker_api).await?;
+  create_system_network(SYSTEM_NETWORK_KEY, SYSTEM_NETWORK, docker_api).await?;
   let (pool, s_pool) = prepare_store(&config, &docker_api).await?;
   let boot_config = BootConfig {
     config: config.to_owned(),
