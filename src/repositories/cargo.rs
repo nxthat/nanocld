@@ -43,6 +43,9 @@ pub async fn create(
       dns_entry: item.dns_entry,
       domainname: item.domainname,
       hostname: item.hostname,
+      network_mode: item.network_mode,
+      restart_policy: item.restart_policy,
+      cap_add: item.cap_add,
     };
     diesel::insert_into(dsl::cargoes)
       .values(&new_item)
@@ -159,6 +162,9 @@ pub async fn update_by_key(
       dns_entry: item.dns_entry,
       domainname: item.domainname,
       hostname: item.hostname,
+      network_mode: item.network_mode,
+      restart_policy: item.restart_policy,
+      cap_add: item.cap_add,
     };
     diesel::update(
       dsl::cargoes.filter(dsl::key.eq(&format!("{}-{}", &nsp, &name))),

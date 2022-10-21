@@ -21,6 +21,9 @@ pub struct CargoPartial {
   pub(crate) dns_entry: Option<String>,
   pub(crate) domainname: Option<String>,
   pub(crate) hostname: Option<String>,
+  pub(crate) network_mode: Option<String>,
+  pub(crate) restart_policy: Option<String>,
+  pub(crate) cap_add: Option<Vec<String>>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -33,6 +36,9 @@ pub struct CargoPatchPartial {
   pub(crate) domainname: Option<String>,
   pub(crate) hostname: Option<String>,
   pub(crate) environnements: Option<Vec<String>>,
+  pub(crate) network_mode: Option<String>,
+  pub(crate) restart_policy: Option<String>,
+  pub(crate) cap_add: Option<Vec<String>>,
 }
 
 #[derive(AsChangeset)]
@@ -46,6 +52,9 @@ pub struct CargoPatchItem {
   pub(crate) dns_entry: Option<String>,
   pub(crate) domainname: Option<String>,
   pub(crate) hostname: Option<String>,
+  pub(crate) network_mode: Option<String>,
+  pub(crate) restart_policy: Option<String>,
+  pub(crate) cap_add: Option<Vec<String>>,
 }
 
 /// Cargo item is an definition to container create image and start them
@@ -75,6 +84,9 @@ pub struct CargoItem {
   pub(crate) dns_entry: Option<String>,
   pub(crate) domainname: Option<String>,
   pub(crate) hostname: Option<String>,
+  pub(crate) network_mode: Option<String>,
+  pub(crate) restart_policy: Option<String>,
+  pub(crate) cap_add: Option<Vec<String>>,
 }
 
 /// Cargo item with his relation
@@ -90,6 +102,9 @@ pub struct CargoItemWithRelation {
   pub(crate) dns_entry: Option<String>,
   pub(crate) domainname: Option<String>,
   pub(crate) hostname: Option<String>,
+  pub(crate) network_mode: Option<String>,
+  pub(crate) restart_policy: Option<String>,
+  pub(crate) cap_add: Option<Vec<String>>,
   pub(crate) environnements: Option<Vec<CargoEnvItem>>,
   pub(crate) containers: Vec<bollard::models::ContainerSummary>,
 }

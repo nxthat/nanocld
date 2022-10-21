@@ -4,25 +4,39 @@ use std::error::Error;
 use std::path::Path;
 use std::{thread, time};
 
+use ntex::http::StatusCode;
 use ntex::web;
 use bollard::Docker;
-use bollard::network::CreateNetworkOptions;
+use bollard::network::{CreateNetworkOptions, InspectNetworkOptions};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
 use crate::config::DaemonConfig;
 use crate::controllers::utils::NetworkState;
 use crate::utils::cluster::JoinCargoOptions;
 use crate::{controllers, repositories, utils};
-use crate::models::{Pool, NamespacePartial, ClusterPartial, CargoPartial};
+use crate::models::{
+  Pool, NamespacePartial, ClusterPartial, CargoPartial, ClusterNetworkItem,
+  ClusterNetworkPartial, CargoInstancePartial,
+};
 
-use crate::errors::DaemonError;
+use crate::errors::{DaemonError, HttpResponseError};
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[derive(Clone)]
 pub struct BootState {
   pub(crate) pool: Pool,
-  pub(crate) docker_api: bollard::Docker,
+  pub(crate) docker_api: Docker,
+}
+
+struct BootConfig {
+  config: DaemonConfig,
+  s_pool: web::types::State<Pool>,
+  docker_api: Docker,
+  default_namespace: String,
+  sys_cluster: String,
+  sys_network: String,
+  sys_namespace: String,
 }
 
 /// # Create default namespace
@@ -120,18 +134,18 @@ fn run_migrations(
 async fn create_system_cluster(
   sys_nsp: String,
   pool: &web::types::State<Pool>,
-  docker_api: &bollard::Docker,
 ) -> Result<(), DaemonError> {
   if repositories::cluster::find_by_key(String::from("system-nano"), pool)
     .await
-    .is_err()
+    .is_ok()
   {
-    let cluster = ClusterPartial {
-      name: String::from("nano"),
-      proxy_templates: None,
-    };
-    repositories::cluster::create_for_namespace(sys_nsp, cluster, pool).await?;
+    return Ok(());
   }
+  let cluster = ClusterPartial {
+    name: String::from("nano"),
+    proxy_templates: None,
+  };
+  repositories::cluster::create_for_namespace(sys_nsp, cluster, pool).await?;
   Ok(())
 }
 
@@ -155,27 +169,47 @@ async fn prepare_store(
 }
 
 async fn create_store_cargo(
-  system_nsp: &str,
-  config: &DaemonConfig,
-  s_pool: &web::types::State<Pool>,
+  boot_config: &BootConfig,
 ) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(system_nsp, "nstore");
-  if repositories::cargo::find_by_key(key, s_pool).await.is_ok() {
+  let key = utils::key::gen_key(&boot_config.sys_namespace, "nstore");
+  if repositories::cargo::find_by_key(key, &boot_config.s_pool)
+    .await
+    .is_ok()
+  {
     return Ok(());
   }
-  let path = Path::new(&config.state_dir).join("store/data");
+  let path = Path::new(&boot_config.config.state_dir).join("store/data");
   let binds = vec![format!("{}:/cockroach/cockroach-data", path.display())];
   let store_cargo = CargoPartial {
     name: String::from("nstore"),
     image_name: String::from("cockroachdb/cockroach:v21.2.17"),
-    environnements: Some(vec![String::from("test")]),
+    environnements: None,
     binds: Some(binds),
     replicas: Some(1),
     dns_entry: None,
     domainname: Some(String::from("nstore")),
     hostname: Some(String::from("nstore")),
+    network_mode: Some(String::from("internal0")),
+    restart_policy: Some(String::from("unless-stopped")),
+    cap_add: None,
   };
-  repositories::cargo::create(system_nsp.to_owned(), store_cargo, s_pool)
+  let cargo = repositories::cargo::create(
+    boot_config.sys_namespace.to_owned(),
+    store_cargo,
+    &boot_config.s_pool,
+  )
+  .await?;
+
+  let cluster_key =
+    utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
+  let network_key = utils::key::gen_key(&cluster_key, &boot_config.sys_network);
+  let cargo_instance = CargoInstancePartial {
+    cargo_key: cargo.key,
+    cluster_key,
+    network_key,
+  };
+
+  repositories::cargo_instance::create(cargo_instance, &boot_config.s_pool)
     .await?;
 
   Ok(())
@@ -214,6 +248,9 @@ async fn create_proxy_cargo(
     dns_entry: None,
     domainname: Some(String::from("nproxy")),
     hostname: Some(String::from("nproxy")),
+    network_mode: Some(String::from("internal0")),
+    restart_policy: Some(String::from("unless-stopped")),
+    cap_add: None,
   };
 
   repositories::cargo::create(system_nsp.to_owned(), proxy_cargo, s_pool)
@@ -222,31 +259,90 @@ async fn create_proxy_cargo(
   Ok(())
 }
 
-async fn create_dns_cargo(
-  system_nsp: &str,
-  config: &DaemonConfig,
-  s_pool: &web::types::State<Pool>,
+async fn register_system_network(
+  boot_config: &BootConfig,
 ) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(system_nsp, "ndns");
-  if repositories::cargo::find_by_key(key, s_pool).await.is_ok() {
+  let cluster_key =
+    utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
+  let key = utils::key::gen_key(&cluster_key, &boot_config.sys_network);
+
+  if repositories::cluster_network::find_by_key(key, &boot_config.s_pool)
+    .await
+    .is_ok()
+  {
     return Ok(());
   }
+
+  let docker_network = boot_config
+    .docker_api
+    .inspect_network("nanoclinternal0", None::<InspectNetworkOptions<&str>>)
+    .await?;
+  let network = ClusterNetworkPartial {
+    name: boot_config.sys_network.to_owned(),
+  };
+
+  let docker_network_id =
+    docker_network
+      .id
+      .ok_or(DaemonError::HttpResponse(HttpResponseError {
+        msg: String::from("Unable to get network ID of nanoclinternal0"),
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+      }))?;
+
+  let ipam_config = docker_network
+    .ipam
+    .ok_or(HttpResponseError {
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+      msg: String::from("Unable to get ipam config from network"),
+    })?
+    .config
+    .ok_or(HttpResponseError {
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+      msg: String::from("Unable to get ipam config"),
+    })?;
+
+  let default_gateway = ipam_config
+    .get(0)
+    .ok_or(HttpResponseError {
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+      msg: String::from("Unable to get ipam config"),
+    })?
+    .gateway
+    .as_ref()
+    .ok_or(HttpResponseError {
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+      msg: String::from("Unable to get ipam config gateway"),
+    })?;
+
+  repositories::cluster_network::create_for_cluster(
+    boot_config.sys_namespace.to_owned(),
+    boot_config.sys_cluster.to_owned(),
+    network,
+    docker_network_id,
+    default_gateway.to_owned(),
+    &boot_config.s_pool,
+  )
+  .await?;
+
   Ok(())
 }
 
-async fn prepare_system(
-  config: &DaemonConfig,
-  docker_api: &Docker,
-  s_pool: &web::types::State<Pool>,
-) -> Result<(), DaemonError> {
-  const SYSTEM_NSP: &str = "system";
-  const DEFAULT_NSP: &str = "global";
-  const SYSTEM_NETWORK: &str = "nanoclinternal0";
-  ensure_namespace(DEFAULT_NSP, &s_pool).await?;
-  ensure_namespace(SYSTEM_NSP, &s_pool).await?;
-  create_system_cluster(SYSTEM_NSP.to_owned(), s_pool, docker_api).await?;
-  create_store_cargo(SYSTEM_NSP, config, s_pool).await?;
-  create_proxy_cargo(SYSTEM_NSP, config, s_pool).await?;
+async fn prepare_system(boot_config: &BootConfig) -> Result<(), DaemonError> {
+  ensure_namespace(&boot_config.default_namespace, &boot_config.s_pool).await?;
+  ensure_namespace(&boot_config.sys_namespace, &boot_config.s_pool).await?;
+  create_system_cluster(
+    boot_config.sys_namespace.to_owned(),
+    &boot_config.s_pool,
+  )
+  .await?;
+  register_system_network(boot_config).await?;
+  create_store_cargo(boot_config).await?;
+  create_proxy_cargo(
+    &boot_config.sys_namespace,
+    &boot_config.config,
+    &boot_config.s_pool,
+  )
+  .await?;
   Ok(())
 }
 
@@ -259,8 +355,16 @@ pub async fn boot(
   const SYSTEM_NETWORK: &str = "nanoclinternal0";
   create_system_network(SYSTEM_NETWORK, docker_api).await?;
   let (pool, s_pool) = prepare_store(&config, &docker_api).await?;
-  // Ensure required namespace to exists
-  prepare_system(config, docker_api, &s_pool).await?;
+  let boot_config = BootConfig {
+    config: config.to_owned(),
+    s_pool,
+    docker_api: docker_api.to_owned(),
+    default_namespace: String::from("global"),
+    sys_cluster: String::from("nano"),
+    sys_network: String::from("internal0"),
+    sys_namespace: String::from("system"),
+  };
+  prepare_system(&boot_config).await?;
   // Return state
   Ok(BootState {
     pool,

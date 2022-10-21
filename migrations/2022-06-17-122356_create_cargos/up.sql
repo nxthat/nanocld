@@ -10,5 +10,6 @@ create table "cargoes" (
   "domainname" VARCHAR,
   "hostname" VARCHAR,
   "network_mode" VARCHAR,
-  "restart_policy" VARCHAR
+  "restart_policy" VARCHAR,
+  "cap_add" TEXT[]
 );

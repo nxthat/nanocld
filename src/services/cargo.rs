@@ -198,6 +198,9 @@ async fn inspect_cargo_by_name(
     domainname: res.domainname,
     dns_entry: res.dns_entry,
     hostname: res.hostname,
+    network_mode: res.network_mode,
+    restart_policy: res.restart_policy,
+    cap_add: res.cap_add,
     containers,
   };
 

@@ -47,6 +47,9 @@ diesel::table! {
         dns_entry -> Nullable<Varchar>,
         domainname -> Nullable<Varchar>,
         hostname -> Nullable<Varchar>,
+        network_mode -> Nullable<Varchar>,
+        restart_policy -> Nullable<Varchar>,
+        cap_add -> Nullable<Array<Text>>,
     }
 }
 

@@ -7,7 +7,7 @@ pub async fn install_components(
   docker: &bollard::Docker,
 ) -> Result<(), DaemonError> {
   controllers::utils::install_component(
-    "cockroachdb/cockroach:v21.2.16",
+    "cockroachdb/cockroach:v21.2.17",
     docker,
   )
   .await?;
