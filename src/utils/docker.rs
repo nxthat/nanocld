@@ -4,7 +4,6 @@ use bollard::Docker;
 use bollard::container::StartContainerOptions;
 use bollard::errors::Error as DockerError;
 use bollard::models::Network;
-use bollard::image::{BuildImageOptions, CreateImageOptions};
 use bollard::network::InspectNetworkOptions;
 use ntex::{web, rt};
 use ntex::util::Bytes;
@@ -109,9 +108,6 @@ pub enum NetworkState {
   Ready,
 }
 
-type DockerBuildOutput = Result<bollard::models::BuildInfo, DockerError>;
-type DockerCreateOutput = Result<bollard::models::CreateImageInfo, DockerError>;
-
 /// ## Generate labels with a namespace
 ///
 /// ## Arguments
@@ -156,151 +152,6 @@ pub async fn start_component(
     .start_container(name, None::<StartContainerOptions<String>>)
     .await?;
   Ok(())
-}
-
-/// ## Parse docker build output
-/// Print parsed docker build output
-///
-/// ## Arguments
-/// - [service_name](str) The name of the service being builded
-/// - [output](DockerBuildOutput) The output to parse
-///
-/// ## Return
-/// Ok in any case
-fn parse_build_output(
-  service_name: &'static str,
-  output: DockerBuildOutput,
-) -> Result<(), DockerError> {
-  match output {
-    Err(err) => return Err(err),
-    Ok(build_info) => {
-      if let Some(err) = build_info.error {
-        log::error!("[{}] {:#?}", &service_name, &err);
-        return Err(DockerError::DockerResponseServerError {
-          status_code: 400,
-          message: format!("Error while building {}: {}", &service_name, &err),
-        });
-      }
-    }
-  }
-  Ok(())
-}
-
-/// ## Parse docker create output
-/// Print parsed docker create output
-///
-/// ## Arguments
-/// - [service_name](str) The name of the service being builded
-/// - [output](DockerCreateOutput) The output to parse
-///
-/// ## Return
-/// CreateImageInfo or DockerError
-fn parse_create_output(
-  service_name: &'static str,
-  output: DockerCreateOutput,
-) -> Result<bollard::models::CreateImageInfo, DockerError> {
-  let output = match output {
-    Err(err) => return Err(err),
-    Ok(create_info) => {
-      if let Some(err) = create_info.error {
-        log::error!("[{}] {:#?}", &service_name, &err);
-        return Err(DockerError::DockerResponseServerError {
-          status_code: 400,
-          message: format!("Error while building {}: {}", &service_name, &err),
-        });
-      }
-      create_info
-    }
-  };
-  Ok(output)
-}
-
-/// # Build a service
-/// Build a nxthat service from github
-///
-/// # Arguments
-/// - [name](str) name of the service to build
-/// - [docker_api](Docker) bollard docker instance
-///
-/// # Return
-/// if sucess return nothing a [docker error](DockerError) is returned if an error occur
-///
-/// /// # Examples
-/// ```rust,norun
-/// use crate::services;
-///
-/// services::utils::build_component(&docker, "nproxy").await;
-/// ```
-pub async fn build_component(
-  service_name: &'static str,
-  docker_api: &Docker,
-) -> Result<(), DockerError> {
-  if image_exists(service_name, docker_api).await {
-    return Ok(());
-  }
-  let git_url = "https://github.com/nxthat/".to_owned();
-  let image_url = git_url + service_name + ".git#nightly";
-  let options = BuildImageOptions::<String> {
-    dockerfile: String::from("Dockerfile"),
-    t: service_name.to_string(),
-    remote: image_url,
-    rm: true,
-    forcerm: true,
-    ..Default::default()
-  };
-  log::info!("building service [{}]", &service_name);
-  let mut stream = docker_api.build_image(options, None, None);
-  while let Some(output) = stream.next().await {
-    parse_build_output(service_name, output)?;
-  }
-  log::info!("successfully builded service [{}]", &service_name);
-  Ok(())
-}
-
-/// # Install a service
-/// Install a service from docker image
-///
-/// # Arguments
-/// - [name](str) name of the service to install
-/// - [docker_api](Docker) bollard docker instance
-///
-/// # Return
-/// if sucess return nothing a [docker error](DockerError) is returned if an error occur
-///
-/// /// # Examples
-/// ```rust,norun
-/// use crate::services;
-///
-/// services::utils::install_component("postgresql", &docker_api).await;
-/// ```
-pub async fn install_component(
-  image_name: &'static str,
-  docker_api: &Docker,
-) -> Result<(), DockerError> {
-  if image_exists(image_name, docker_api).await {
-    return Ok(());
-  }
-  log::info!("installing component [{}]", image_name);
-  let mut stream = docker_api.create_image(
-    Some(CreateImageOptions {
-      from_image: image_name,
-      ..Default::default()
-    }),
-    None,
-    None,
-  );
-  while let Some(output) = stream.next().await {
-    parse_create_output(image_name, output)?;
-  }
-  log::info!("successfully installed component [{}]", image_name);
-  Ok(())
-}
-
-pub async fn image_exists(image_name: &str, docker: &Docker) -> bool {
-  if docker.inspect_image(image_name).await.is_ok() {
-    return true;
-  }
-  false
 }
 
 /// ## Get network state
