@@ -1,14 +1,57 @@
+// use std::fs::File;
+// use std::io::BufReader;
+
 use ntex::web;
+// use rustls::RootCertStore;
+// use rustls::server::AllowAnyAuthenticatedClient;
+// use rustls::{Certificate, PrivateKey, ServerConfig};
+// use rustls_pemfile::{certs, pkcs8_private_keys};
 
 use crate::openapi;
 use crate::services;
 use crate::boot::BootState;
 use crate::config::DaemonConfig;
 
+// fn load_certs(filename: &str) -> Vec<rustls::Certificate> {
+//   let certfile = File::open(filename).expect("cannot open certificate file");
+//   let mut reader = BufReader::new(certfile);
+//   certs(&mut reader)
+//     .unwrap()
+//     .iter()
+//     .map(|v| Certificate(v.clone()))
+//     .collect()
+// }
+
 pub async fn start<'a>(
   config: DaemonConfig,
   boot_state: BootState,
 ) -> std::io::Result<()> {
+  // load ssl keys
+
+  // let key_file = &mut BufReader::new(
+  //   File::open("/home/leone/ssl_test/certs/node.key").unwrap(),
+  // );
+  // let key = PrivateKey(pkcs8_private_keys(key_file).unwrap().remove(0));
+  // let cert_chain = load_certs("/home/leone/ssl_test/certs/node.crt");
+
+  // let roots = load_certs("/home/leone/ssl_test/certs/ca.crt");
+  // let mut client_auth_roots = RootCertStore::empty();
+  // for root in roots {
+  //   println!("{:#?}", &root);
+  //   client_auth_roots.add(&root).unwrap();
+  // }
+
+  // let server_config = ServerConfig::builder()
+  //   .with_cipher_suites(rustls::ALL_CIPHER_SUITES)
+  //   .with_safe_default_kx_groups()
+  //   .with_protocol_versions(rustls::ALL_VERSIONS)
+  //   .expect("inconsistent cipher-suites/versions specified")
+  //   .with_client_cert_verifier(AllowAnyAuthenticatedClient::new(
+  //     client_auth_roots,
+  //   ))
+  //   .with_single_cert(cert_chain, key)
+  //   .unwrap();
+
   log::info!("Preparing server");
   let hosts = config.hosts.to_owned();
   let mut server = web::HttpServer::new(move || {
@@ -85,6 +128,7 @@ pub async fn start<'a>(
     server = server.bind("0.0.0.0:8383")?;
     log::info!("Listening on http://0.0.0.0:8383");
   }
+  // server = server.bind_rustls("0.0.0.0:8443", server_config)?;
   log::info!("Server ready");
   server.run().await
 }

@@ -239,7 +239,7 @@ pub async fn build_component(
     return Ok(());
   }
   let git_url = "https://github.com/nxthat/".to_owned();
-  let image_url = git_url + service_name + ".git";
+  let image_url = git_url + service_name + ".git#nightly";
   let options = BuildImageOptions::<String> {
     dockerfile: String::from("Dockerfile"),
     t: service_name.to_string(),

@@ -18,7 +18,6 @@ mod controllers;
 mod utils;
 mod errors;
 mod config;
-mod install;
 mod server;
 mod schema;
 mod models;
@@ -67,19 +66,6 @@ async fn main() -> std::io::Result<()> {
     }
     Ok(docker_api) => docker_api,
   };
-
-  // Download, configure and boot internal services
-  if args.install_components {
-    if let Err(err) = install::install_components(&docker_api).await {
-      let exit_code = errors::parse_main_error(&args, &daemon_config, err);
-      std::process::exit(exit_code);
-    }
-    if let Err(err) = boot::boot(&daemon_config, &docker_api).await {
-      let exit_code = errors::parse_main_error(&args, &daemon_config, err);
-      std::process::exit(exit_code);
-    }
-    return Ok(());
-  }
 
   // Start internal services
   let boot_state = match boot::boot(&daemon_config, &docker_api).await {
