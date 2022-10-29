@@ -14,6 +14,7 @@ COPY --from=planner /usr/local/cargo/bin/cargo-chef /usr/local/cargo/bin/cargo-c
 COPY --from=planner /app/recipe.json ./recipe.json
 COPY . .
 RUN apk add openssl gcc g++ libpq-dev
+ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN cargo chef cook --release --recipe-path recipe.json
 
 # stage 3 - build our project
@@ -22,12 +23,14 @@ WORKDIR /app
 COPY . .
 COPY --from=cacher /app/target /app/target
 COPY --from=cacher /usr/local/cargo /usr/local/cargo
-RUN apk add libpq-dev
+RUN apk add musl-dev libpq-dev
+ENV RUSTFLAGS="-C target-feature=-crt-static"
 RUN cargo build --release
 
 # stage 4 - create runtime image
 from alpine:3.16.2
 
+RUN apk add gcc musl-dev libpq-dev
 COPY --from=builder /app/target/release/nanocld /usr/local/bin/nanocld
 
 ENTRYPOINT ["/usr/local/bin/nanocld"]
