@@ -219,7 +219,7 @@ async fn create_proxy_cargo(
   config: &DaemonConfig,
   s_pool: &web::types::State<Pool>,
 ) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(system_nsp, "nproxy");
+  let key = utils::key::gen_key(system_nsp, "proxy");
   if repositories::cargo::find_by_key(key, s_pool).await.is_ok() {
     return Ok(());
   }
@@ -239,14 +239,14 @@ async fn create_proxy_cargo(
     format!("{}:/etc/letsencrypt", letsencrypt_path.display()),
   ]);
   let proxy_cargo = CargoPartial {
-    name: String::from("nproxy"),
+    name: String::from("proxy"),
     image_name: String::from("nanocl-proxy-nginx"),
     environnements: None,
     binds,
     replicas: Some(1),
     dns_entry: None,
-    domainname: Some(String::from("nproxy")),
-    hostname: Some(String::from("nproxy")),
+    domainname: Some(String::from("proxy")),
+    hostname: Some(String::from("proxy")),
     network_mode: Some(String::from("host")),
     restart_policy: Some(String::from("unless-stopped")),
     cap_add: None,

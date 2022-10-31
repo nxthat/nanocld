@@ -44,7 +44,7 @@ async fn create_system_store(
   let image = Some("cockroachdb/cockroach:v21.2.17");
   let mut labels = utils::docker::gen_labels_with_namespace("system");
   labels.insert("cluster", "system-nano");
-  labels.insert("cargo", "system-nstore");
+  labels.insert("cargo", "system-store");
   let host_config = Some(gen_store_host_conf(config));
   let options = Some(CreateContainerOptions { name });
   let config = Config {
