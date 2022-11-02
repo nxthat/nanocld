@@ -86,7 +86,7 @@ pub fn add_dns_entry(
 }
 
 pub async fn restart(docker_api: &Docker) -> Result<(), DnsError> {
-  docker_api.restart_container("ndns", None).await?;
+  docker_api.restart_container("dns", None).await?;
   Ok(())
 }
 

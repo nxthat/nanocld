@@ -170,7 +170,7 @@ async fn prepare_store(
 async fn create_store_cargo(
   boot_config: &BootConfig,
 ) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(&boot_config.sys_namespace, "nstore");
+  let key = utils::key::gen_key(&boot_config.sys_namespace, "store");
   if repositories::cargo::find_by_key(key, &boot_config.s_pool)
     .await
     .is_ok()
@@ -180,14 +180,14 @@ async fn create_store_cargo(
   let path = Path::new(&boot_config.config.state_dir).join("store/data");
   let binds = vec![format!("{}:/cockroach/cockroach-data", path.display())];
   let store_cargo = CargoPartial {
-    name: String::from("nstore"),
+    name: String::from("store"),
     image_name: String::from("cockroachdb/cockroach:v21.2.17"),
     environnements: None,
     binds: Some(binds),
     replicas: Some(1),
     dns_entry: None,
-    domainname: Some(String::from("nstore")),
-    hostname: Some(String::from("nstore")),
+    domainname: Some(String::from("store")),
+    hostname: Some(String::from("store")),
     network_mode: None,
     restart_policy: Some(String::from("unless-stopped")),
     cap_add: None,
@@ -259,7 +259,7 @@ async fn create_proxy_cargo(
 }
 
 async fn create_dns_cargo(boot_config: &BootConfig) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(&boot_config.sys_namespace, "ndns");
+  let key = utils::key::gen_key(&boot_config.sys_namespace, "dns");
 
   if repositories::cargo::find_by_key(key, &boot_config.s_pool)
     .await
@@ -277,14 +277,14 @@ async fn create_dns_cargo(boot_config: &BootConfig) -> Result<(), DaemonError> {
     format!("{}:/etc/dnsmasq.d/", dir_path.display()),
   ]);
   let dns_cargo = CargoPartial {
-    name: String::from("ndns"),
+    name: String::from("dns"),
     image_name: String::from("nanocl-dns-dnsmasq"),
     environnements: None,
     binds,
     replicas: Some(1),
     dns_entry: None,
-    domainname: Some(String::from("ndns")),
-    hostname: Some(String::from("ndns")),
+    domainname: Some(String::from("dns")),
+    hostname: Some(String::from("dns")),
     network_mode: Some(String::from("host")),
     restart_policy: Some(String::from("unless-stopped")),
     cap_add: Some(vec![String::from("NET_ADMIN")]),
@@ -300,6 +300,55 @@ async fn create_dns_cargo(boot_config: &BootConfig) -> Result<(), DaemonError> {
   Ok(())
 }
 
+async fn create_daemon_cargo(
+  boot_config: &BootConfig,
+) -> Result<(), DaemonError> {
+  let key = utils::key::gen_key(&boot_config.sys_namespace, "daemon");
+  if repositories::cargo::find_by_key(key, &boot_config.s_pool)
+    .await
+    .is_ok()
+  {
+    return Ok(());
+  }
+  println!("state dir {}", &boot_config.config.state_dir);
+  let path = Path::new(&boot_config.config.state_dir);
+  let binds = vec![format!("{}:/var/lib/nanocl", path.display())];
+  let store_cargo = CargoPartial {
+    name: String::from("daemon"),
+    image_name: String::from("nanocl-daemon:0.1.5"),
+    environnements: None,
+    binds: Some(binds),
+    replicas: Some(1),
+    dns_entry: None,
+    domainname: Some(String::from("daemon")),
+    hostname: Some(String::from("daemon")),
+    network_mode: Some(String::from("host")),
+    restart_policy: Some(String::from("unless-stopped")),
+    cap_add: None,
+  };
+  let cargo = repositories::cargo::create(
+    boot_config.sys_namespace.to_owned(),
+    store_cargo,
+    &boot_config.s_pool,
+  )
+  .await?;
+
+  let cluster_key =
+    utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
+  let network_key = utils::key::gen_key(&cluster_key, &boot_config.sys_network);
+  let cargo_instance = CargoInstancePartial {
+    cargo_key: cargo.key,
+    cluster_key,
+    network_key,
+  };
+
+  repositories::cargo_instance::create(cargo_instance, &boot_config.s_pool)
+    .await?;
+
+  Ok(())
+}
+
+/// Register default system network in store
 async fn register_system_network(
   boot_config: &BootConfig,
 ) -> Result<(), DaemonError> {
@@ -359,6 +408,7 @@ async fn prepare_system(boot_config: &BootConfig) -> Result<(), DaemonError> {
   .await?;
   register_system_network(boot_config).await?;
   create_store_cargo(boot_config).await?;
+  create_daemon_cargo(boot_config).await?;
   create_proxy_cargo(
     &boot_config.sys_namespace,
     &boot_config.config,

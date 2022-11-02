@@ -43,6 +43,7 @@ async fn create_system_store(
 ) -> Result<(), DockerError> {
   let image = Some("cockroachdb/cockroach:v21.2.17");
   let mut labels = utils::docker::gen_labels_with_namespace("system");
+  labels.insert("namespace", "system");
   labels.insert("cluster", "system-nano");
   labels.insert("cargo", "system-store");
   let host_config = Some(gen_store_host_conf(config));
@@ -104,28 +105,28 @@ pub fn get_pool_conn(
 pub async fn get_store_ip_addr(
   docker_api: &Docker,
 ) -> Result<String, HttpResponseError> {
-  let container = docker_api.inspect_container("nstore", None).await?;
+  let container = docker_api.inspect_container("store", None).await?;
   let networks = container
     .network_settings
     .ok_or(HttpResponseError {
-      msg: String::from("unable to get nstore network nettings"),
+      msg: String::from("unable to get store network nettings"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?
     .networks
     .ok_or(HttpResponseError {
-      msg: String::from("unable to get nstore networks"),
+      msg: String::from("unable to get store networks"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
   let ip_address = networks
     .get("system-nano-internal0")
     .ok_or(HttpResponseError {
-      msg: String::from("unable to get nstore network nanocl"),
+      msg: String::from("unable to get store network nanocl"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?
     .ip_address
     .as_ref()
     .ok_or(HttpResponseError {
-      msg: String::from("unable to get nstore network nanocl"),
+      msg: String::from("unable to get store network nanocl"),
       status: StatusCode::INTERNAL_SERVER_ERROR,
     })?;
   Ok(ip_address.to_owned())
@@ -135,7 +136,7 @@ pub async fn boot(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let container_name = "nstore";
+  let container_name = "store";
   let s_state =
     utils::docker::get_component_state(container_name, docker_api).await;
 
