@@ -34,7 +34,9 @@ jobs:
       run: sudo sh ./scripts/ubuntu.deps.sh
     - name: Ci file perm
       run: sudo mkdir /run/nanocl && sudo mkdir /var/lib/nanocl && sudo mkdir -p ./vm_images && sudo chmod 777 -R /run/nanocl && sudo chmod 777 -R /var/lib/nanocl
-    - name: Install components
-      run: cargo run -- --docker-host /run/docker.sock --install-components
+    - name: Setup
+      run: >-
+        docker import https://github.com/nxthat/nanocl/releases/download/v0.1.4/nanocl.0.1.4.tar.gz
+        docker run -v /run/docker.sock:/run/docker.sock nanocl:0.1.4 setup
     - name: Run tests
       run: DOCKER_SOCKET_PATH=/run/docker.sock cargo make test
