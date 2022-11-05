@@ -9,7 +9,7 @@ use ntex::web;
 
 use crate::openapi;
 use crate::services;
-use crate::boot::BootState;
+use crate::state::BootState;
 use crate::config::DaemonConfig;
 
 // fn load_certs(filename: &str) -> Vec<rustls::Certificate> {

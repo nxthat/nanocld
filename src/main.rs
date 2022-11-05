@@ -11,13 +11,13 @@ extern crate diesel;
 use clap::Parser;
 
 mod cli;
-mod boot;
 mod version;
 mod controllers;
 
 mod utils;
 mod errors;
 mod config;
+mod state;
 mod server;
 mod schema;
 mod models;
@@ -67,8 +67,8 @@ async fn main() -> std::io::Result<()> {
     Ok(docker_api) => docker_api,
   };
 
-  // Start internal services
-  let boot_state = match boot::boot(&daemon_config, &docker_api).await {
+  // Init internal dependencies
+  let boot_state = match state::init(&daemon_config, &docker_api).await {
     Err(err) => {
       let exit_code = errors::parse_main_error(&args, &daemon_config, err);
       std::process::exit(exit_code);
