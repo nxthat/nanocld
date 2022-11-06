@@ -1,9 +1,15 @@
 use r2d2::PooledConnection;
-use diesel::{r2d2::ConnectionManager, PgConnection};
 use serde::{Deserialize, Serialize};
+use diesel::{r2d2::ConnectionManager, PgConnection};
 
 #[cfg(feature = "dev")]
 use utoipa::ToSchema;
+
+mod config;
+pub use config::*;
+
+mod state;
+pub use state::*;
 
 mod namespace;
 pub use namespace::*;
@@ -47,19 +53,17 @@ pub use container_image::*;
 mod node;
 pub use node::*;
 
-mod config;
-pub use config::*;
-
-pub type DBConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
+pub type DBConn = PooledConnection<ConnectionManager<PgConnection>>;
 
-/// Generic postgresql delete response
+/// Generic delete response
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct GenericDelete {
   pub(crate) count: usize,
 }
 
+/// Generic count response
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct GenericCount {

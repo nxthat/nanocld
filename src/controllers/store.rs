@@ -14,11 +14,13 @@ use bollard::{
 };
 
 use crate::{
-  utils,
-  models::{Pool, DBConn},
-  models::DaemonConfig,
+  utils, repositories,
+  models::{
+    Pool, DBConn, ArgState, DaemonConfig, CargoPartial, CargoInstancePartial,
+  },
 };
-use crate::errors::HttpResponseError;
+
+use crate::errors::{DaemonError, HttpResponseError};
 
 fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
   let path = Path::new(&config.state_dir).join("store/data");
@@ -150,5 +152,50 @@ pub async fn boot(
       log::error!("error while starting {} {}", container_name, err);
     }
   }
+  Ok(())
+}
+
+pub async fn register(boot_config: &ArgState) -> Result<(), DaemonError> {
+  let key = utils::key::gen_key(&boot_config.sys_namespace, "store");
+  if repositories::cargo::find_by_key(key, &boot_config.s_pool)
+    .await
+    .is_ok()
+  {
+    return Ok(());
+  }
+  let path = Path::new(&boot_config.config.state_dir).join("store/data");
+  let binds = vec![format!("{}:/cockroach/cockroach-data", path.display())];
+  let store_cargo = CargoPartial {
+    name: String::from("store"),
+    image_name: String::from("cockroachdb/cockroach:v21.2.17"),
+    environnements: None,
+    binds: Some(binds),
+    replicas: Some(1),
+    dns_entry: None,
+    domainname: Some(String::from("store")),
+    hostname: Some(String::from("store")),
+    network_mode: None,
+    restart_policy: Some(String::from("unless-stopped")),
+    cap_add: None,
+  };
+  let cargo = repositories::cargo::create(
+    boot_config.sys_namespace.to_owned(),
+    store_cargo,
+    &boot_config.s_pool,
+  )
+  .await?;
+
+  let cluster_key =
+    utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
+  let network_key = utils::key::gen_key(&cluster_key, &boot_config.sys_network);
+  let cargo_instance = CargoInstancePartial {
+    cargo_key: cargo.key,
+    cluster_key,
+    network_key,
+  };
+
+  repositories::cargo_instance::create(cargo_instance, &boot_config.s_pool)
+    .await?;
+
   Ok(())
 }

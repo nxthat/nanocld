@@ -12,7 +12,9 @@ use thiserror::Error;
 use regex::Error as RegexError;
 use std::io::Error as IoError;
 
-use crate::errors::{HttpResponseError, IntoHttpResponseError};
+use crate::{utils, repositories};
+use crate::models::{ArgState, CargoPartial};
+use crate::errors::{HttpResponseError, IntoHttpResponseError, DaemonError};
 
 use crate::utils::errors::docker_error_ref;
 
@@ -87,6 +89,48 @@ pub fn add_dns_entry(
 
 pub async fn restart(docker_api: &Docker) -> Result<(), DnsError> {
   docker_api.restart_container("dns", None).await?;
+  Ok(())
+}
+
+pub async fn register(boot_config: &ArgState) -> Result<(), DaemonError> {
+  let key = utils::key::gen_key(&boot_config.sys_namespace, "dns");
+
+  if repositories::cargo::find_by_key(key, &boot_config.s_pool)
+    .await
+    .is_ok()
+  {
+    return Ok(());
+  }
+
+  let config_file_path =
+    Path::new(&boot_config.config.state_dir).join("dnsmasq/dnsmasq.conf");
+  let dir_path =
+    Path::new(&boot_config.config.state_dir).join("dnsmasq/dnsmasq.d/");
+  let binds = Some(vec![
+    format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
+    format!("{}:/etc/dnsmasq.d/", dir_path.display()),
+  ]);
+  let dns_cargo = CargoPartial {
+    name: String::from("dns"),
+    image_name: String::from("nanocl-dns-dnsmasq"),
+    environnements: None,
+    binds,
+    replicas: Some(1),
+    dns_entry: None,
+    domainname: Some(String::from("dns")),
+    hostname: Some(String::from("dns")),
+    network_mode: Some(String::from("host")),
+    restart_policy: Some(String::from("unless-stopped")),
+    cap_add: Some(vec![String::from("NET_ADMIN")]),
+  };
+
+  repositories::cargo::create(
+    boot_config.sys_namespace.to_owned(),
+    dns_cargo,
+    &boot_config.s_pool,
+  )
+  .await?;
+
   Ok(())
 }
 

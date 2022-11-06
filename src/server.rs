@@ -9,7 +9,7 @@ use ntex::web;
 
 use crate::openapi;
 use crate::services;
-use crate::state::DaemonState;
+use crate::models::DaemonState;
 
 // fn load_certs(filename: &str) -> Vec<rustls::Certificate> {
 //   let certfile = File::open(filename).expect("cannot open certificate file");
