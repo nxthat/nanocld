@@ -2,32 +2,36 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::path::Path;
-use std::{thread, time};
 
-use ntex::http::StatusCode;
 use ntex::web;
+use ntex::http::StatusCode;
+
 use bollard::Docker;
 use bollard::network::{CreateNetworkOptions, InspectNetworkOptions};
+
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
-use crate::config::DaemonConfig;
-use crate::{controllers, repositories, utils};
+use crate::cli::Cli;
+use crate::{utils, controllers, repositories};
 use crate::models::{
   Pool, NamespacePartial, ClusterPartial, CargoPartial, ClusterNetworkPartial,
-  CargoInstancePartial,
+  CargoInstancePartial, DaemonConfig,
 };
 
 use crate::errors::{DaemonError, HttpResponseError};
 
+use super::config;
+
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[derive(Clone)]
-pub struct BootState {
+pub struct DaemonState {
   pub(crate) pool: Pool,
   pub(crate) docker_api: Docker,
+  pub(crate) config: DaemonConfig,
 }
 
-struct BootConfig {
+struct ArgState {
   config: DaemonConfig,
   s_pool: web::types::State<Pool>,
   docker_api: Docker,
@@ -81,23 +85,21 @@ async fn ensure_namespace(
 ///
 /// services::utils::init_system_network(&docker, "network-name").await;
 /// ```
-async fn init_system_network(
-  network_name: &str,
-  interface_name: &str,
-  docker_api: &Docker,
-) -> Result<(), DaemonError> {
+async fn init_system_network(docker_api: &Docker) -> Result<(), DaemonError> {
+  const SYSTEM_NETWORK_KEY: &str = "system-nano-internal0";
+  const SYSTEM_NETWORK: &str = "nanoclinternal0";
   let network_state =
-    utils::docker::get_network_state(network_name, docker_api).await?;
+    utils::docker::get_network_state(SYSTEM_NETWORK_KEY, docker_api).await?;
   if network_state == utils::docker::NetworkState::Ready {
     return Ok(());
   }
   let mut options: HashMap<String, String> = HashMap::new();
   options.insert(
     String::from("com.docker.network.bridge.name"),
-    interface_name.to_owned(),
+    SYSTEM_NETWORK.to_owned(),
   );
   let config = CreateNetworkOptions {
-    name: network_name.to_owned(),
+    name: SYSTEM_NETWORK.to_owned(),
     driver: String::from("bridge"),
     options,
     ..Default::default()
@@ -168,7 +170,7 @@ async fn init_store(
 }
 
 async fn register_store_cargo(
-  boot_config: &BootConfig,
+  boot_config: &ArgState,
 ) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&boot_config.sys_namespace, "store");
   if repositories::cargo::find_by_key(key, &boot_config.s_pool)
@@ -258,9 +260,7 @@ async fn register_proxy_cargo(
   Ok(())
 }
 
-async fn register_dns_cargo(
-  boot_config: &BootConfig,
-) -> Result<(), DaemonError> {
+async fn register_dns_cargo(boot_config: &ArgState) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&boot_config.sys_namespace, "dns");
 
   if repositories::cargo::find_by_key(key, &boot_config.s_pool)
@@ -303,7 +303,7 @@ async fn register_dns_cargo(
 }
 
 async fn register_daemon_cargo(
-  boot_config: &BootConfig,
+  boot_config: &ArgState,
 ) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&boot_config.sys_namespace, "daemon");
   if repositories::cargo::find_by_key(key, &boot_config.s_pool)
@@ -352,7 +352,7 @@ async fn register_daemon_cargo(
 
 /// Register default system network in store
 async fn register_system_network(
-  boot_config: &BootConfig,
+  boot_config: &ArgState,
 ) -> Result<(), DaemonError> {
   let cluster_key =
     utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
@@ -401,7 +401,7 @@ async fn register_system_network(
 }
 
 async fn register_dependencies(
-  boot_config: &BootConfig,
+  boot_config: &ArgState,
 ) -> Result<(), DaemonError> {
   ensure_namespace(&boot_config.default_namespace, &boot_config.s_pool).await?;
   ensure_namespace(&boot_config.sys_namespace, &boot_config.s_pool).await?;
@@ -425,15 +425,16 @@ async fn register_dependencies(
 
 /// Init function called before http server start
 /// to initialize his state and some background task
-pub async fn init(
-  config: &DaemonConfig,
-  docker_api: &Docker,
-) -> Result<BootState, DaemonError> {
-  const SYSTEM_NETWORK_KEY: &str = "system-nano-internal0";
-  const SYSTEM_NETWORK: &str = "nanoclinternal0";
-  init_system_network(SYSTEM_NETWORK_KEY, SYSTEM_NETWORK, docker_api).await?;
+pub async fn init(args: &Cli) -> Result<DaemonState, DaemonError> {
+  let config = config::init(args)?;
+  let docker_api = bollard::Docker::connect_with_unix(
+    &config.docker_host,
+    120,
+    bollard::API_DEFAULT_VERSION,
+  )?;
+  init_system_network(&docker_api).await?;
   let (pool, s_pool) = init_store(&config, &docker_api).await?;
-  let boot_config = BootConfig {
+  let boot_config = ArgState {
     config: config.to_owned(),
     s_pool,
     docker_api: docker_api.to_owned(),
@@ -443,9 +444,9 @@ pub async fn init(
     sys_namespace: String::from("system"),
   };
   register_dependencies(&boot_config).await?;
-  // Return state
-  Ok(BootState {
+  Ok(DaemonState {
     pool,
-    docker_api: docker_api.to_owned(),
+    config,
+    docker_api,
   })
 }

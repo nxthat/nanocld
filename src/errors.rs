@@ -7,8 +7,6 @@ use bollard::errors::Error as DockerError;
 #[cfg(feature = "dev")]
 use utoipa::ToSchema;
 
-use crate::{config, cli};
-
 /// Http response error
 #[derive(Debug, Error)]
 pub struct HttpResponseError {
@@ -83,19 +81,12 @@ pub enum DaemonError {
   HttpResponse(#[from] HttpResponseError),
 }
 
-pub fn parse_main_error(
-  #[allow(unused)] args: &cli::Cli,
-  config: &config::DaemonConfig,
-  err: DaemonError,
-) -> i32 {
+pub fn parse_main_error(err: DaemonError) -> i32 {
   match err {
     DaemonError::Docker(err) => match err {
       bollard::errors::Error::HyperResponseError { err } => {
         if err.is_connect() {
-          log::error!(
-            "unable to connect to docker host {}",
-            &config.docker_host,
-          );
+          log::error!("unable to connect to docker host {err}");
           return 1;
         }
         log::error!("{}", err);

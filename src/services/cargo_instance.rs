@@ -1,7 +1,7 @@
 use ntex::web;
 use futures::{stream, StreamExt};
 
-use crate::config::DaemonConfig;
+use crate::models::DaemonConfig;
 use crate::{utils, repositories};
 use crate::models::{Pool, GenericNspQuery, CargoInstancePath};
 use crate::errors::HttpResponseError;

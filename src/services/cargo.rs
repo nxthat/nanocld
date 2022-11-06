@@ -2,7 +2,7 @@ use futures::{stream, StreamExt};
 use ntex::web;
 use ntex::http::StatusCode;
 
-use crate::config::DaemonConfig;
+use crate::models::DaemonConfig;
 use crate::{repositories, utils};
 use crate::models::{
   Pool, GenericNspQuery, CargoPartial, CargoEnvPartial, CargoItemWithRelation,

@@ -4,7 +4,7 @@ use ntex::http::StatusCode;
 use std::collections::HashMap;
 use futures::{StreamExt, stream};
 
-use crate::config::DaemonConfig;
+use crate::models::DaemonConfig;
 use crate::{repositories, utils};
 
 use crate::models::{CargoItem, Pool};

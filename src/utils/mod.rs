@@ -99,10 +99,8 @@ pub mod test {
   use ntex::web::*;
 
   use std::env;
-  use crate::state;
   use crate::controllers;
-  use crate::config::DaemonConfig;
-  use crate::models::Pool;
+  use crate::models::{Pool, DaemonConfig};
 
   pub use ntex::web::test::TestServer;
 
@@ -122,24 +120,8 @@ pub mod test {
   }
 
   pub async fn gen_postgre_pool() -> Pool {
-    let socket_path = env::var("DOCKER_SOCKET_PATH")
-      .unwrap_or_else(|_| String::from("/run/docker.sock"));
-    let daemon_config = DaemonConfig {
-      hosts: Vec::new(),
-      state_dir: String::from("/var/lib/nanocl"),
-      docker_host: socket_path,
-      github_user: String::new(),
-      github_token: String::new(),
-    };
     let docker_api = gen_docker_client();
-    let boot_state = match state::init(&daemon_config, &docker_api).await {
-      Err(err) => {
-        eprintln!("Error while initing state {err}");
-        std::process::exit(1);
-      }
-      Ok(state) => state,
-    };
-    let ip_addr = controllers::store::get_store_ip_addr(&boot_state.docker_api)
+    let ip_addr = controllers::store::get_store_ip_addr(&docker_api)
       .await
       .unwrap();
 
@@ -147,29 +129,19 @@ pub mod test {
   }
 
   pub async fn generate_server(config: Config) -> test::TestServer {
-    let socket_path = env::var("DOCKER_SOCKET_PATH")
-      .unwrap_or_else(|_| String::from("/run/docker.sock"));
-    let daemon_config = DaemonConfig {
-      hosts: Vec::new(),
-      state_dir: String::from("/var/lib/nanocl"),
-      docker_host: socket_path,
-      github_user: String::new(),
-      github_token: String::new(),
-    };
     let docker_api = gen_docker_client();
-    let boot_state = match state::init(&daemon_config, &docker_api).await {
-      Err(err) => {
-        eprintln!("Error while initing state {err}");
-        std::process::exit(1);
-      }
-      Ok(state) => state,
+    let daemon_config = DaemonConfig {
+      state_dir: String::from("/var/lib/nanocl"),
+      ..Default::default()
     };
+
+    let pool = gen_postgre_pool().await;
 
     test::server(move || {
       App::new()
         .state(daemon_config.clone())
-        .state(boot_state.pool.clone())
-        .state(boot_state.docker_api.clone())
+        .state(pool.clone())
+        .state(docker_api.clone())
         .configure(config)
     })
   }
