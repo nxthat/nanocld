@@ -47,6 +47,9 @@ pub use container_image::*;
 mod node;
 pub use node::*;
 
+mod config;
+pub use config::*;
+
 pub type DBConn = PooledConnection<ConnectionManager<PgConnection>>;
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 

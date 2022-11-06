@@ -1,28 +1,8 @@
-use serde::{Serialize, Deserialize};
-
+use crate::cli::Cli;
 use crate::errors::DaemonError;
+use crate::models::{DaemonConfig, DaemonConfigFile};
 
-use super::cli::Cli;
-
-#[derive(Debug, Clone, Default)]
-pub struct DaemonConfig {
-  pub(crate) hosts: Vec<String>,
-  pub(crate) state_dir: String,
-  pub(crate) docker_host: String,
-  pub(crate) github_user: String,
-  pub(crate) github_token: String,
-}
-
-#[derive(Default, Serialize, Deserialize)]
-pub struct DaemonConfigFile {
-  pub(crate) hosts: Option<Vec<String>>,
-  pub(crate) docker_host: Option<String>,
-  pub(crate) state_dir: Option<String>,
-  pub(crate) github_user: Option<String>,
-  pub(crate) github_token: Option<String>,
-}
-
-pub fn merge_config(args: &Cli, config: &DaemonConfigFile) -> DaemonConfig {
+fn merge_config(args: &Cli, config: &DaemonConfigFile) -> DaemonConfig {
   let hosts = if let Some(ref hosts) = args.hosts {
     hosts.to_owned()
   } else if let Some(ref hosts) = config.hosts {
@@ -72,7 +52,7 @@ pub fn merge_config(args: &Cli, config: &DaemonConfigFile) -> DaemonConfig {
   }
 }
 
-pub fn read_config_file(
+fn read_config_file(
   config_dir: &String,
 ) -> Result<DaemonConfigFile, DaemonError> {
   let config_path = std::path::Path::new(&config_dir).join("nanocl.conf");
@@ -85,4 +65,20 @@ pub fn read_config_file(
   let config = serde_yaml::from_str::<DaemonConfigFile>(&content)?;
 
   Ok(config)
+}
+
+/// Init Daemon config
+/// It will read /etc/nanocl/nanocl.conf
+/// and parse Cli arguments we merge them together with a priority to the config file
+pub fn init(args: &Cli) -> Result<DaemonConfig, DaemonError> {
+  let file_config = match read_config_file(&args.config_dir) {
+    Err(err) => {
+      log::error!("{}", err);
+      std::process::exit(1);
+    }
+    Ok(file_config) => file_config,
+  };
+
+  // Merge cli args and config file with priority to args
+  Ok(merge_config(&args, &file_config))
 }

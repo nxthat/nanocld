@@ -9,8 +9,7 @@ use ntex::web;
 
 use crate::openapi;
 use crate::services;
-use crate::boot::BootState;
-use crate::config::DaemonConfig;
+use crate::state::DaemonState;
 
 // fn load_certs(filename: &str) -> Vec<rustls::Certificate> {
 //   let certfile = File::open(filename).expect("cannot open certificate file");
@@ -22,10 +21,7 @@ use crate::config::DaemonConfig;
 //     .collect()
 // }
 
-pub async fn start<'a>(
-  config: DaemonConfig,
-  boot_state: BootState,
-) -> std::io::Result<()> {
+pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
   // load ssl keys
 
   // let key_file = &mut BufReader::new(
@@ -53,15 +49,15 @@ pub async fn start<'a>(
   //   .unwrap();
 
   log::info!("Preparing server");
-  let hosts = config.hosts.to_owned();
+  let hosts = daemon_state.config.hosts.to_owned();
   let mut server = web::HttpServer::new(move || {
     web::App::new()
       // bind config state
-      .state(config.clone())
+      .state(daemon_state.config.clone())
       // bind postgre pool to state
-      .state(boot_state.pool.clone())
+      .state(daemon_state.pool.clone())
       // bind docker api
-      .state(boot_state.docker_api.clone())
+      .state(daemon_state.docker_api.clone())
       // Default logger middleware
       .wrap(web::middleware::Logger::default())
       // Set Json body max size

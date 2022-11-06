@@ -6,7 +6,7 @@ use serde::{Serialize, Deserialize};
 use futures::{StreamExt, stream};
 use futures::stream::FuturesUnordered;
 
-use crate::config::DaemonConfig;
+use crate::models::DaemonConfig;
 use crate::utils::render_template;
 use crate::{utils, controllers, repositories};
 use crate::models::{

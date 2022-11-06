@@ -170,7 +170,7 @@ mod test_github {
   use super::*;
 
   // #[ntex::test]
-  async fn list_repository_branches() -> TestReturn {
+  async fn _list_repository_branches() -> TestReturn {
     let github_api = GithubApi::new("", "");
     let item = GitRepositoryPartial {
       name: String::from("express-test-deploy"),

@@ -5,7 +5,7 @@ use ntex::util::Bytes;
 use ntex::channel::mpsc;
 use futures::{StreamExt, stream};
 
-use crate::config::DaemonConfig;
+use crate::models::DaemonConfig;
 use crate::{utils, repositories};
 
 use crate::models::{ContainerImagePartial, Pool};

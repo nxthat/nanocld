@@ -2,32 +2,36 @@
 use std::collections::HashMap;
 use std::error::Error;
 use std::path::Path;
-use std::{thread, time};
 
-use ntex::http::StatusCode;
 use ntex::web;
+use ntex::http::StatusCode;
+
 use bollard::Docker;
 use bollard::network::{CreateNetworkOptions, InspectNetworkOptions};
+
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 
-use crate::config::DaemonConfig;
-use crate::{controllers, repositories, utils};
+use crate::cli::Cli;
+use crate::{utils, controllers, repositories};
 use crate::models::{
   Pool, NamespacePartial, ClusterPartial, CargoPartial, ClusterNetworkPartial,
-  CargoInstancePartial,
+  CargoInstancePartial, DaemonConfig,
 };
 
 use crate::errors::{DaemonError, HttpResponseError};
 
+use super::config;
+
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!("./migrations");
 
 #[derive(Clone)]
-pub struct BootState {
+pub struct DaemonState {
   pub(crate) pool: Pool,
   pub(crate) docker_api: Docker,
+  pub(crate) config: DaemonConfig,
 }
 
-struct BootConfig {
+struct ArgState {
   config: DaemonConfig,
   s_pool: web::types::State<Pool>,
   docker_api: Docker,
@@ -79,25 +83,23 @@ async fn ensure_namespace(
 /// ```rust,norun
 /// use crate::services;
 ///
-/// services::utils::create_system_network(&docker, "network-name").await;
+/// services::utils::init_system_network(&docker, "network-name").await;
 /// ```
-async fn create_system_network(
-  network_name: &str,
-  interface_name: &str,
-  docker_api: &Docker,
-) -> Result<(), DaemonError> {
+async fn init_system_network(docker_api: &Docker) -> Result<(), DaemonError> {
+  const SYSTEM_NETWORK_KEY: &str = "system-nano-internal0";
+  const SYSTEM_NETWORK: &str = "nanoclinternal0";
   let network_state =
-    utils::docker::get_network_state(network_name, docker_api).await?;
+    utils::docker::get_network_state(SYSTEM_NETWORK_KEY, docker_api).await?;
   if network_state == utils::docker::NetworkState::Ready {
     return Ok(());
   }
   let mut options: HashMap<String, String> = HashMap::new();
   options.insert(
     String::from("com.docker.network.bridge.name"),
-    interface_name.to_owned(),
+    SYSTEM_NETWORK.to_owned(),
   );
   let config = CreateNetworkOptions {
-    name: network_name.to_owned(),
+    name: SYSTEM_NETWORK.to_owned(),
     driver: String::from("bridge"),
     options,
     ..Default::default()
@@ -106,15 +108,15 @@ async fn create_system_network(
   Ok(())
 }
 
-async fn boot_store(
+async fn create_store(
   config: &DaemonConfig,
   docker_api: &bollard::Docker,
 ) -> Result<(), DaemonError> {
   controllers::store::boot(config, docker_api).await?;
-  // We wait 100ms to ensure store is booted
+  // We wait 500ms to ensure store is booted
   // It's a tricky wait to avoid some error printed by postgresql connector.
-  let sleep_time = time::Duration::from_millis(500);
-  thread::sleep(sleep_time);
+  // let sleep_time = time::Duration::from_millis(500);
+  // thread::sleep(sleep_time);
   Ok(())
 }
 
@@ -130,7 +132,7 @@ fn run_migrations(
   Ok(())
 }
 
-async fn create_system_cluster(
+async fn register_system_cluster(
   sys_nsp: String,
   pool: &web::types::State<Pool>,
 ) -> Result<(), DaemonError> {
@@ -148,12 +150,12 @@ async fn create_system_cluster(
   Ok(())
 }
 
-async fn prepare_store(
+async fn init_store(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(Pool, web::types::State<Pool>), DaemonError> {
   log::info!("Booting store");
-  boot_store(config, docker_api).await?;
+  create_store(config, docker_api).await?;
   log::info!("Store booted");
   let postgres_ip = controllers::store::get_store_ip_addr(docker_api).await?;
   log::info!("Connecting to store");
@@ -167,8 +169,8 @@ async fn prepare_store(
   Ok((pool, s_pool))
 }
 
-async fn create_store_cargo(
-  boot_config: &BootConfig,
+async fn register_store_cargo(
+  boot_config: &ArgState,
 ) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&boot_config.sys_namespace, "store");
   if repositories::cargo::find_by_key(key, &boot_config.s_pool)
@@ -214,7 +216,7 @@ async fn create_store_cargo(
   Ok(())
 }
 
-async fn create_proxy_cargo(
+async fn register_proxy_cargo(
   system_nsp: &str,
   config: &DaemonConfig,
   s_pool: &web::types::State<Pool>,
@@ -258,7 +260,7 @@ async fn create_proxy_cargo(
   Ok(())
 }
 
-async fn create_dns_cargo(boot_config: &BootConfig) -> Result<(), DaemonError> {
+async fn register_dns_cargo(boot_config: &ArgState) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&boot_config.sys_namespace, "dns");
 
   if repositories::cargo::find_by_key(key, &boot_config.s_pool)
@@ -300,8 +302,8 @@ async fn create_dns_cargo(boot_config: &BootConfig) -> Result<(), DaemonError> {
   Ok(())
 }
 
-async fn create_daemon_cargo(
-  boot_config: &BootConfig,
+async fn register_daemon_cargo(
+  boot_config: &ArgState,
 ) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&boot_config.sys_namespace, "daemon");
   if repositories::cargo::find_by_key(key, &boot_config.s_pool)
@@ -350,7 +352,7 @@ async fn create_daemon_cargo(
 
 /// Register default system network in store
 async fn register_system_network(
-  boot_config: &BootConfig,
+  boot_config: &ArgState,
 ) -> Result<(), DaemonError> {
   let cluster_key =
     utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
@@ -398,38 +400,41 @@ async fn register_system_network(
   Ok(())
 }
 
-async fn prepare_system(boot_config: &BootConfig) -> Result<(), DaemonError> {
+async fn register_dependencies(
+  boot_config: &ArgState,
+) -> Result<(), DaemonError> {
   ensure_namespace(&boot_config.default_namespace, &boot_config.s_pool).await?;
   ensure_namespace(&boot_config.sys_namespace, &boot_config.s_pool).await?;
-  create_system_cluster(
+  register_system_cluster(
     boot_config.sys_namespace.to_owned(),
     &boot_config.s_pool,
   )
   .await?;
   register_system_network(boot_config).await?;
-  create_store_cargo(boot_config).await?;
-  create_daemon_cargo(boot_config).await?;
-  create_proxy_cargo(
+  register_store_cargo(boot_config).await?;
+  register_daemon_cargo(boot_config).await?;
+  register_proxy_cargo(
     &boot_config.sys_namespace,
     &boot_config.config,
     &boot_config.s_pool,
   )
   .await?;
-  create_dns_cargo(boot_config).await?;
+  register_dns_cargo(boot_config).await?;
   Ok(())
 }
 
-/// Boot function called before http server start to
-/// initialize his state and some background task
-pub async fn boot(
-  config: &DaemonConfig,
-  docker_api: &Docker,
-) -> Result<BootState, DaemonError> {
-  const SYSTEM_NETWORK_KEY: &str = "system-nano-internal0";
-  const SYSTEM_NETWORK: &str = "nanoclinternal0";
-  create_system_network(SYSTEM_NETWORK_KEY, SYSTEM_NETWORK, docker_api).await?;
-  let (pool, s_pool) = prepare_store(&config, &docker_api).await?;
-  let boot_config = BootConfig {
+/// Init function called before http server start
+/// to initialize his state and some background task
+pub async fn init(args: &Cli) -> Result<DaemonState, DaemonError> {
+  let config = config::init(args)?;
+  let docker_api = bollard::Docker::connect_with_unix(
+    &config.docker_host,
+    120,
+    bollard::API_DEFAULT_VERSION,
+  )?;
+  init_system_network(&docker_api).await?;
+  let (pool, s_pool) = init_store(&config, &docker_api).await?;
+  let boot_config = ArgState {
     config: config.to_owned(),
     s_pool,
     docker_api: docker_api.to_owned(),
@@ -438,10 +443,10 @@ pub async fn boot(
     sys_network: String::from("internal0"),
     sys_namespace: String::from("system"),
   };
-  prepare_system(&boot_config).await?;
-  // Return state
-  Ok(BootState {
+  register_dependencies(&boot_config).await?;
+  Ok(DaemonState {
     pool,
-    docker_api: docker_api.to_owned(),
+    config,
+    docker_api,
   })
 }

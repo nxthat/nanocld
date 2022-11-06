@@ -7,7 +7,7 @@ use bollard::errors::Error as DockerError;
 use bollard::models::{HostConfig, PortBinding, DeviceMapping, Ipam, IpamConfig};
 use bollard::network::CreateNetworkOptions;
 
-use crate::config::DaemonConfig;
+use crate::models::DaemonConfig;
 
 use super::utils::{*, self};
 

@@ -16,7 +16,7 @@ use bollard::{
 use crate::{
   utils,
   models::{Pool, DBConn},
-  config::DaemonConfig,
+  models::DaemonConfig,
 };
 use crate::errors::HttpResponseError;
 

@@ -4,7 +4,7 @@ use futures::stream;
 use futures::StreamExt;
 use ntex::http::StatusCode;
 
-use crate::config::DaemonConfig;
+use crate::models::DaemonConfig;
 use crate::models::ClusterTemplatePartial;
 use crate::models::DeleteClusterTemplatePath;
 use crate::{utils, repositories};

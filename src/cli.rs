@@ -9,7 +9,7 @@ use clap::Parser;
 pub struct Cli {
   /// Only install required components this have to be called after fresh installation.
   #[clap(long)]
-  pub(crate) install_components: bool,
+  pub(crate) init: bool,
   /// Daemon host to listen to you can use tcp:// and unix://
   /// [default: unix:///run/nanocl/nanocl.sock]
   #[clap(short = 'H', long = "hosts")]

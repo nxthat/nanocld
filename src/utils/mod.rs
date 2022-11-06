@@ -100,8 +100,7 @@ pub mod test {
 
   use std::env;
   use crate::controllers;
-  use crate::config::DaemonConfig;
-  use crate::models::Pool;
+  use crate::models::{Pool, DaemonConfig};
 
   pub use ntex::web::test::TestServer;
 
@@ -121,8 +120,8 @@ pub mod test {
   }
 
   pub async fn gen_postgre_pool() -> Pool {
-    let docker = gen_docker_client();
-    let ip_addr = controllers::store::get_store_ip_addr(&docker)
+    let docker_api = gen_docker_client();
+    let ip_addr = controllers::store::get_store_ip_addr(&docker_api)
       .await
       .unwrap();
 
@@ -130,7 +129,7 @@ pub mod test {
   }
 
   pub async fn generate_server(config: Config) -> test::TestServer {
-    let docker = gen_docker_client();
+    let docker_api = gen_docker_client();
     let daemon_config = DaemonConfig {
       state_dir: String::from("/var/lib/nanocl"),
       ..Default::default()
@@ -142,7 +141,7 @@ pub mod test {
       App::new()
         .state(daemon_config.clone())
         .state(pool.clone())
-        .state(docker.clone())
+        .state(docker_api.clone())
         .configure(config)
     })
   }

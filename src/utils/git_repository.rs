@@ -2,7 +2,7 @@ use ntex::web;
 use ntex::http::StatusCode;
 use url::Url;
 
-use crate::config::DaemonConfig;
+use crate::models::DaemonConfig;
 use crate::repositories;
 use crate::errors::HttpResponseError;
 use crate::models::{Pool, GitRepositoryItem, GitRepositoryBranchItem};

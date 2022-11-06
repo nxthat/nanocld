@@ -5,9 +5,10 @@ pub mod simple_scenario {
 
   async fn before_test() {
     Command::new("./target/debug/nanocld")
-      .args(["/C", "echo hello"])
       .spawn()
-      .expect("Start nanocld server");
+      .expect("Start nanocld server")
+      .wait()
+      .expect("end");
   }
 
   #[ntex::test]
