@@ -99,7 +99,7 @@ async fn init_system_network(docker_api: &Docker) -> Result<(), DaemonError> {
     SYSTEM_NETWORK.to_owned(),
   );
   let config = CreateNetworkOptions {
-    name: SYSTEM_NETWORK.to_owned(),
+    name: SYSTEM_NETWORK_KEY.to_owned(),
     driver: String::from("bridge"),
     options,
     ..Default::default()
