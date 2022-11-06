@@ -40,5 +40,6 @@ jobs:
         docker load -i nanocl.0.1.5.tar.gz;
         docker image ls;
         docker run -v /run/docker.sock:/run/nanocl/docker.sock nanocl:0.1.5 setup;
+        cargo run -- --init;
     - name: Run tests
       run: DOCKER_SOCKET_PATH=/run/docker.sock cargo make test
