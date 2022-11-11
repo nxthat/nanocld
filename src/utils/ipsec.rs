@@ -71,7 +71,6 @@ fn gen_ipsec_host_conf(config: &DaemonConfig) -> HostConfig {
 
   HostConfig {
     binds: Some(binds),
-    // privileged: Some(true),
     port_bindings: Some(port_bindings),
     network_mode: Some(String::from("nanoclvpn0")),
     cap_add: Some(vec![String::from("NET_ADMIN")]),
@@ -153,7 +152,7 @@ pub async fn boot(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let container_name = "nanocl-vpn-ipsec";
+  let container_name = "system-nanocl-ipsec";
 
   create_ipsec_network(docker_api).await?;
   let s_state = get_service_state(container_name, docker_api).await;
