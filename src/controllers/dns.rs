@@ -44,6 +44,11 @@ impl IntoHttpResponseError for DnsError {
   }
 }
 
+/// Write content into given path
+///
+/// ## Arguments
+/// - [path](PathBuf) The file path to write in
+/// - [content](str) The content to write as a string reference
 fn write_dns_entry_conf(path: &PathBuf, content: &str) -> std::io::Result<()> {
   let mut f = fs::File::create(path)?;
   f.write_all(content.as_bytes())?;
@@ -51,12 +56,12 @@ fn write_dns_entry_conf(path: &PathBuf, content: &str) -> std::io::Result<()> {
   Ok(())
 }
 
-/// # Add or Update a dns entry on dnsmasq
+/// Add or Update a dns entry
 ///
-/// # Arguments
-/// - [domain_name] The domain name to add
-/// - [ip_address] The ip address the domain target
-/// - [state_dir] Daemon state dir to know where to store the information
+/// ## Arguments
+/// - [domain_name](str) The domain name to add
+/// - [ip_address](str) The ip address the domain target
+/// - [state_dir](str) Daemon state dir to know where to store the information
 pub fn add_dns_entry(
   domain_name: &str,
   ip_address: &str,
@@ -65,12 +70,10 @@ pub fn add_dns_entry(
   let file_path = Path::new(state_dir).join("dnsmasq/dnsmasq.d/dns_entry.conf");
   let content = fs::read_to_string(&file_path)?;
   let reg_expr = r"address=/.".to_owned() + domain_name + "/.*";
-
   let reg = Regex::new(&reg_expr)?;
-
   let new_dns_entry = "address=/.".to_owned() + domain_name + "/" + ip_address;
   if reg.is_match(&content) {
-    // If entry exist we just update it by replacing it with the regex
+    // If entry exist we just update it by replacing the ip address
     let res = reg.replace_all(&content, &new_dns_entry);
     let new_content = res.to_string();
     write_dns_entry_conf(&file_path, &new_content)?;
@@ -80,22 +83,30 @@ pub fn add_dns_entry(
       .write(true)
       .append(true)
       .open(file_path)?;
-
     writeln!(file, "{}", &new_dns_entry)?;
   }
 
   Ok(())
 }
 
+/// Restart dns controller
+///
+/// ## Arguments
+/// - [docker_api](Docker) Docker api reference
 pub async fn restart(docker_api: &Docker) -> Result<(), DnsError> {
   docker_api.restart_container("dns", None).await?;
   Ok(())
 }
 
-pub async fn register(boot_config: &ArgState) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(&boot_config.sys_namespace, "dns");
+/// Register dns controller as a cargo
+/// That way we can manage it using nanocl commands
+///
+/// ## Arguments
+/// - [arg](ArgState) Reference to argument state
+pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
+  let key = utils::key::gen_key(&arg.sys_namespace, "dns");
 
-  if repositories::cargo::find_by_key(key, &boot_config.s_pool)
+  if repositories::cargo::find_by_key(key, &arg.s_pool)
     .await
     .is_ok()
   {
@@ -103,9 +114,8 @@ pub async fn register(boot_config: &ArgState) -> Result<(), DaemonError> {
   }
 
   let config_file_path =
-    Path::new(&boot_config.config.state_dir).join("dnsmasq/dnsmasq.conf");
-  let dir_path =
-    Path::new(&boot_config.config.state_dir).join("dnsmasq/dnsmasq.d/");
+    Path::new(&arg.config.state_dir).join("dnsmasq/dnsmasq.conf");
+  let dir_path = Path::new(&arg.config.state_dir).join("dnsmasq/dnsmasq.d/");
   let binds = Some(vec![
     format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
     format!("{}:/etc/dnsmasq.d/", dir_path.display()),
@@ -125,9 +135,9 @@ pub async fn register(boot_config: &ArgState) -> Result<(), DaemonError> {
   };
 
   repositories::cargo::create(
-    boot_config.sys_namespace.to_owned(),
+    arg.sys_namespace.to_owned(),
     dns_cargo,
-    &boot_config.s_pool,
+    &arg.s_pool,
   )
   .await?;
 

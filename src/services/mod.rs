@@ -19,7 +19,5 @@ pub mod container_image;
 pub mod system;
 /// Mange cargo instance
 pub mod cargo_instance;
-/// Manage containers
-pub mod container;
 /// Manage nodes
 pub mod node;

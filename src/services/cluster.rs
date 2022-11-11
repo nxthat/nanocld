@@ -101,7 +101,8 @@ async fn delete_cluster_by_name(
 
   repositories::cargo_instance::delete_by_cluster_key(key.to_owned(), &pool)
     .await?;
-  let containers = utils::container::list_container(qs, &docker_api).await?;
+  let containers =
+    utils::cargo_instance::list_cargo_instance(qs, &docker_api).await?;
   let mut stream = stream::iter(containers);
   while let Some(container) = stream.next().await {
     let options = bollard::container::RemoveContainerOptions {

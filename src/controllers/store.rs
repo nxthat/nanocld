@@ -22,6 +22,10 @@ use crate::{
 
 use crate::errors::{DaemonError, HttpResponseError};
 
+/// Generate HostConfig struct for container creation
+///
+/// ## Arguments
+/// [config](DaemonConfig) Daemon config reference
 fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
   let path = Path::new(&config.state_dir).join("store/data");
 
@@ -38,6 +42,12 @@ fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
   }
 }
 
+/// Create system store cargo instance
+///
+/// ## Arguments
+/// [name](str) The name of the cargo instance
+/// [config](DaemonConfig) Reference to daemon config
+/// [docker_api](Docker) Reference to docker api
 async fn create_system_store(
   name: &str,
   config: &DaemonConfig,
@@ -63,16 +73,13 @@ async fn create_system_store(
   Ok(())
 }
 
-/// # Create pool
-/// Create an pool connection to postgres database
+/// Create a connection pool for postgres database
 ///
-/// # Returns
+/// ## Arguments
+/// [host](String) Host to connect to
+///
+/// ## Returns
 /// - [Pool](Pool) R2d2 pool connection for postgres
-///
-/// # Examples
-/// ```
-/// let pool = create_pool(String::from("localhost"));
-/// ```
 pub async fn create_pool(host: String) -> Pool {
   web::block(move || {
     let db_url =
@@ -84,11 +91,10 @@ pub async fn create_pool(host: String) -> Pool {
   .expect("cannot connect to postgresql.")
 }
 
-/// # Get connection from a pool
+/// Get connection from the connection pool
 ///
-/// # Arguments
+/// ## Arguments
 /// [pool](web::types::State<Pool>) a pool wrapped in ntex State
-///
 pub fn get_pool_conn(
   pool: &web::types::State<Pool>,
 ) -> Result<DBConn, HttpResponseError> {
@@ -104,6 +110,10 @@ pub fn get_pool_conn(
   Ok(conn)
 }
 
+/// Get store ip address
+///
+/// ## Arguments
+/// [docker_api](Docker) Reference to docker api
 pub async fn get_store_ip_addr(
   docker_api: &Docker,
 ) -> Result<String, HttpResponseError> {
@@ -134,6 +144,11 @@ pub async fn get_store_ip_addr(
   Ok(ip_address.to_owned())
 }
 
+/// Boot the store and ensure it's running
+///
+/// ## Arguments
+/// [config](DaemonConfig) Reference to Daemon config
+/// [docker_api](Docker) Reference to docker
 pub async fn boot(
   config: &DaemonConfig,
   docker_api: &Docker,
@@ -155,15 +170,19 @@ pub async fn boot(
   Ok(())
 }
 
-pub async fn register(boot_config: &ArgState) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(&boot_config.sys_namespace, "store");
-  if repositories::cargo::find_by_key(key, &boot_config.s_pool)
+/// Register store as a cargo
+///
+/// ## Arguments
+/// [arg](ArgState) Reference to argument state
+pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
+  let key = utils::key::gen_key(&arg.sys_namespace, "store");
+  if repositories::cargo::find_by_key(key, &arg.s_pool)
     .await
     .is_ok()
   {
     return Ok(());
   }
-  let path = Path::new(&boot_config.config.state_dir).join("store/data");
+  let path = Path::new(&arg.config.state_dir).join("store/data");
   let binds = vec![format!("{}:/cockroach/cockroach-data", path.display())];
   let store_cargo = CargoPartial {
     name: String::from("store"),
@@ -179,23 +198,21 @@ pub async fn register(boot_config: &ArgState) -> Result<(), DaemonError> {
     cap_add: None,
   };
   let cargo = repositories::cargo::create(
-    boot_config.sys_namespace.to_owned(),
+    arg.sys_namespace.to_owned(),
     store_cargo,
-    &boot_config.s_pool,
+    &arg.s_pool,
   )
   .await?;
 
-  let cluster_key =
-    utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
-  let network_key = utils::key::gen_key(&cluster_key, &boot_config.sys_network);
+  let cluster_key = utils::key::gen_key(&arg.sys_namespace, &arg.sys_cluster);
+  let network_key = utils::key::gen_key(&cluster_key, &arg.sys_network);
   let cargo_instance = CargoInstancePartial {
     cargo_key: cargo.key,
     cluster_key,
     network_key,
   };
 
-  repositories::cargo_instance::create(cargo_instance, &boot_config.s_pool)
-    .await?;
+  repositories::cargo_instance::create(cargo_instance, &arg.s_pool).await?;
 
   Ok(())
 }

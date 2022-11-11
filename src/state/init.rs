@@ -122,20 +122,17 @@ async fn register_system_cluster(
 }
 
 /// Ensure existance of the system network in our store binded to `nanoclinternal0`
-async fn register_system_network(
-  boot_config: &ArgState,
-) -> Result<(), DaemonError> {
-  let cluster_key =
-    utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
-  let key = utils::key::gen_key(&cluster_key, &boot_config.sys_network);
-  if repositories::cluster_network::find_by_key(key, &boot_config.s_pool)
+async fn register_system_network(arg: &ArgState) -> Result<(), DaemonError> {
+  let cluster_key = utils::key::gen_key(&arg.sys_namespace, &arg.sys_cluster);
+  let key = utils::key::gen_key(&cluster_key, &arg.sys_network);
+  if repositories::cluster_network::find_by_key(key, &arg.s_pool)
     .await
     .is_ok()
   {
     return Ok(());
   }
 
-  let docker_network = boot_config
+  let docker_network = arg
     .docker_api
     .inspect_network(
       "system-nano-internal0",
@@ -143,7 +140,7 @@ async fn register_system_network(
     )
     .await?;
   let network = ClusterNetworkPartial {
-    name: boot_config.sys_network.to_owned(),
+    name: arg.sys_network.to_owned(),
   };
 
   let docker_network_id =
@@ -158,12 +155,12 @@ async fn register_system_network(
   let default_gateway = utils::docker::get_default_gateway(&docker_network)?;
 
   repositories::cluster_network::create_for_cluster(
-    boot_config.sys_namespace.to_owned(),
-    boot_config.sys_cluster.to_owned(),
+    arg.sys_namespace.to_owned(),
+    arg.sys_cluster.to_owned(),
     network,
     docker_network_id,
     default_gateway.to_owned(),
-    &boot_config.s_pool,
+    &arg.s_pool,
   )
   .await?;
 
@@ -172,16 +169,16 @@ async fn register_system_network(
 
 /// Ensure exsistance of our deamon in the store.
 /// We are running inside us it's that crazy ?
-async fn register_daemon(boot_config: &ArgState) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(&boot_config.sys_namespace, "daemon");
-  if repositories::cargo::find_by_key(key, &boot_config.s_pool)
+async fn register_daemon(arg: &ArgState) -> Result<(), DaemonError> {
+  let key = utils::key::gen_key(&arg.sys_namespace, "daemon");
+  if repositories::cargo::find_by_key(key, &arg.s_pool)
     .await
     .is_ok()
   {
     return Ok(());
   }
-  println!("state dir {}", &boot_config.config.state_dir);
-  let path = Path::new(&boot_config.config.state_dir);
+  println!("state dir {}", &arg.config.state_dir);
+  let path = Path::new(&arg.config.state_dir);
   let binds = vec![format!("{}:/var/lib/nanocl", path.display())];
   let store_cargo = CargoPartial {
     name: String::from("daemon"),
@@ -197,50 +194,36 @@ async fn register_daemon(boot_config: &ArgState) -> Result<(), DaemonError> {
     cap_add: None,
   };
   let cargo = repositories::cargo::create(
-    boot_config.sys_namespace.to_owned(),
+    arg.sys_namespace.to_owned(),
     store_cargo,
-    &boot_config.s_pool,
+    &arg.s_pool,
   )
   .await?;
 
-  let cluster_key =
-    utils::key::gen_key(&boot_config.sys_namespace, &boot_config.sys_cluster);
-  let network_key = utils::key::gen_key(&cluster_key, &boot_config.sys_network);
+  let cluster_key = utils::key::gen_key(&arg.sys_namespace, &arg.sys_cluster);
+  let network_key = utils::key::gen_key(&cluster_key, &arg.sys_network);
   let cargo_instance = CargoInstancePartial {
     cargo_key: cargo.key,
     cluster_key,
     network_key,
   };
 
-  repositories::cargo_instance::create(cargo_instance, &boot_config.s_pool)
-    .await?;
+  repositories::cargo_instance::create(cargo_instance, &arg.s_pool).await?;
 
   Ok(())
 }
 
 /// Register all dependencies needed
 /// Default Namespace, Cluster, Network, and Controllers will be registered in our store
-async fn register_dependencies(
-  boot_config: &ArgState,
-) -> Result<(), DaemonError> {
-  register_namespace(&boot_config.default_namespace, &boot_config.s_pool)
-    .await?;
-  register_namespace(&boot_config.sys_namespace, &boot_config.s_pool).await?;
-  register_system_cluster(
-    boot_config.sys_namespace.to_owned(),
-    &boot_config.s_pool,
-  )
-  .await?;
-  register_system_network(boot_config).await?;
-  controllers::store::register(boot_config).await?;
-  controllers::proxy::register(
-    &boot_config.sys_namespace,
-    &boot_config.config,
-    &boot_config.s_pool,
-  )
-  .await?;
-  controllers::dns::register(boot_config).await?;
-  register_daemon(boot_config).await?;
+async fn register_dependencies(arg: &ArgState) -> Result<(), DaemonError> {
+  register_namespace(&arg.default_namespace, &arg.s_pool).await?;
+  register_namespace(&arg.sys_namespace, &arg.s_pool).await?;
+  register_system_cluster(arg.sys_namespace.to_owned(), &arg.s_pool).await?;
+  register_system_network(arg).await?;
+  controllers::store::register(arg).await?;
+  controllers::proxy::register(arg).await?;
+  controllers::dns::register(arg).await?;
+  register_daemon(arg).await?;
   Ok(())
 }
 
@@ -255,7 +238,7 @@ pub async fn init(args: &Cli) -> Result<DaemonState, DaemonError> {
   )?;
   ensure_system_network(&docker_api).await?;
   let (pool, s_pool) = ensure_store(&config, &docker_api).await?;
-  let boot_config = ArgState {
+  let arg_state = ArgState {
     config: config.to_owned(),
     s_pool,
     docker_api: docker_api.to_owned(),
@@ -264,7 +247,7 @@ pub async fn init(args: &Cli) -> Result<DaemonState, DaemonError> {
     sys_network: String::from("internal0"),
     sys_namespace: String::from("system"),
   };
-  register_dependencies(&boot_config).await?;
+  register_dependencies(&arg_state).await?;
   Ok(DaemonState {
     pool,
     config,

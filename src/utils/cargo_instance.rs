@@ -5,7 +5,7 @@ use crate::utils::key;
 use crate::models::ContainerFilterQuery;
 use crate::errors::HttpResponseError;
 
-pub async fn list_container(
+pub async fn list_cargo_instance(
   qs: ContainerFilterQuery,
   docker_api: &web::types::State<bollard::Docker>,
 ) -> Result<Vec<bollard::models::ContainerSummary>, HttpResponseError> {

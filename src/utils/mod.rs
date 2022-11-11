@@ -7,7 +7,7 @@ pub mod docker;
 pub mod github;
 pub mod cluster;
 pub mod cluster_network;
-pub mod container;
+pub mod cargo_instance;
 pub mod git_repository;
 pub mod cluster_variable;
 

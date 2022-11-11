@@ -78,12 +78,10 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
       .configure(services::cluster_variable::ntex_config)
       // bind controller cluster network
       .configure(services::cluster_network::ntex_config)
-      // bind controller cluster cargo
+      // bind controller cargo instance
       .configure(services::cargo_instance::ntex_config)
       // bind controller nginx template
       .configure(services::nginx_template::ntex_config)
-      // bind controller container
-      .configure(services::container::ntex_config)
       // bind controller cargo
       .configure(services::cargo::ntex_config)
   });

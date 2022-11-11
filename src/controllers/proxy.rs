@@ -5,12 +5,16 @@ use bollard::{
   errors::Error as DockerError,
   exec::{CreateExecOptions, StartExecOptions},
 };
-use ntex::web;
 
 use crate::{utils, repositories};
-use crate::models::{Pool, DaemonConfig, CargoPartial};
+use crate::models::{ArgState, CargoPartial};
 use crate::errors::DaemonError;
 
+/// Reload proxy config
+/// Since our proxy is a nginx image we reload it running `nginx -s reload` inside the proxy container
+///
+/// ## Arguments
+/// [docker_api](Docker) Docker api reference
 pub async fn reload_config(docker_api: &Docker) -> Result<(), DockerError> {
   let container_name = "nproxy";
   let config = CreateExecOptions {
@@ -29,22 +33,27 @@ pub async fn reload_config(docker_api: &Docker) -> Result<(), DockerError> {
   Ok(())
 }
 
-pub async fn register(
-  system_nsp: &str,
-  config: &DaemonConfig,
-  s_pool: &web::types::State<Pool>,
-) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(system_nsp, "proxy");
-  if repositories::cargo::find_by_key(key, s_pool).await.is_ok() {
+/// Register our proxy controller as a cargo
+///
+/// ## Arguments
+/// [arg](ArgState) Reference to argument state
+pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
+  let key = utils::key::gen_key(&arg.sys_namespace, "proxy");
+  if repositories::cargo::find_by_key(key, &arg.s_pool)
+    .await
+    .is_ok()
+  {
     return Ok(());
   }
 
-  let sites_path = Path::new(&config.state_dir).join("nginx/sites-enabled");
-  let stream_path = Path::new(&config.state_dir).join("nginx/streams-enabled");
-  let log_path = Path::new(&config.state_dir).join("nginx/log");
-  let ssl_path = Path::new(&config.state_dir).join("nginx/ssl");
-  let sock_path = Path::new(&config.state_dir).join("socket");
-  let letsencrypt_path = Path::new(&config.state_dir).join("nginx/letsencrypt");
+  let sites_path = Path::new(&arg.config.state_dir).join("nginx/sites-enabled");
+  let stream_path =
+    Path::new(&arg.config.state_dir).join("nginx/streams-enabled");
+  let log_path = Path::new(&arg.config.state_dir).join("nginx/log");
+  let ssl_path = Path::new(&arg.config.state_dir).join("nginx/ssl");
+  let sock_path = Path::new(&arg.config.state_dir).join("socket");
+  let letsencrypt_path =
+    Path::new(&arg.config.state_dir).join("nginx/letsencrypt");
   let binds = Some(vec![
     format!("{}:/opt/nanocl-socket", sock_path.display()),
     format!("{}:/etc/nginx/sites-enabled", sites_path.display()),
@@ -67,8 +76,12 @@ pub async fn register(
     cap_add: None,
   };
 
-  repositories::cargo::create(system_nsp.to_owned(), proxy_cargo, s_pool)
-    .await?;
+  repositories::cargo::create(
+    arg.sys_namespace.to_owned(),
+    proxy_cargo,
+    &arg.s_pool,
+  )
+  .await?;
 
   Ok(())
 }

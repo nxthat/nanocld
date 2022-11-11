@@ -178,7 +178,8 @@ async fn inspect_cargo_by_name(
     cluster: None,
     namespace: qs.namespace.to_owned(),
   };
-  let containers = utils::container::list_container(qs, &docker_api).await?;
+  let containers =
+    utils::cargo_instance::list_cargo_instance(qs, &docker_api).await?;
   let environnements = if let Ok(envs) =
     repositories::cargo_env::list_by_cargo_key(key, &pool).await
   {
