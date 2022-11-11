@@ -1,4 +1,4 @@
 pub const ARCH: &str = "amd64";
-pub const VERSION: &str = "0.1.7";
-pub const COMMIT_ID: &str = "40740b24";
+pub const VERSION: &str = "0.1.8";
+pub const COMMIT_ID: &str = "e6c4a523";
 
