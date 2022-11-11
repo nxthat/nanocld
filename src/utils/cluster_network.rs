@@ -27,9 +27,9 @@ pub async fn create_network(
   let cluster_key = gen_key(&nsp, &c_name);
   let mut labels = HashMap::new();
   labels.insert(String::from("cluster_key"), cluster_key.to_owned());
-  let gen_name = cluster_key.to_owned() + "-" + &item.name;
+  let net_id = gen_key(&cluster_key, &item.name);
   let network_existing =
-    repositories::cluster_network::find_by_key(gen_name.clone(), &pool)
+    repositories::cluster_network::find_by_key(net_id.clone(), &pool)
       .await
       .is_ok();
   if network_existing {
@@ -39,7 +39,7 @@ pub async fn create_network(
     });
   }
   let config = bollard::network::CreateNetworkOptions {
-    name: gen_name,
+    name: net_id,
     driver: String::from("bridge"),
     labels,
     ..Default::default()
@@ -99,7 +99,7 @@ pub async fn create_network(
 
   let new_network = repositories::cluster_network::create_for_cluster(
     nsp.to_owned(),
-    item.name.to_owned(),
+    c_name.to_owned(),
     item,
     id,
     default_gateway.to_owned(),

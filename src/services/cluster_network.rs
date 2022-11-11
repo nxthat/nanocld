@@ -64,7 +64,6 @@ async fn create_cluster_network(
   // Verify if the repository exist
   // NOTE: Should use a is_exist method instead.
   repositories::cluster::find_by_key(key, &pool).await?;
-
   // Create the new network
   let new_network = utils::cluster_network::create_network(
     nsp,
