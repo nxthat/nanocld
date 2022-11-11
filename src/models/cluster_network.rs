@@ -9,7 +9,7 @@ use super::cluster::ClusterItem;
 
 /// Cluster network partial
 /// this structure ensure write in database
-#[derive(Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct ClusterNetworkPartial {
   pub(crate) name: String,

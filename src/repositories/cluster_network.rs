@@ -1,7 +1,7 @@
 use ntex::web;
 use diesel::prelude::*;
 
-use crate::controllers;
+use crate::{utils, controllers};
 use crate::errors::HttpResponseError;
 use crate::models::{
   Pool, ClusterNetworkPartial, ClusterNetworkItem, GenericDelete, ClusterItem,
@@ -61,9 +61,9 @@ pub async fn create_for_cluster(
   let mut conn = controllers::store::get_pool_conn(pool)?;
 
   let res = web::block(move || {
-    let cluster_key = namespace_name.to_owned() + "-" + &cluster_name;
+    let cluster_key = utils::key::gen_key(&namespace_name, &cluster_name);
     let item = ClusterNetworkItem {
-      key: cluster_key.to_owned() + "-" + &item.name,
+      key: utils::key::gen_key(&cluster_key, &item.name),
       cluster_key,
       name: item.name,
       default_gateway,
