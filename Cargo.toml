@@ -2,6 +2,10 @@
 name = "nanocld"
 version = "0.1.7"
 edition = "2021"
+authors = ["nanocl contributors <team@next-hat.com>"]
+description = "The Self-Sufficient Hybrid-Cloud Orchestrator Daemon"
+readme = "README.md"
+license = "MIT OR Apache-2.0"
 
 [features]
 default = []
