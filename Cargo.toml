@@ -7,6 +7,12 @@ description = "The Self-Sufficient Hybrid-Cloud Orchestrator Daemon"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
 
+[[bin]]
+name = "nanocld"
+test = false
+bench = false
+path = "src/main.rs"
+
 [features]
 default = []
 dev = ["dep:utoipa"]
@@ -42,7 +48,7 @@ uuid = { version = "1.2", features = ["serde", "v4"] }
 ntex = { version = "=0.5.29", features = ["rustls", "tokio"] }
 diesel-derive-enum = { version = "2.0.0-rc.0", features = ["postgres"] }
 diesel = { version = "2.0.1", features = ["postgres", "r2d2", "chrono", "uuid"] }
-# Dependency required with dev feature
-utoipa = { version = "2.2.0", features = ["uuid", "chrono"], optional = true }
 rustls = "0.20.7"
 rustls-pemfile = "1.0.1"
+# Dependency required with dev feature
+utoipa = { version = "2.2.0", features = ["uuid", "chrono"], optional = true }
