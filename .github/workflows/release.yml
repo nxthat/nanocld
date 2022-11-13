@@ -35,7 +35,7 @@ jobs:
     - name: Print version
       run: echo $IMAGE_VERSION
     - name: Build image
-      run: docker buildx build --load --cache-from type=local,src=/tmp/.buildx-cache --cache-to type=local,dest=/tmp/.buildx-cache -t nanocl-daemon:$IMAGE_VERSION .
+      run: docker buildx build --cache-from type=local,src=/tmp/.buildx-cache --cache-to type=local,dest=/tmp/.buildx-cache -t nanocl-daemon:$IMAGE_VERSION .
     - name: Export image
       run: docker save nanocl-daemon:$IMAGE_VERSION | gzip > /tmp/nanocl-daemon:$IMAGE_VERSION.tar.gz
     - name: Test if release already exists
