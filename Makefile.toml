@@ -9,7 +9,7 @@ args = ["clean"]
 
 [tasks.dev]
 command = "cargo"
-args = ["run", "--", "--docker-host", "/run/nanocl/docker.sock"]
+args = ["run"]
 
 [tasks.cov]
 command = "cargo"

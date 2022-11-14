@@ -22,10 +22,6 @@ jobs:
       with:
         path: ./target/llvm-cov-target
         key: llvm-cov-key
-    - uses: actions/cache@v3
-      with:
-        path: ./fake_path/var/lib
-        key: image-and-container-key
     - uses: Swatinem/rust-cache@v2
     - uses: davidB/rust-cargo-make@v1
     - uses: taiki-e/install-action@cargo-llvm-cov
@@ -40,4 +36,4 @@ jobs:
         docker load -i nanocl.0.1.5.tar.gz;
         docker run -v /run/docker.sock:/run/nanocl/docker.sock nanocl:0.1.5 setup;
     - name: Run tests
-      run: DOCKER_SOCKET_PATH=/run/docker.sock cargo make test
+      run: cargo make test

@@ -44,7 +44,7 @@ OPTIONS
 **\--docker-host**=*DOCKER\_HOST*
 
 :   Docker daemon socket to connect \[default:
-    unix:///run/nanocl/docker.sock\]
+    unix:///run/docker.sock\]
 
 **\--state-dir**=*STATE\_DIR*
 
