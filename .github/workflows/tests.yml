@@ -32,8 +32,8 @@ jobs:
       run: sudo chmod 777 /run/docker.sock && sudo mkdir /run/nanocl && sudo mkdir /var/lib/nanocl && sudo mkdir -p ./vm_images && sudo chmod 777 -R /run/nanocl && sudo chmod 777 -R /var/lib/nanocl
     - name: Setup
       run: >-
-        wget -c https://github.com/nxthat/nanocl/releases/download/v0.1.5/nanocl.0.1.5.tar.gz;
-        docker load -i nanocl.0.1.5.tar.gz;
-        docker run -v /run/docker.sock:/run/nanocl/docker.sock nanocl:0.1.5 setup;
+        wget -c https://github.com/nxthat/nanocl/releases/download/v0.1.6/nanocl.0.1.6.tar.gz;
+        docker load -i nanocl.0.1.6.tar.gz;
+        docker run -v /run/docker.sock:/run/nanocl/docker.sock nanocl:0.1.6 setup;
     - name: Run tests
       run: cargo make test
