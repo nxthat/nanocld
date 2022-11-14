@@ -34,6 +34,6 @@ jobs:
       run: >-
         wget -c https://github.com/nxthat/nanocl/releases/download/v0.1.6/nanocl.0.1.6.tar.gz;
         docker load -i nanocl.0.1.6.tar.gz;
-        docker run -v /run/docker.sock:/run/nanocl/docker.sock nanocl:0.1.6 setup;
+        docker run -v /run/docker.sock:/run/docker.sock nanocl:0.1.6 setup;
     - name: Run tests
       run: cargo make test
