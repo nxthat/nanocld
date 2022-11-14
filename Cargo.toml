@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 
 [[bin]]
 name = "nanocld"
-test = false
+test = true
 bench = false
 path = "src/main.rs"
 
