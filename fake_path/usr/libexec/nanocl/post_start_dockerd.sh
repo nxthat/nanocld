@@ -32,4 +32,4 @@ for file in ${files}; do
 done
 
 chmod 660 /var/lib/nanocl
-chmod 770 /run/nanocl/docker.sock
+chmod 770 /run/docker.sock

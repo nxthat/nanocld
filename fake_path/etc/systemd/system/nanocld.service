@@ -6,7 +6,7 @@ Wants=network-online.target nanocld@containerd.service nanocld@dockerd.service
 Requires=nanocld@containerd.service nanocld@dockerd.service
 
 [Service]
-ExecStart=/usr/local/bin/nanocld --docker-host /run/nanocl/docker.sock
+ExecStart=/usr/local/bin/nanocld
 PIDFile=/run/nanocl/nanocl.pid
 Restart=always
 # file size

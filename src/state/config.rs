@@ -24,7 +24,7 @@ fn merge_config(args: &Cli, config: &DaemonConfigFile) -> DaemonConfig {
   } else if let Some(ref docker_host) = config.docker_host {
     docker_host.to_owned()
   } else {
-    String::from("/run/nanocl/docker.sock")
+    String::from("/run/docker.sock")
   };
 
   let github_user = if let Some(ref github_user) = args.github_user {
