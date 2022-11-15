@@ -6,6 +6,8 @@ authors = ["nanocl contributors <team@next-hat.com>"]
 description = "The Self-Sufficient Hybrid-Cloud Orchestrator Daemon"
 readme = "README.md"
 license = "MIT OR Apache-2.0"
+homepage = "https://docs.next-hat.com/docs/guides/nanocl/overview"
+repository = "https://github.com/nxthat/nanocld"
 
 [[bin]]
 name = "nanocld"
