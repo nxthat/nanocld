@@ -34,7 +34,7 @@ jobs:
       run: >-
         wget -c https://github.com/nxthat/nanocl/releases/download/v0.1.7/nanocl.0.1.7.tar.gz;
         docker load -i nanocl.0.1.7.tar.gz;
-        sudo useradd -S nanocl;
+        sudo useradd -U nanocl;
         echo "NANOCL_GID=$(getent group nanocl | cut -d: -f3)" >> $GITHUB_ENV;
         docker run -e NANOCL_GID=$NANOCL_GID -v /run/docker.sock:/run/nanocl/docker.sock nanocl:0.1.7 setup;
     - name: Run tests
