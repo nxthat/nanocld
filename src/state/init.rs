@@ -182,7 +182,7 @@ async fn register_daemon(arg: &ArgState) -> Result<(), DaemonError> {
   let binds = vec![format!("{}:/var/lib/nanocl", path.display())];
   let store_cargo = CargoPartial {
     name: String::from("daemon"),
-    image_name: String::from("nanocl-daemon:0.1.11"),
+    image_name: String::from("nanocl-daemon:0.1.12"),
     environnements: None,
     binds: Some(binds),
     replicas: Some(1),

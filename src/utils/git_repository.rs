@@ -1,13 +1,66 @@
-use ntex::web;
-use ntex::http::StatusCode;
-use url::Url;
+use std::collections::HashMap;
 
-use crate::models::DaemonConfig;
+use url::Url;
+use ntex::{web, rt};
+use ntex::http::StatusCode;
+use ntex::util::Bytes;
+use ntex::channel::mpsc::{self, Receiver};
+use futures::StreamExt;
+
 use crate::repositories;
 use crate::errors::HttpResponseError;
-use crate::models::{Pool, GitRepositoryItem, GitRepositoryBranchItem};
+use crate::models::{
+  Pool, DaemonConfig, GitRepositoryItem, GitRepositoryBranchItem,
+};
 
-use super::{docker, github};
+use super::github;
+
+pub async fn build_git_repository(
+  image_name: String,
+  item: GitRepositoryItem,
+  branch: GitRepositoryBranchItem,
+  docker_api: web::types::State<bollard::Docker>,
+) -> Result<Receiver<Result<Bytes, web::error::Error>>, HttpResponseError> {
+  let image_url = item.url + ".git#" + &branch.name;
+  let mut labels: HashMap<String, String> = HashMap::new();
+  labels.insert(String::from("commit"), branch.last_commit_sha);
+  let options = bollard::image::BuildImageOptions::<String> {
+    dockerfile: String::from("Dockerfile"),
+    t: image_name,
+    labels,
+    remote: image_url,
+    rm: true,
+    forcerm: true,
+    ..Default::default()
+  };
+  let (tx, rx_body) = mpsc::channel();
+  rt::spawn(async move {
+    let mut stream = docker_api.build_image(options, None, None);
+    while let Some(result) = stream.next().await {
+      match result {
+        Err(err) => {
+          let err = ntex::web::Error::new(web::error::InternalError::default(
+            format!("{:?}", err),
+            StatusCode::INTERNAL_SERVER_ERROR,
+          ));
+          let result = tx.send(Err::<_, web::error::Error>(err));
+          if result.is_err() {
+            break;
+          }
+        }
+        Ok(result) => {
+          let data = serde_json::to_string(&result).unwrap();
+          let result = tx.send(Ok::<_, web::error::Error>(Bytes::from(data)));
+          if result.is_err() {
+            break;
+          }
+        }
+      }
+    }
+  });
+
+  Ok(rx_body)
+}
 
 pub async fn build(
   item: GitRepositoryItem,
@@ -70,7 +123,7 @@ pub async fn build(
     // Image not exist so we build it
     Err(_) => {
       log::info!("it's first build");
-      let rx_body = docker::build_git_repository(
+      let rx_body = build_git_repository(
         image_name.to_owned(),
         item_with_password.to_owned(),
         new_branch.to_owned(),
@@ -151,8 +204,8 @@ pub async fn build(
           )?;
         }
       }
-      // unless we build the image :O
-      let rx_body = docker::build_git_repository(
+      // unless we build the image
+      let rx_body = build_git_repository(
         image_name.to_owned(),
         item_with_password,
         new_branch.to_owned(),

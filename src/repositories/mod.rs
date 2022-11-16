@@ -1,4 +1,5 @@
 //! Functions to manipulate model in database
+
 pub mod errors;
 
 pub mod node;

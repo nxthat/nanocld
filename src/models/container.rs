@@ -1,8 +1,5 @@
 use serde::{Serialize, Deserialize};
 
-#[cfg(feature = "dev")]
-use utoipa::ToSchema;
-
 /// Data use to filter containers by cluster cargo or namespace.
 #[derive(Serialize, Deserialize)]
 pub struct ContainerFilterQuery {
