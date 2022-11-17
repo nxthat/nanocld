@@ -4,19 +4,19 @@ use serde::{Serialize, Deserialize};
 #[cfg(feature = "dev")]
 use utoipa::ToSchema;
 
-use crate::schema::nginx_templates;
+use crate::schema::proxy_templates;
 
 /// Nginx template mode
 /// # Examples
 /// ```
-/// NginxTemplateModes::Http; // For http forward
-/// NginxTemplateModes::Stream; // For low level tcp/udp forward
+/// ProxyTemplateModes::Http; // For http forward
+/// ProxyTemplateModes::Stream; // For low level tcp/udp forward
 /// ```
 #[derive(Serialize, Deserialize, Debug, Eq, PartialEq, DbEnum, Clone)]
-#[DieselTypePath = "crate::schema::sql_types::NginxTemplateModes"]
+#[DieselTypePath = "crate::schema::sql_types::ProxyTemplateModes"]
 #[serde(rename_all = "snake_case")]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
-pub enum NginxTemplateModes {
+pub enum ProxyTemplateModes {
   Http,
   Stream,
 }
@@ -25,10 +25,10 @@ pub enum NginxTemplateModes {
   Debug, Clone, Serialize, Deserialize, Queryable, Identifiable, Insertable,
 )]
 #[diesel(primary_key(name))]
-#[diesel(table_name = nginx_templates)]
+#[diesel(table_name = proxy_templates)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
-pub struct NginxTemplateItem {
+pub struct ProxyTemplateItem {
   pub(crate) name: String,
-  pub(crate) mode: NginxTemplateModes,
+  pub(crate) mode: ProxyTemplateModes,
   pub(crate) content: String,
 }

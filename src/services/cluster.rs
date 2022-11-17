@@ -295,7 +295,7 @@ async fn add_cluster_template(
   pool: web::types::State<Pool>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let key = utils::key::gen_key_from_nsp(&qs.namespace, &name.into_inner());
-  repositories::nginx_template::get_by_name(payload.name.to_owned(), &pool)
+  repositories::proxy_template::get_by_name(payload.name.to_owned(), &pool)
     .await?;
 
   let cluster =
@@ -319,7 +319,7 @@ async fn delete_cluster_template(
   pool: web::types::State<Pool>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let key = utils::key::gen_key_from_nsp(&qs.namespace, &req_path.cl_name);
-  repositories::nginx_template::get_by_name(req_path.nt_name.to_owned(), &pool)
+  repositories::proxy_template::get_by_name(req_path.nt_name.to_owned(), &pool)
     .await?;
 
   let cluster =

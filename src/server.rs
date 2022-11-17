@@ -79,7 +79,7 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
       // configure cargo instance service
       .configure(services::cargo_instance::ntex_config)
       // configure nginx template service
-      .configure(services::nginx_template::ntex_config)
+      .configure(services::proxy_template::ntex_config)
       // configure cargo service
       .configure(services::cargo::ntex_config)
   });

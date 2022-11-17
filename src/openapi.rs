@@ -19,8 +19,8 @@ use crate::errors::ApiError;
     namespace::delete_namespace_by_name,
     namespace::inspect_namespace_by_name,
 
-    // nginx template
-    nginx_template::list_nginx_template,
+    // proxy template
+    proxy_template::list_proxy_template,
 
     // Cargo
     cargo::list_cargo,
@@ -54,9 +54,9 @@ use crate::errors::ApiError;
     schemas(GenericDelete),
     schemas(GenericCount),
 
-    // Nginx template
-    schemas(NginxTemplateItem),
-    schemas(NginxTemplateModes),
+    // Proxy template
+    schemas(ProxyTemplateItem),
+    schemas(ProxyTemplateModes),
 
     // Namespace
     schemas(NamespaceItem),

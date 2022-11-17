@@ -8,7 +8,7 @@ pub mod cargo;
 /// Manage cluster network
 pub mod cluster_network;
 /// Manage nginx template
-pub mod nginx_template;
+pub mod proxy_template;
 /// Manage cluster variable
 pub mod cluster_variable;
 /// Manage container_image

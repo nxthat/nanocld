@@ -11,7 +11,7 @@ use crate::utils::render_template;
 use crate::{utils, controllers, repositories};
 use crate::models::{
   Pool, ClusterItem, CargoItem, ClusterNetworkItem, CargoInstancePartial,
-  CargoEnvItem, NginxTemplateModes, CargoInstanceItem,
+  CargoEnvItem, ProxyTemplateModes, CargoInstanceItem,
 };
 
 use crate::errors::{HttpResponseError, IntoHttpResponseError};
@@ -247,15 +247,15 @@ pub async fn start(
     let mut templates = stream::iter(&cluster.proxy_templates);
 
     while let Some(template_name) = templates.next().await {
-      let template = repositories::nginx_template::get_by_name(
+      let template = repositories::proxy_template::get_by_name(
         template_name.to_owned(),
         pool,
       )
       .await?;
       let file_path = Path::new(&config.state_dir);
       let file_path = match template.mode {
-        NginxTemplateModes::Http => file_path.join("nginx/sites-enabled"),
-        NginxTemplateModes::Stream => file_path.join("nginx/streams-enabled"),
+        ProxyTemplateModes::Http => file_path.join("nginx/sites-enabled"),
+        ProxyTemplateModes::Stream => file_path.join("nginx/streams-enabled"),
       };
       let file_name = format!("{}.{}", &cluster.key, &template.name);
       let file_path = file_path.join(format!("{file_name}.conf"));
