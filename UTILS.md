@@ -21,5 +21,5 @@ docker run --rm -v $(pwd):/local openapitools/openapi-generator-cli generate -g 
 ## Generate ssl cert from certbot
 
 ```sh
-nanocl exec nproxy -- certbot --nginx --email email@email.com --agree-tos -d your-domain.com
+nanocl exec system-nano-proxy -- certbot --nginx --email email@email.com --agree-tos -d your-domain.com
 ```

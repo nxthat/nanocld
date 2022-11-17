@@ -287,7 +287,7 @@ async fn count_cluster(
 }
 
 /// Add nginx template to cluster
-#[web::post("/clusters/{name}/nginx_templates")]
+#[web::post("/clusters/{name}/proxy/templates")]
 async fn add_cluster_template(
   name: web::types::Path<String>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
@@ -312,7 +312,7 @@ async fn add_cluster_template(
 }
 
 /// Delete nginx template to cluster
-#[web::delete("/clusters/{cl_name}/nginx_templates/{nt_name}")]
+#[web::delete("/clusters/{cl_name}/proxy/templates/{nt_name}")]
 async fn delete_cluster_template(
   req_path: web::types::Path<DeleteClusterTemplatePath>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
