@@ -2,9 +2,6 @@ use uuid::Uuid;
 use chrono::{DateTime, FixedOffset};
 use serde::{Serialize, Deserialize, Deserializer};
 
-#[cfg(feature = "dev")]
-use utoipa::ToSchema;
-
 use crate::schema::nginx_logs;
 
 fn deserialize_empty_string<'de, D>(

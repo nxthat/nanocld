@@ -35,6 +35,6 @@ RUN apk add libgcc libpq util-linux
 
 COPY --from=builder /app/target/release/nanocld /usr/local/bin/nanocld
 
-COPY entrypoint.sh /entrypoint.sh
+COPY ./entrypoint.sh /entrypoint.sh
 
 ENTRYPOINT ["/bin/sh", "/entrypoint.sh"]

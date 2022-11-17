@@ -131,13 +131,13 @@ async fn list_cargo_instance(
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let containers =
     utils::cargo_instance::list_cargo_instance(qs, &docker_api).await?;
+
   Ok(web::HttpResponse::Ok().json(&containers))
 }
 
 #[web::post("/cargoes/instances/{name}/exec")]
 async fn create_cargo_instance_exec(
   name: web::types::Path<String>,
-  // mut stream: web::types::Payload,
   web::types::Json(body): web::types::Json<ContainerExecBody>,
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
