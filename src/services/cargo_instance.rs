@@ -124,7 +124,7 @@ async fn delete_cargo_instance_by_name(
   Ok(web::HttpResponse::Ok().into())
 }
 
-#[web::get("/cargo_instances")]
+#[web::get("/cargoes/instances")]
 async fn list_cargo_instance(
   web::types::Query(qs): web::types::Query<ContainerFilterQuery>,
   docker_api: web::types::State<bollard::Docker>,
@@ -134,8 +134,8 @@ async fn list_cargo_instance(
   Ok(web::HttpResponse::Ok().json(&containers))
 }
 
-#[web::post("/containers/{name}/exec")]
-async fn create_exec(
+#[web::post("/cargoes/instances/{name}/exec")]
+async fn create_cargo_instance_exec(
   name: web::types::Path<String>,
   // mut stream: web::types::Payload,
   web::types::Json(body): web::types::Json<ContainerExecBody>,
@@ -159,8 +159,8 @@ async fn create_exec(
   Ok(web::HttpResponse::Created().json(&exec_instance))
 }
 
-#[web::post("/exec/{id}/start")]
-async fn start_exec(
+#[web::post("/cargoes/instances/exec/{id}/start")]
+async fn start_cargo_instance_exec(
   id: web::types::Path<String>,
   docker_api: web::types::State<bollard::Docker>,
   // Todo pipe this stream with stdio
@@ -211,6 +211,6 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(list_cargo_instance);
   config.service(delete_cargo_instance_by_name);
   config.service(update_cargo_instance_by_name);
-  config.service(create_exec);
-  config.service(start_exec);
+  config.service(create_cargo_instance_exec);
+  config.service(start_cargo_instance_exec);
 }
