@@ -2,8 +2,8 @@
 
 pub mod sql_types {
   #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "nginx_template_modes"))]
-  pub struct NginxTemplateModes;
+  #[diesel(postgres_type(name = "proxy_template_modes"))]
+  pub struct ProxyTemplateModes;
 
   #[derive(diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "node_modes"))]
@@ -111,11 +111,11 @@ diesel::table! {
 
 diesel::table! {
     use diesel::sql_types::*;
-    use super::sql_types::NginxTemplateModes;
+    use super::sql_types::ProxyTemplateModes;
 
-    nginx_templates (name) {
+    proxy_templates (name) {
         name -> Varchar,
-        mode -> NginxTemplateModes,
+        mode -> ProxyTemplateModes,
         content -> Text,
     }
 }
@@ -150,6 +150,6 @@ diesel::allow_tables_to_appear_in_same_query!(
   clusters,
   namespaces,
   nginx_logs,
-  nginx_templates,
+  proxy_templates,
   nodes,
 );

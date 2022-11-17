@@ -32,8 +32,8 @@ pub use cluster_variable::*;
 mod cargo_env;
 pub use cargo_env::*;
 
-mod nginx_template;
-pub use nginx_template::*;
+mod proxy_template;
+pub use proxy_template::*;
 
 mod nginx_log;
 pub use nginx_log::*;

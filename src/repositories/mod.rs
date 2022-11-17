@@ -5,7 +5,7 @@ pub mod node;
 
 pub mod namespace;
 
-pub mod nginx_template;
+pub mod proxy_template;
 
 pub mod cargo;
 pub mod cargo_env;

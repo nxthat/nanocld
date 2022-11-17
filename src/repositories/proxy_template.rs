@@ -2,18 +2,18 @@ use ntex::web;
 use diesel::prelude::*;
 
 use crate::controllers;
-use crate::models::{Pool, NginxTemplateItem, GenericDelete};
+use crate::models::{Pool, ProxyTemplateItem, GenericDelete};
 
 use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
 
 pub async fn list(
   pool: &web::types::State<Pool>,
-) -> Result<Vec<NginxTemplateItem>, HttpResponseError> {
-  use crate::schema::nginx_templates::dsl;
+) -> Result<Vec<ProxyTemplateItem>, HttpResponseError> {
+  use crate::schema::proxy_templates::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
-  let res = web::block(move || dsl::nginx_templates.load(&mut conn)).await;
+  let res = web::block(move || dsl::proxy_templates.load(&mut conn)).await;
 
   match res {
     Err(err) => Err(db_blocking_error(err)),
@@ -22,14 +22,14 @@ pub async fn list(
 }
 
 pub async fn create(
-  item: NginxTemplateItem,
+  item: ProxyTemplateItem,
   pool: &web::types::State<Pool>,
-) -> Result<NginxTemplateItem, HttpResponseError> {
-  use crate::schema::nginx_templates::dsl;
+) -> Result<ProxyTemplateItem, HttpResponseError> {
+  use crate::schema::proxy_templates::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    diesel::insert_into(dsl::nginx_templates)
+    diesel::insert_into(dsl::proxy_templates)
       .values(&item)
       .execute(&mut conn)?;
     Ok(item)
@@ -44,12 +44,12 @@ pub async fn create(
 pub async fn get_by_name(
   name: String,
   pool: &web::types::State<Pool>,
-) -> Result<NginxTemplateItem, HttpResponseError> {
-  use crate::schema::nginx_templates::dsl;
+) -> Result<ProxyTemplateItem, HttpResponseError> {
+  use crate::schema::proxy_templates::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    dsl::nginx_templates
+    dsl::proxy_templates
       .filter(dsl::name.eq(name))
       .get_result(&mut conn)
   })
@@ -65,11 +65,11 @@ pub async fn delete_by_name(
   name: String,
   pool: &web::types::State<Pool>,
 ) -> Result<GenericDelete, HttpResponseError> {
-  use crate::schema::nginx_templates::dsl;
+  use crate::schema::proxy_templates::dsl;
 
   let mut conn = controllers::store::get_pool_conn(pool)?;
   let res = web::block(move || {
-    diesel::delete(dsl::nginx_templates.filter(dsl::name.eq(name)))
+    diesel::delete(dsl::proxy_templates.filter(dsl::name.eq(name)))
       .execute(&mut conn)
   })
   .await;
