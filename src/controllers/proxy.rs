@@ -16,7 +16,7 @@ use crate::errors::DaemonError;
 /// ## Arguments
 /// [docker_api](Docker) Docker api reference
 pub async fn reload_config(docker_api: &Docker) -> Result<(), DockerError> {
-  let container_name = "nproxy";
+  let container_name = "system-nano-proxy";
   let config = CreateExecOptions {
     cmd: Some(vec!["nginx", "-s", "reload"]),
     attach_stdout: Some(true),

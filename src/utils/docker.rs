@@ -89,13 +89,6 @@ pub fn gen_labels_with_namespace(namespace: &str) -> HashMap<&str, &str> {
 ///
 /// ## Return
 /// if sucess return nothing a [docker error](DockerError) is returned if an error occur
-///
-/// ## Examples
-/// ```rust,norun
-/// use crate::services;
-///
-/// services::utils::start_service(&docker, "nproxy").await;
-/// ```
 pub async fn start_component(
   name: &str,
   docker_api: &Docker,
@@ -162,13 +155,6 @@ pub async fn get_network_state(
 /// ## Return
 /// if success return [service state](ServiceState)
 /// a [docker error](DockerError) is returned if an error occur
-///
-/// ## Examples
-/// ```rust,norun
-/// use crate::services;
-///
-/// services::utils::get_component_state(&docker, "nproxy").await;
-/// ```
 pub async fn get_component_state(
   container_name: &'static str,
   docker_api: &Docker,

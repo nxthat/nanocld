@@ -94,7 +94,9 @@ pub fn add_dns_entry(
 /// ## Arguments
 /// - [docker_api](Docker) Docker api reference
 pub async fn restart(docker_api: &Docker) -> Result<(), DnsError> {
-  docker_api.restart_container("dns", None).await?;
+  docker_api
+    .restart_container("system-nano-dns", None)
+    .await?;
   Ok(())
 }
 
