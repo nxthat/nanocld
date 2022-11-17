@@ -124,7 +124,7 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
   ]);
   let dns_cargo = CargoPartial {
     name: String::from("dns"),
-    image_name: String::from("nanocl-ctrl-dns"),
+    image_name: String::from("nanocl-ctrl-dns:0.0.2"),
     environnements: None,
     binds,
     replicas: Some(1),
