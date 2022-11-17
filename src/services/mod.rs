@@ -14,7 +14,7 @@ pub mod nginx_template;
 /// Manage cluster variable
 pub mod cluster_variable;
 /// Manage container_image
-pub mod container_image;
+pub mod cargo_image;
 /// Manage system
 pub mod system;
 /// Mange cargo instance

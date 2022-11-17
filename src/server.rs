@@ -62,27 +62,27 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
       .wrap(web::middleware::Logger::default())
       // Set Json body max size
       .app_state(web::types::JsonConfig::default().limit(4096))
-      // bind /explorer
+      // configure /explorer
       .configure(openapi::ntex_config)
-      // bind controller system
+      // configure system service
       .configure(services::system::ntex_config)
-      // bind controller namespace
+      // configure namespace service
       .configure(services::namespace::ntex_config)
-      // bind controller git repository
+      // configure git repository service
       .configure(services::git_repository::ntex_config)
-      // bind controller container_image
-      .configure(services::container_image::ntex_config)
-      // bind controller cluster
+      // configure container_image service
+      .configure(services::cargo_image::ntex_config)
+      // configure cluster service
       .configure(services::cluster::ntex_config)
-      // bind controller cluster variables
+      // configure cluster variables service
       .configure(services::cluster_variable::ntex_config)
-      // bind controller cluster network
+      // configure cluster network service
       .configure(services::cluster_network::ntex_config)
-      // bind controller cargo instance
+      // configure cargo instance service
       .configure(services::cargo_instance::ntex_config)
-      // bind controller nginx template
+      // configure nginx template service
       .configure(services::nginx_template::ntex_config)
-      // bind controller cargo
+      // configure cargo service
       .configure(services::cargo::ntex_config)
   });
   let mut count = 0;

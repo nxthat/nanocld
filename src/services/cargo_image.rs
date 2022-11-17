@@ -11,7 +11,7 @@ use crate::{utils, repositories};
 use crate::models::{ContainerImagePartial, Pool};
 use crate::errors::HttpResponseError;
 
-#[web::get("/containers/images")]
+#[web::get("/cargoes/images")]
 async fn list_container_image(
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
@@ -25,7 +25,7 @@ async fn list_container_image(
   Ok(web::HttpResponse::Ok().json(&images))
 }
 
-#[web::get("/containers/images/{name}")]
+#[web::get("/cargoes/images/{name}")]
 async fn inspect_container_image(
   name: web::types::Path<String>,
   docker_api: web::types::State<bollard::Docker>,
@@ -35,7 +35,7 @@ async fn inspect_container_image(
   Ok(web::HttpResponse::Ok().json(&image))
 }
 
-#[web::post("/containers/images")]
+#[web::post("/cargoes/images")]
 async fn create_container_image(
   docker_api: web::types::State<bollard::Docker>,
   web::types::Json(payload): web::types::Json<ContainerImagePartial>,
@@ -101,7 +101,7 @@ async fn create_container_image(
   )
 }
 
-#[web::delete("/containers/images/{id_or_name}")]
+#[web::delete("/cargoes/images/{id_or_name}")]
 async fn delete_container_image_by_name(
   docker_api: web::types::State<bollard::Docker>,
   id_or_name: web::types::Path<String>,
@@ -111,7 +111,7 @@ async fn delete_container_image_by_name(
   Ok(web::HttpResponse::Ok().into())
 }
 
-#[web::post("/containers/images/{id_or_name}/deploy")]
+#[web::post("/cargoes/images/{id_or_name}/deploy")]
 async fn deploy_container_image(
   id_or_name: web::types::Path<String>,
   pool: web::types::State<Pool>,
