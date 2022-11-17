@@ -5,8 +5,6 @@ pub mod namespace;
 pub mod cluster;
 // Manage cargo
 pub mod cargo;
-/// Manage git repository
-pub mod git_repository;
 /// Manage cluster network
 pub mod cluster_network;
 /// Manage nginx template

@@ -68,9 +68,7 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
       .configure(services::system::ntex_config)
       // configure namespace service
       .configure(services::namespace::ntex_config)
-      // configure git repository service
-      .configure(services::git_repository::ntex_config)
-      // configure container_image service
+      // configure cargo image service
       .configure(services::cargo_image::ntex_config)
       // configure cluster service
       .configure(services::cluster::ntex_config)

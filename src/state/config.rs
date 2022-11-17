@@ -27,28 +27,10 @@ fn merge_config(args: &Cli, config: &DaemonConfigFile) -> DaemonConfig {
     String::from("/run/docker.sock")
   };
 
-  let github_user = if let Some(ref github_user) = args.github_user {
-    github_user.to_owned()
-  } else if let Some(ref github_user) = config.github_user {
-    github_user.to_owned()
-  } else {
-    String::default()
-  };
-
-  let github_token = if let Some(ref github_token) = args.github_token {
-    github_token.to_owned()
-  } else if let Some(ref github_token) = config.github_token {
-    github_token.to_owned()
-  } else {
-    String::default()
-  };
-
   DaemonConfig {
     hosts,
     state_dir,
     docker_host,
-    github_user,
-    github_token,
   }
 }
 

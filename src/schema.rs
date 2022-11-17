@@ -2,10 +2,6 @@
 
 pub mod sql_types {
   #[derive(diesel::sql_types::SqlType)]
-  #[diesel(postgres_type(name = "git_repository_source_type"))]
-  pub struct GitRepositorySourceType;
-
-  #[derive(diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "nginx_template_modes"))]
   pub struct NginxTemplateModes;
 
@@ -83,27 +79,6 @@ diesel::table! {
 }
 
 diesel::table! {
-    use diesel::sql_types::*;
-    use super::sql_types::GitRepositorySourceType;
-
-    git_repositories (name) {
-        name -> Varchar,
-        url -> Varchar,
-        default_branch -> Varchar,
-        source -> GitRepositorySourceType,
-    }
-}
-
-diesel::table! {
-    git_repository_branches (key) {
-        key -> Varchar,
-        name -> Varchar,
-        last_commit_sha -> Varchar,
-        repository_name -> Varchar,
-    }
-}
-
-diesel::table! {
     namespaces (name) {
         name -> Varchar,
     }
@@ -173,8 +148,6 @@ diesel::allow_tables_to_appear_in_same_query!(
   cluster_networks,
   cluster_variables,
   clusters,
-  git_repositories,
-  git_repository_branches,
   namespaces,
   nginx_logs,
   nginx_templates,

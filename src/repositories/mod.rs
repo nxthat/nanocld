@@ -14,7 +14,4 @@ pub mod cluster;
 pub mod cargo_instance;
 pub mod cluster_network;
 
-pub mod git_repository;
-pub mod git_repository_branch;
-
 pub mod cluster_variable;
