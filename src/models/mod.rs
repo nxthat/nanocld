@@ -14,12 +14,6 @@ pub use state::*;
 mod namespace;
 pub use namespace::*;
 
-mod git_repository;
-pub use git_repository::*;
-
-mod git_repository_branch;
-pub use git_repository_branch::*;
-
 mod cargo;
 pub use cargo::*;
 
