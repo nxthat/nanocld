@@ -63,10 +63,10 @@ fn write_dns_default_conf(path: &PathBuf) -> std::io::Result<()> {
   }
   let content = format!(
     "bind-interfaces\n \
-    interface=nanoclinternal0\n \
-    server=8.8.8.8\n \
-    server=8.8.4.4\n \
-    conf-dir=/etc/dnsmasq.d/,*.conf\n"
+interface=nanoclinternal0\n \
+server=8.8.8.8\n \
+server=8.8.4.4\n \
+conf-dir=/etc/dnsmasq.d/,*.conf\n"
   );
   let mut f = fs::File::create(path)?;
   f.write_all(content.as_bytes())?;
@@ -133,10 +133,15 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
     return Ok(());
   }
 
-  let config_file_path =
-    Path::new(&arg.config.state_dir).join("dnsmasq/dnsmasq.conf");
+  let dir_path = Path::new(&arg.config.state_dir).join("dnsmasq");
+
+  if !dir_path.exists() {
+    fs::create_dir_all(&dir_path)?;
+  }
+
+  let config_file_path = Path::new(&dir_path).join("dnsmasq.conf");
   write_dns_default_conf(&config_file_path)?;
-  let dir_path = Path::new(&arg.config.state_dir).join("dnsmasq/dnsmasq.d/");
+  let dir_path = Path::new(&dir_path).join("dnsmasq.d/");
   let binds = Some(vec![
     format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
     format!("{}:/etc/dnsmasq.d/", dir_path.display()),
