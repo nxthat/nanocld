@@ -56,6 +56,24 @@ fn write_dns_entry_conf(path: &PathBuf, content: &str) -> std::io::Result<()> {
   Ok(())
 }
 
+/// Write default dns config if not exists.
+fn write_dns_default_conf(path: &PathBuf) -> std::io::Result<()> {
+  if path.exists() {
+    return Ok(());
+  }
+  let content = format!(
+    "bind-interfaces\n \
+    interface=nanoclinternal0\n \
+    server=8.8.8.8\n \
+    server=8.8.4.4\n \
+    conf-dir=/etc/dnsmasq.d/,*.conf\n"
+  );
+  let mut f = fs::File::create(path)?;
+  f.write_all(content.as_bytes())?;
+  f.sync_data()?;
+  Ok(())
+}
+
 /// Add or Update a dns entry
 ///
 /// ## Arguments
@@ -117,6 +135,7 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
 
   let config_file_path =
     Path::new(&arg.config.state_dir).join("dnsmasq/dnsmasq.conf");
+  write_dns_default_conf(&config_file_path)?;
   let dir_path = Path::new(&arg.config.state_dir).join("dnsmasq/dnsmasq.d/");
   let binds = Some(vec![
     format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
