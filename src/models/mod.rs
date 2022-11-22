@@ -38,9 +38,6 @@ pub use proxy_template::*;
 mod nginx_log;
 pub use nginx_log::*;
 
-mod container;
-pub use container::*;
-
 mod cargo_image;
 pub use cargo_image::*;
 

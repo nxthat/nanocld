@@ -177,7 +177,7 @@ mod tests {
 
   use super::*;
 
-  use crate::utils::test::*;
+  use crate::utils::tests::*;
 
   struct TestDomain {
     name: String,
@@ -185,7 +185,7 @@ mod tests {
   }
 
   #[ntex::test]
-  async fn manipulate_dns_entry() -> TestReturn {
+  async fn manipulate_dns_entry() -> TestRet {
     // Create temporary directory for the tests
     let tmp_state_dir =
       env::temp_dir().join("nanocld-unit").display().to_string();

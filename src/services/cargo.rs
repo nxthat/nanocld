@@ -292,14 +292,14 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
 mod tests {
   use ntex::http::StatusCode;
 
-  use crate::utils::test::*;
+  use crate::utils::tests::*;
   use crate::services::cargo_image;
   use crate::models::{CargoPartial, CargoPatchPartial, CargoItem};
 
   use super::ntex_config;
 
   /// Ensure the cargo image exists for the test to run
-  async fn ensure_test_image() -> TestReturn {
+  async fn ensure_test_image() -> TestRet {
     let srv = generate_server(cargo_image::ntex_config).await;
     cargo_image::tests::create_cargo_image(
       &srv,
@@ -311,7 +311,7 @@ mod tests {
 
   /// Perform basic list against cargoes
   #[ntex::test]
-  async fn basic_list() -> TestReturn {
+  async fn basic_list() -> TestRet {
     let srv = generate_server(ntex_config).await;
     let resp = srv.get("/cargoes").send().await?;
     assert!(
@@ -323,7 +323,7 @@ mod tests {
 
   /// Perform count list against cargoes
   #[ntex::test]
-  async fn basic_count() -> TestReturn {
+  async fn basic_count() -> TestRet {
     let srv = generate_server(ntex_config).await;
     let resp = srv.get("/cargoes/count").send().await?;
     assert!(
@@ -335,7 +335,7 @@ mod tests {
 
   /// Perform CRUD Test against cargoes
   #[ntex::test]
-  async fn crud() -> TestReturn {
+  async fn crud() -> TestRet {
     ensure_test_image().await?;
     let srv = generate_server(ntex_config).await;
 
