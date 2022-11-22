@@ -1,4 +1,4 @@
 /target/
 /vm_images/
 /swagger-ui/
-cov_data.json
+lcov.info
