@@ -41,7 +41,7 @@ jobs:
       run: cargo make cov-ci
     - uses: codecov/codecov-action@v3
       with:
-        token: ${{ secrets.CODECOV_TOKEN }}
+        token: ${{ secrets.CODE_COV_TOKEN }}
         files: ./cov_data.json
         flags: unittests # optional
         verbose: true # optional (default = false)
