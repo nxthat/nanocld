@@ -10,7 +10,7 @@ use super::namespace::NamespaceItem;
 
 /// Cargo partial
 /// this structure ensure write in database
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Default, Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoPartial {
   pub(crate) name: String,
@@ -26,7 +26,7 @@ pub struct CargoPartial {
   pub(crate) cap_add: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize)]
 pub struct CargoPatchPartial {
   pub(crate) name: Option<String>,
   pub(crate) image_name: Option<String>,

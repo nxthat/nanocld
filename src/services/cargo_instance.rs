@@ -109,7 +109,9 @@ mod tests {
   use crate::utils::test::*;
   use crate::models::{CargoInstanceFilterQuery, CargoInstanceExecBody};
 
-  async fn list_cargo_instance(srv: &TestServer) -> TestReturn {
+  #[ntex::test]
+  async fn basic_list() -> TestReturn {
+    let srv = generate_server(ntex_config).await;
     let query = CargoInstanceFilterQuery {
       namespace: Some(String::from("system")),
       ..Default::default()
@@ -121,7 +123,10 @@ mod tests {
     Ok(())
   }
 
-  async fn cargo_instance_exec(srv: &TestServer, name: &str) -> TestReturn {
+  #[ntex::test]
+  async fn exec_ls_in_store(srv: &TestServer) -> TestReturn {
+    let instance_name = "store";
+    let srv = generate_server(ntex_config).await;
     let exec = CargoInstanceExecBody {
       attach_stdin: Some(false),
       attach_stdout: Some(true),
@@ -135,7 +140,7 @@ mod tests {
       working_dir: None,
     };
     let mut resp = srv
-      .post(format!("/cargoes/instances/{}/exec", &name))
+      .post(format!("/cargoes/instances/{}/exec", &instance_name))
       .send_json(&exec)
       .await?;
     assert!(resp.status().is_success());
@@ -146,14 +151,6 @@ mod tests {
       .send()
       .await?;
     assert!(resp.status().is_success());
-    Ok(())
-  }
-
-  #[ntex::test]
-  async fn manipulate_cargo_instance() -> TestReturn {
-    let srv = generate_server(ntex_config).await;
-    list_cargo_instance(&srv).await?;
-    cargo_instance_exec(&srv, "store").await?;
     Ok(())
   }
 }
