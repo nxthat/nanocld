@@ -6,7 +6,7 @@ use crate::models::DaemonConfig;
 use crate::{repositories, utils};
 use crate::models::{
   Pool, GenericNspQuery, CargoPartial, CargoEnvPartial, CargoItemWithRelation,
-  ContainerFilterQuery, CargoPatchPartial,
+  CargoInstanceFilterQuery, CargoPatchPartial,
 };
 
 use crate::errors::HttpResponseError;
@@ -173,7 +173,7 @@ async fn inspect_cargo_by_name(
   log::info!("asking cargo inspection {}", &name);
   let key = utils::key::gen_key_from_nsp(&qs.namespace, &name);
   let res = repositories::cargo::find_by_key(key.to_owned(), &pool).await?;
-  let qs = ContainerFilterQuery {
+  let qs = CargoInstanceFilterQuery {
     cargo: Some(name.to_owned()),
     cluster: None,
     namespace: qs.namespace.to_owned(),

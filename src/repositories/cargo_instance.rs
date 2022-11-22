@@ -70,7 +70,7 @@ pub async fn delete_by_cluster_key(
   }
 }
 
-pub async fn delete_by_key(
+pub async fn _delete_by_key(
   key: String,
   pool: &web::types::State<Pool>,
 ) -> Result<GenericDelete, HttpResponseError> {

@@ -2,11 +2,11 @@ use ntex::web;
 use std::collections::HashMap;
 
 use crate::utils::key;
-use crate::models::ContainerFilterQuery;
+use crate::models::CargoInstanceFilterQuery;
 use crate::errors::HttpResponseError;
 
 pub async fn list_cargo_instance(
-  qs: ContainerFilterQuery,
+  qs: CargoInstanceFilterQuery,
   docker_api: &web::types::State<bollard::Docker>,
 ) -> Result<Vec<bollard::models::ContainerSummary>, HttpResponseError> {
   let namespace = key::resolve_nsp(&qs.namespace);

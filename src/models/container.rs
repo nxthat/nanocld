@@ -4,8 +4,8 @@ use serde::{Serialize, Deserialize};
 use utoipa::ToSchema;
 
 /// Data use to filter containers by cluster cargo or namespace.
-#[derive(Serialize, Deserialize)]
-pub struct ContainerFilterQuery {
+#[derive(Default, Serialize, Deserialize)]
+pub struct CargoInstanceFilterQuery {
   pub(crate) cluster: Option<String>,
   pub(crate) cargo: Option<String>,
   pub(crate) namespace: Option<String>,
@@ -13,7 +13,7 @@ pub struct ContainerFilterQuery {
 
 /// Structure used to create an exec instance inside a container
 #[derive(Serialize, Deserialize)]
-pub struct ContainerExecBody {
+pub struct CargoInstanceExecBody {
   pub(crate) attach_stdin: Option<bool>,
   pub(crate) attach_stdout: Option<bool>,
   pub(crate) attach_stderr: Option<bool>,
