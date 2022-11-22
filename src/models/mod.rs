@@ -41,8 +41,8 @@ pub use nginx_log::*;
 mod container;
 pub use container::*;
 
-mod container_image;
-pub use container_image::*;
+mod cargo_image;
+pub use cargo_image::*;
 
 mod node;
 pub use node::*;

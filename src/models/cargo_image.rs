@@ -5,6 +5,6 @@ use utoipa::ToSchema;
 
 #[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
-pub struct ContainerImagePartial {
+pub struct CargoImagePartial {
   pub(crate) name: String,
 }

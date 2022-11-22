@@ -162,36 +162,3 @@ pub async fn find_by_name(
     Ok(item) => Ok(item),
   }
 }
-
-#[cfg(test)]
-mod test_namespace {
-  use super::*;
-
-  use crate::utils::test::*;
-  #[ntex::test]
-  async fn main() -> Result<(), HttpResponseError> {
-    let pool = gen_postgre_pool().await;
-    let pool_state = web::types::State::new(pool);
-
-    // List namespace
-    let _res = list(&pool_state).await?;
-    let namespace_name = String::from("test-default");
-    let item = NamespacePartial {
-      name: namespace_name.clone(),
-    };
-
-    // Create namespace
-    let res = create(item, &pool_state).await?;
-    assert_eq!(res.name, namespace_name.clone());
-
-    // Inspect namespace
-    let res = inspect_by_name(namespace_name.clone(), &pool_state).await?;
-    assert_eq!(res.name, namespace_name.clone());
-
-    // Delete namespace
-    let res = delete_by_name(namespace_name.clone(), &pool_state).await?;
-    assert_eq!(res.count, 1);
-
-    Ok(())
-  }
-}

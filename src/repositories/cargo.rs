@@ -117,7 +117,7 @@ pub async fn find_by_key(
   }
 }
 
-pub async fn find_by_image_name(
+pub async fn _find_by_image_name(
   image_name: String,
   pool: &web::types::State<Pool>,
 ) -> Result<Vec<CargoItem>, HttpResponseError> {

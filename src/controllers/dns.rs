@@ -173,6 +173,8 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
 #[cfg(test)]
 mod tests {
 
+  use std::*;
+
   use super::*;
 
   use crate::utils::test::*;
@@ -183,40 +185,56 @@ mod tests {
   }
 
   #[ntex::test]
-  async fn test_add_dns_entry() -> TestReturn {
-    const STATE_DIR: &str = "./fake_path/var/lib/nanocl";
-    let file_path =
-      Path::new(STATE_DIR).join("dnsmasq/dnsmasq.d/dns_entry.conf");
-    let saved_content = fs::read_to_string(&file_path)?;
-    write_dns_entry_conf(&file_path, "")?;
+  async fn manipulate_dns_entry() -> TestReturn {
+    // Create temporary directory for the tests
+    let tmp_state_dir =
+      env::temp_dir().join("nanocld-unit").display().to_string();
+    let dnsmasq_conf_dir = Path::new(&tmp_state_dir).join("dnsmasq/dnsmasq.d");
+    fs::create_dir_all(&dnsmasq_conf_dir)?;
+
+    // Create a dummy dns entry file
+    let dns_entry_path = Path::new(&dnsmasq_conf_dir).join("dns_entry.conf");
+    write_dns_entry_conf(&dns_entry_path, "")?;
+
+    // Test to add domain test.com pointing to 141.0.0.1
     let test_1 = TestDomain {
       name: String::from("test.com"),
       ip_address: String::from("141.0.0.1"),
     };
+    add_dns_entry(&test_1.name, &test_1.ip_address, &tmp_state_dir)?;
+    let content = fs::read_to_string(&dns_entry_path)?;
+    let expected_content =
+      format!("address=/.{}/{}\n", &test_1.name, &test_1.ip_address);
+    assert_eq!(content, expected_content);
+
+    // Test to add another domain test2.com pointing to 122.0.0.1
     let test_2 = TestDomain {
       name: String::from("test2.com"),
       ip_address: String::from("122.0.0.1"),
     };
-    add_dns_entry(&test_1.name, &test_1.ip_address, STATE_DIR)?;
-    add_dns_entry(&test_2.name, &test_2.ip_address, STATE_DIR)?;
-    let content = fs::read_to_string(&file_path)?;
+    add_dns_entry(&test_2.name, &test_2.ip_address, &tmp_state_dir)?;
+    let content = fs::read_to_string(&dns_entry_path)?;
     let expected_content = format!(
       "address=/.{}/{}\naddress=/.{}/{}\n",
       &test_1.name, &test_1.ip_address, &test_2.name, &test_2.ip_address
     );
     assert_eq!(content, expected_content);
+
+    // Test to update domain 2 with a new ip address 121.0.0.1
     let test_3 = TestDomain {
       ip_address: String::from("121.0.0.1"),
       ..test_2
     };
-    add_dns_entry(&test_3.name, &test_3.ip_address, STATE_DIR)?;
-    let content = fs::read_to_string(&file_path)?;
+    add_dns_entry(&test_3.name, &test_3.ip_address, &tmp_state_dir)?;
+    let content = fs::read_to_string(&dns_entry_path)?;
     let expected_content = format!(
       "address=/.{}/{}\naddress=/.{}/{}\n",
       &test_1.name, &test_1.ip_address, &test_3.name, &test_3.ip_address
     );
     assert_eq!(content, expected_content);
-    write_dns_entry_conf(&file_path, &saved_content)?;
+
+    // Remove the dummy state directory
+    fs::remove_dir_all(&tmp_state_dir)?;
     Ok(())
   }
 }

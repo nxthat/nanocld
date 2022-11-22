@@ -21,13 +21,3 @@ pub async fn _setup_proxy() {
 pub async fn _setup_worker() {}
 
 pub async fn _setup_master() {}
-
-#[cfg(test)]
-pub mod tests {
-  use super::*;
-
-  #[ntex::test]
-  async fn test_setup_proxy() {
-    _setup_proxy().await;
-  }
-}
