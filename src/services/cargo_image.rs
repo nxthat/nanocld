@@ -3,16 +3,13 @@ use ntex::web;
 use ntex::http::StatusCode;
 use ntex::util::Bytes;
 use ntex::channel::mpsc;
-use futures::{StreamExt, stream};
+use futures::StreamExt;
 
-use crate::models::DaemonConfig;
-use crate::{utils, repositories};
-
-use crate::models::{ContainerImagePartial, Pool};
+use crate::models::CargoImagePartial;
 use crate::errors::HttpResponseError;
 
 #[web::get("/cargoes/images")]
-async fn list_container_image(
+async fn list_cargo_image(
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let images = docker_api
@@ -25,8 +22,8 @@ async fn list_container_image(
   Ok(web::HttpResponse::Ok().json(&images))
 }
 
-#[web::get("/cargoes/images/{name}")]
-async fn inspect_container_image(
+#[web::get("/cargoes/images/{id_or_name}*")]
+async fn inspect_cargo_image(
   name: web::types::Path<String>,
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
@@ -36,9 +33,9 @@ async fn inspect_container_image(
 }
 
 #[web::post("/cargoes/images")]
-async fn create_container_image(
+async fn create_cargo_image(
   docker_api: web::types::State<bollard::Docker>,
-  web::types::Json(payload): web::types::Json<ContainerImagePartial>,
+  web::types::Json(payload): web::types::Json<CargoImagePartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let image_info = payload.name.split(':').collect::<Vec<&str>>();
 
@@ -101,8 +98,8 @@ async fn create_container_image(
   )
 }
 
-#[web::delete("/cargoes/images/{id_or_name}")]
-async fn delete_container_image_by_name(
+#[web::delete("/cargoes/images/{id_or_name}*")]
+async fn delete_cargo_image_by_name(
   docker_api: web::types::State<bollard::Docker>,
   id_or_name: web::types::Path<String>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
@@ -111,36 +108,83 @@ async fn delete_container_image_by_name(
   Ok(web::HttpResponse::Ok().into())
 }
 
-#[web::post("/cargoes/images/{id_or_name}/deploy")]
-async fn deploy_container_image(
-  id_or_name: web::types::Path<String>,
-  pool: web::types::State<Pool>,
-  daemon_config: web::types::State<DaemonConfig>,
-  docker_api: web::types::State<bollard::Docker>,
-) -> Result<web::HttpResponse, HttpResponseError> {
-  let id_or_name = id_or_name.into_inner();
-
-  let cargoes =
-    repositories::cargo::find_by_image_name(id_or_name, &pool).await?;
-
-  let mut cargoes_stream = stream::iter(cargoes);
-  while let Some(cargo) = cargoes_stream.next().await {
-    utils::cargo::update_containers(
-      cargo.key,
-      &daemon_config,
-      &docker_api,
-      &pool,
-    )
-    .await?;
-  }
-
-  Ok(web::HttpResponse::Ok().into())
+pub fn ntex_config(config: &mut web::ServiceConfig) {
+  config.service(list_cargo_image);
+  config.service(create_cargo_image);
+  config.service(delete_cargo_image_by_name);
+  config.service(inspect_cargo_image);
 }
 
-pub fn ntex_config(config: &mut web::ServiceConfig) {
-  config.service(list_container_image);
-  config.service(create_container_image);
-  config.service(delete_container_image_by_name);
-  config.service(deploy_container_image);
-  config.service(inspect_container_image);
+#[cfg(test)]
+mod tests {
+
+  use futures::{TryStreamExt, StreamExt};
+
+  use super::ntex_config;
+  use crate::utils::test::*;
+  use crate::models::CargoImagePartial;
+
+  async fn list_cargo_image(srv: &TestServer) -> TestReturn {
+    let resp = srv.get("/cargoes/images").send().await?;
+
+    let status = resp.status();
+
+    assert!(status.is_success());
+
+    Ok(())
+  }
+
+  async fn create_cargo_image(srv: &TestServer, name: &str) -> TestReturn {
+    let payload = CargoImagePartial {
+      name: name.to_owned(),
+    };
+    let resp = srv.post("/cargoes/images").send_json(&payload).await?;
+
+    let status = resp.status();
+
+    assert!(status.is_success());
+
+    let mut stream = resp.into_stream();
+
+    while let Some(chunk) = stream.next().await {
+      if let Err(err) = chunk {
+        panic!("Error while downloading image {}", &err);
+      }
+    }
+
+    Ok(())
+  }
+
+  async fn inspect_image(srv: &TestServer, name: &str) -> TestReturn {
+    let resp = srv.get(format!("/cargoes/images/{}", &name)).send().await?;
+
+    let status = resp.status();
+    assert!(status.is_success());
+
+    Ok(())
+  }
+
+  async fn delete_image(srv: &TestServer, name: &str) -> TestReturn {
+    let resp = srv
+      .delete(format!("/cargoes/images/{}", &name))
+      .send()
+      .await?;
+
+    let status = resp.status();
+
+    assert!(status.is_success());
+
+    Ok(())
+  }
+
+  #[ntex::test]
+  async fn manipulate_cargo_image() -> TestReturn {
+    const TEST_IMAGE: &str = "busybox:unstable-musl";
+    let srv = generate_server(ntex_config).await;
+    list_cargo_image(&srv).await?;
+    create_cargo_image(&srv, TEST_IMAGE).await?;
+    inspect_image(&srv, TEST_IMAGE).await?;
+    delete_image(&srv, TEST_IMAGE).await?;
+    Ok(())
+  }
 }
