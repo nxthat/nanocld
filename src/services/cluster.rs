@@ -11,7 +11,7 @@ use crate::{utils, repositories};
 use crate::utils::cluster::JoinCargoOptions;
 use crate::models::{
   Pool, GenericNspQuery, ClusterJoinBody, ClusterPartial,
-  ClusterItemWithRelation, ContainerFilterQuery,
+  ClusterItemWithRelation, CargoInstanceFilterQuery,
 };
 
 use crate::errors::HttpResponseError;
@@ -93,7 +93,7 @@ async fn delete_cluster_by_name(
 
   repositories::cluster_variable::delete_by_cluster_key(key.to_owned(), &pool)
     .await?;
-  let qs = ContainerFilterQuery {
+  let qs = CargoInstanceFilterQuery {
     cluster: Some(name),
     namespace: Some(nsp),
     cargo: None,
