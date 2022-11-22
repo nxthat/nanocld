@@ -116,7 +116,7 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
 
   use futures::{TryStreamExt, StreamExt};
 
@@ -124,17 +124,18 @@ mod tests {
   use crate::utils::test::*;
   use crate::models::CargoImagePartial;
 
-  async fn list_cargo_image(srv: &TestServer) -> TestReturn {
+  #[ntex::test]
+  pub async fn basic_list() -> TestReturn {
+    let srv = generate_server(ntex_config).await;
+
     let resp = srv.get("/cargoes/images").send().await?;
-
     let status = resp.status();
-
     assert!(status.is_success());
-
     Ok(())
   }
 
-  async fn create_cargo_image(srv: &TestServer, name: &str) -> TestReturn {
+  pub async fn create_cargo_image(srv: &TestServer, name: &str) -> TestReturn {
+    println!("create cargo image {}", name);
     let payload = CargoImagePartial {
       name: name.to_owned(),
     };
@@ -143,6 +144,8 @@ mod tests {
     let status = resp.status();
 
     assert!(status.is_success());
+    let content_type = resp.header("content-type").unwrap().to_str().unwrap();
+    assert_eq!(content_type, "nanocl/streaming-v1");
 
     let mut stream = resp.into_stream();
 
@@ -155,7 +158,7 @@ mod tests {
     Ok(())
   }
 
-  async fn inspect_image(srv: &TestServer, name: &str) -> TestReturn {
+  pub async fn inspect_image(srv: &TestServer, name: &str) -> TestReturn {
     let resp = srv.get(format!("/cargoes/images/{}", &name)).send().await?;
 
     let status = resp.status();
@@ -164,7 +167,7 @@ mod tests {
     Ok(())
   }
 
-  async fn delete_image(srv: &TestServer, name: &str) -> TestReturn {
+  pub async fn delete_image(srv: &TestServer, name: &str) -> TestReturn {
     let resp = srv
       .delete(format!("/cargoes/images/{}", &name))
       .send()
@@ -177,11 +180,11 @@ mod tests {
     Ok(())
   }
 
+  /// Perform crud tests agains cargo images
   #[ntex::test]
-  async fn manipulate_cargo_image() -> TestReturn {
+  async fn crud() -> TestReturn {
     const TEST_IMAGE: &str = "busybox:unstable-musl";
     let srv = generate_server(ntex_config).await;
-    list_cargo_image(&srv).await?;
     create_cargo_image(&srv, TEST_IMAGE).await?;
     inspect_image(&srv, TEST_IMAGE).await?;
     delete_image(&srv, TEST_IMAGE).await?;

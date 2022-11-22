@@ -1,6 +1,6 @@
-use futures::{stream, StreamExt};
 use ntex::web;
 use ntex::http::StatusCode;
+use futures::{stream, StreamExt};
 
 use crate::models::DaemonConfig;
 use crate::{repositories, utils};
@@ -289,16 +289,148 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
 }
 
 #[cfg(test)]
-mod test_cargo {
+mod tests {
+  use ntex::http::StatusCode;
+
   use crate::utils::test::*;
+  use crate::services::cargo_image;
+  use crate::models::{CargoPartial, CargoPatchPartial, CargoItem};
 
   use super::ntex_config;
 
+  /// Ensure the cargo image exists for the test to run
+  async fn ensure_test_image() -> TestReturn {
+    let srv = generate_server(cargo_image::ntex_config).await;
+    cargo_image::tests::create_cargo_image(
+      &srv,
+      "nexthat/nanocl-get-started:latest",
+    )
+    .await?;
+    Ok(())
+  }
+
+  /// Perform basic list against cargoes
   #[ntex::test]
-  async fn test_list() -> TestReturn {
+  async fn basic_list() -> TestReturn {
     let srv = generate_server(ntex_config).await;
-    let res = srv.get("/cargoes").send().await?;
-    assert!(res.status().is_success());
+    let resp = srv.get("/cargoes").send().await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while listing cargoes"
+    );
+    Ok(())
+  }
+
+  /// Perform count list against cargoes
+  #[ntex::test]
+  async fn basic_count() -> TestReturn {
+    let srv = generate_server(ntex_config).await;
+    let resp = srv.get("/cargoes/count").send().await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while counting cargoes"
+    );
+    Ok(())
+  }
+
+  /// Perform CRUD Test against cargoes
+  #[ntex::test]
+  async fn crud() -> TestReturn {
+    ensure_test_image().await?;
+    let srv = generate_server(ntex_config).await;
+
+    // Create a new Cargo crud-test
+    let new_cargo = CargoPartial {
+      name: String::from("crud-test"),
+      image_name: String::from("nexthat/nanocl-get-started"),
+      ..Default::default()
+    };
+    let mut resp = srv.post("/cargoes").send_json(&new_cargo).await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect create new cargo to success with payload : {:#?}",
+      new_cargo
+    );
+    let test_cargo: CargoItem = resp.json().await?;
+    assert_eq!(
+      test_cargo.name, new_cargo.name,
+      "Expect create response name {} to match with payload name {}",
+      test_cargo.name, new_cargo.name
+    );
+
+    // Inspect the created cargo
+    let mut resp = srv
+      .get(format!("/cargoes/{}/inspect", &test_cargo.name))
+      .send()
+      .await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while inspecting created cargo {}",
+      test_cargo.name
+    );
+    let inspect_body: CargoItem = resp.json().await?;
+    assert_eq!(
+      inspect_body.key, test_cargo.key,
+      "Expect inspect response key {} to match with create response key {}",
+      inspect_body.key, test_cargo.key
+    );
+
+    // Patch the created cargo
+    let cargo_patch_payload = CargoPatchPartial {
+      domainname: Some(String::from("crud-test.internal")),
+      ..Default::default()
+    };
+    let resp = srv
+      .patch(format!("/cargoes/{}", &test_cargo.name))
+      .send_json(&cargo_patch_payload)
+      .await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while patching cargo domainname to {:?}",
+      cargo_patch_payload.domainname
+    );
+
+    // Inspect the updated cargo
+    let mut resp = srv
+      .get(format!("/cargoes/{}/inspect", &test_cargo.name))
+      .send()
+      .await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while inspecting the updated cargo {}",
+      test_cargo.name
+    );
+    let updated_cargo: CargoItem = resp.json().await?;
+
+    assert_eq!(
+      updated_cargo.domainname, cargo_patch_payload.domainname,
+      "Expect updated cargo domainname {:?} to match {:?}",
+      updated_cargo.domainname, cargo_patch_payload.domainname
+    );
+
+    // Delete crud-test cargo
+    let resp = srv
+      .delete(format!("/cargoes/{}", &test_cargo.name))
+      .send()
+      .await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while deleting cargo {}",
+      test_cargo.name
+    );
+
+    // Inspect now just return a 404 not found
+    let resp = srv
+      .get(format!("/cargoes/{}", &test_cargo.name))
+      .send()
+      .await?;
+    assert_eq!(
+      resp.status(),
+      StatusCode::NOT_FOUND,
+      "Expect 404 not found while inspecting deleted cargo {}",
+      test_cargo.name
+    );
+
     Ok(())
   }
 }
