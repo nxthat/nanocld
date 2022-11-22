@@ -113,18 +113,18 @@ mod test_namespace {
   use serde_json::json;
 
   use crate::models::{NamespacePartial, GenericDelete};
-  use crate::utils::test::*;
+  use crate::utils::tests::*;
 
   use super::ntex_config;
 
-  async fn test_list(srv: &TestServer) -> TestReturn {
+  async fn test_list(srv: &TestServer) -> TestRet {
     let resp = srv.get("/namespaces").send().await?;
 
     assert!(resp.status().is_success());
     Ok(())
   }
 
-  async fn test_create(srv: &TestServer) -> TestReturn {
+  async fn test_create(srv: &TestServer) -> TestRet {
     let new_namespace = NamespacePartial {
       name: String::from("controller-default"),
     };
@@ -135,7 +135,7 @@ mod test_namespace {
     Ok(())
   }
 
-  async fn test_fail_create(srv: &TestServer) -> TestReturn {
+  async fn test_fail_create(srv: &TestServer) -> TestRet {
     let resp = srv
       .post("/namespaces")
       .send_json(&json!({
@@ -151,7 +151,7 @@ mod test_namespace {
     Ok(())
   }
 
-  async fn test_inspect_by_id(srv: &TestServer) -> TestReturn {
+  async fn test_inspect_by_id(srv: &TestServer) -> TestRet {
     let resp = srv
       .get(format!(
         "/namespaces/{name}/inspect",
@@ -164,7 +164,7 @@ mod test_namespace {
     Ok(())
   }
 
-  async fn test_delete(srv: &TestServer) -> TestReturn {
+  async fn test_delete(srv: &TestServer) -> TestRet {
     let mut resp = srv
       .delete(format!("/namespaces/{name}", name = "controller-default"))
       .send()
@@ -177,7 +177,7 @@ mod test_namespace {
   }
 
   #[ntex::test]
-  async fn main() -> TestReturn {
+  async fn main() -> TestRet {
     let srv = generate_server(ntex_config).await;
 
     test_fail_create(&srv).await?;

@@ -363,55 +363,62 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
 }
 
 #[cfg(test)]
-mod test_namespace_cluster {
-  use crate::utils::test::*;
-
+pub mod tests {
   use super::*;
+  use crate::utils::tests::*;
 
-  async fn test_list(srv: &TestServer) -> TestReturn {
-    let resp = srv.get("/clusters").send().await?;
-
-    assert!(resp.status().is_success());
-    Ok(())
-  }
-
-  async fn test_list_with_nsp(srv: &TestServer) -> TestReturn {
-    let resp = srv
+  pub async fn list(srv: &TestServer, namespace: Option<String>) -> TestReqRet {
+    let query = &GenericNspQuery { namespace };
+    srv
       .get("/clusters")
-      .query(&GenericNspQuery {
-        namespace: Some(String::from("test")),
-      })?
+      .query(query)
+      .expect(&format!("List cluster with query {:#?}", query))
       .send()
-      .await?;
-
-    assert!(resp.status().is_success());
-    Ok(())
+      .await
   }
 
-  async fn test_create(srv: &TestServer) -> TestReturn {
+  pub async fn create(srv: &TestServer, name: &str) -> TestReqRet {
     let item = ClusterPartial {
-      name: String::from("test_cluster"),
+      name: name.to_owned(),
       proxy_templates: None,
     };
-    let resp = srv.post("/clusters").send_json(&item).await?;
-
-    assert!(resp.status().is_success());
-    Ok(())
+    srv.post("/clusters").send_json(&item).await
   }
 
-  async fn test_delete(srv: &TestServer) -> TestReturn {
-    let resp = srv.delete("/clusters/test_cluster").send().await?;
-    assert!(resp.status().is_success());
+  pub async fn delete(srv: &TestServer, name: &str) -> TestReqRet {
+    srv.delete(format!("/clusters/{}", name)).send().await
+  }
+
+  #[ntex::test]
+  async fn basic_list() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    list(&srv, None).await?;
     Ok(())
   }
 
   #[ntex::test]
-  async fn main() -> TestReturn {
+  async fn list_with_namespace_system() -> TestRet {
     let srv = generate_server(ntex_config).await;
-    test_list(&srv).await?;
-    test_list_with_nsp(&srv).await?;
-    test_create(&srv).await?;
-    test_delete(&srv).await?;
+    list(&srv, Some(String::from("system"))).await?;
+    Ok(())
+  }
+
+  #[ntex::test]
+  async fn create_and_delete() -> TestRet {
+    let cluster_name = "unit-test-cluster";
+    let srv = generate_server(ntex_config).await;
+    let resp = create(&srv, cluster_name).await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success when creating a cluster with name {}",
+      cluster_name
+    );
+    let resp = delete(&srv, cluster_name).await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success when deleting a cluster with name {}",
+      cluster_name
+    );
     Ok(())
   }
 }

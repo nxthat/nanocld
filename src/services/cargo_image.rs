@@ -121,11 +121,11 @@ pub mod tests {
   use futures::{TryStreamExt, StreamExt};
 
   use super::ntex_config;
-  use crate::utils::test::*;
+  use crate::utils::tests::*;
   use crate::models::CargoImagePartial;
 
   #[ntex::test]
-  pub async fn basic_list() -> TestReturn {
+  pub async fn basic_list() -> TestRet {
     let srv = generate_server(ntex_config).await;
 
     let resp = srv.get("/cargoes/images").send().await?;
@@ -134,7 +134,7 @@ pub mod tests {
     Ok(())
   }
 
-  pub async fn create_cargo_image(srv: &TestServer, name: &str) -> TestReturn {
+  pub async fn create_cargo_image(srv: &TestServer, name: &str) -> TestRet {
     println!("create cargo image {}", name);
     let payload = CargoImagePartial {
       name: name.to_owned(),
@@ -158,7 +158,7 @@ pub mod tests {
     Ok(())
   }
 
-  pub async fn inspect_image(srv: &TestServer, name: &str) -> TestReturn {
+  pub async fn inspect_image(srv: &TestServer, name: &str) -> TestRet {
     let resp = srv.get(format!("/cargoes/images/{}", &name)).send().await?;
 
     let status = resp.status();
@@ -167,7 +167,7 @@ pub mod tests {
     Ok(())
   }
 
-  pub async fn delete_image(srv: &TestServer, name: &str) -> TestReturn {
+  pub async fn delete_image(srv: &TestServer, name: &str) -> TestRet {
     let resp = srv
       .delete(format!("/cargoes/images/{}", &name))
       .send()
@@ -182,7 +182,7 @@ pub mod tests {
 
   /// Perform crud tests agains cargo images
   #[ntex::test]
-  async fn crud() -> TestReturn {
+  async fn crud() -> TestRet {
     const TEST_IMAGE: &str = "busybox:unstable-musl";
     let srv = generate_server(ntex_config).await;
     create_cargo_image(&srv, TEST_IMAGE).await?;

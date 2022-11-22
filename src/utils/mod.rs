@@ -9,7 +9,6 @@ pub mod cluster_network;
 pub mod cargo_instance;
 pub mod cluster_variable;
 
-use std::{fs, io::Read};
 use serde::Serialize;
 use ntex::http::StatusCode;
 
@@ -43,58 +42,11 @@ where
   Ok(result)
 }
 
-// Should not be needed anymore
-pub fn _get_free_port() -> Result<u16, HttpResponseError> {
-  let socket = match std::net::UdpSocket::bind("127.0.0.1:0") {
-    Err(err) => {
-      return Err(HttpResponseError {
-        msg: format!("unable to find a free port {:?}", err),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })
-    }
-    Ok(socket) => socket,
-  };
-  let port = match socket.local_addr() {
-    Err(err) => {
-      return Err(HttpResponseError {
-        msg: format!("unable to find a free port {:?}", err),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      })
-    }
-    Ok(local_addr) => local_addr.port(),
-  };
-  drop(socket);
-  Ok(port)
-}
-
-// Should not be needed anymore
-pub fn _generate_mac_addr() -> Result<String, HttpResponseError> {
-  let mut mac: [u8; 6] = [0; 6];
-  let mut urandom =
-    fs::File::open("/dev/urandom").map_err(|err| HttpResponseError {
-      msg: format!(
-        "Unable to open /dev/urandom to generate a mac addr {:?}",
-        &err
-      ),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
-  urandom
-    .read_exact(&mut mac)
-    .map_err(|err| HttpResponseError {
-      msg: format!("Unable to read /dev/urandom to generate a mac addr ${err}"),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
-  let mac_addr = format!(
-    "{:02X}:{:02X}:{:02X}:{:02X}:{:02X}:{:02X}",
-    mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]
-  );
-
-  Ok(mac_addr)
-}
-
 #[cfg(test)]
-pub mod test {
+pub mod tests {
   use ntex::web::*;
+  use ntex::http::client::ClientResponse;
+  use ntex::http::client::error::SendRequestError;
 
   use std::env;
   use crate::controllers;
@@ -102,7 +54,8 @@ pub mod test {
 
   pub use ntex::web::test::TestServer;
 
-  pub type TestReturn = Result<(), Box<dyn std::error::Error + 'static>>;
+  pub type TestRet = Result<(), Box<dyn std::error::Error + 'static>>;
+  pub type TestReqRet = Result<ClientResponse, SendRequestError>;
 
   type Config = fn(&mut ServiceConfig);
 

@@ -106,11 +106,11 @@ mod tests {
 
   use super::ntex_config;
 
-  use crate::utils::test::*;
+  use crate::utils::tests::*;
   use crate::models::{CargoInstanceFilterQuery, CargoInstanceExecBody};
 
   #[ntex::test]
-  async fn basic_list() -> TestReturn {
+  async fn basic_list() -> TestRet {
     let srv = generate_server(ntex_config).await;
     let query = CargoInstanceFilterQuery {
       namespace: Some(String::from("system")),
@@ -124,7 +124,7 @@ mod tests {
   }
 
   #[ntex::test]
-  async fn exec_ls_in_store(srv: &TestServer) -> TestReturn {
+  async fn exec_ls_in_store(srv: &TestServer) -> TestRet {
     let instance_name = "store";
     let srv = generate_server(ntex_config).await;
     let exec = CargoInstanceExecBody {
