@@ -11,11 +11,11 @@ args = ["clean"]
 command = "cargo"
 args = ["run"]
 
-[tasks.cov]
+[tasks.cov-ci]
 command = "cargo"
 args = ["llvm-cov", "nextest", "--output-path", "./daemon_cov.json", "--json"]
 
-[tasks.cov-debug]
+[tasks.cov]
 command = "cargo"
 args = ["llvm-cov", "nextest"]
 

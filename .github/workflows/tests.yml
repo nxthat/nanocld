@@ -39,3 +39,9 @@ jobs:
         docker run -e NANOCL_GID=$NANOCL_GID -v /run/docker.sock:/run/docker.sock nanocl:0.1.7 setup;
     - name: Run tests
       run: cargo make test
+    - uses: codecov/codecov-action@v3
+      with:
+        token: ${{ secrets.CODECOV_TOKEN }}
+        files: ./daemon_cov.json
+        flags: unittests # optional
+        verbose: true # optional (default = false)
