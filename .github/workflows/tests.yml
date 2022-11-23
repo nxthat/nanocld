@@ -41,6 +41,7 @@ jobs:
         sudo chmod 777 -R /run/nanocl;
         docker run -i --rm -e NANOCL_GID=$NANOCL_GID -v /run/docker.sock:/run/docker.sock -v /var/lib/nanocl:/var/lib/nanocl -v /run/nanocl/nanocl.sock:/run/nanocl/nanocl.sock nanocl:0.1.8 controller add dns;
         docker run -i --rm -e NANOCL_GID=$NANOCL_GID -v /run/docker.sock:/run/docker.sock -v /var/lib/nanocl:/var/lib/nanocl -v /run/nanocl/nanocl.sock:/run/nanocl/nanocl.sock nanocl:0.1.8 controller add proxy;
+        sudo chmod 777 -R /var/lib/nanocl
     - name: Run tests
       run: cargo make cov-ci
     - uses: codecov/codecov-action@v3
