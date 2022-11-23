@@ -1,4 +1,0 @@
-ignore:
-  - "src/schema.rs"
-  - "src/cli.rs"
-  - "src/main.rs"
