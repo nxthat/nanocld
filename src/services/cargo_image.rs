@@ -157,6 +157,22 @@ pub mod tests {
       .await
   }
 
+  /// Test utils to ensure the cargo image exists
+  pub async fn ensure_test_image() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    let image = CargoImagePartial {
+      name: "nexthat/nanocl-get-started:latest".to_owned(),
+    };
+    let res = create(&srv, &image).await?;
+    let mut stream = res.into_stream();
+    while let Some(chunk) = stream.next().await {
+      if let Err(err) = chunk {
+        panic!("Error while creating image {}", &err);
+      }
+    }
+    Ok(())
+  }
+
   /// Basic test to list cargo images
   #[ntex::test]
   pub async fn basic_list() -> TestRet {

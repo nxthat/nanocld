@@ -289,7 +289,7 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
   use super::*;
 
   use futures::TryStreamExt;
@@ -300,27 +300,27 @@ mod tests {
   use crate::models::{CargoImagePartial, CargoItem};
 
   /// Test utils to list cargoes
-  async fn list(srv: &TestServer) -> TestReqRet {
+  pub async fn list(srv: &TestServer) -> TestReqRet {
     srv.get("/cargoes").send().await
   }
 
   /// Test utils to count cargoes
-  async fn count(srv: &TestServer) -> TestReqRet {
+  pub async fn count(srv: &TestServer) -> TestReqRet {
     srv.get("/cargoes/count").send().await
   }
 
   /// Test utils to create a cargo
-  async fn create(srv: &TestServer, cargo: &CargoPartial) -> TestReqRet {
+  pub async fn create(srv: &TestServer, cargo: &CargoPartial) -> TestReqRet {
     srv.post("/cargoes").send_json(cargo).await
   }
 
   /// Test utils to inspect a cargo
-  async fn inspect(srv: &TestServer, name: &str) -> TestReqRet {
+  pub async fn inspect(srv: &TestServer, name: &str) -> TestReqRet {
     srv.get(format!("/cargoes/{}/inspect", name)).send().await
   }
 
   /// Test utils to patch a cargo
-  async fn patch(
+  pub async fn patch(
     srv: &TestServer,
     name: &str,
     cargo: &CargoPatchPartial,
@@ -332,24 +332,8 @@ mod tests {
   }
 
   /// Test utils to delete a cargo
-  async fn delete(srv: &TestServer, name: &str) -> TestReqRet {
+  pub async fn delete(srv: &TestServer, name: &str) -> TestReqRet {
     srv.delete(format!("/cargoes/{}", name)).send().await
-  }
-
-  /// Test utils to ensure the cargo image exists
-  async fn ensure_test_image() -> TestRet {
-    let srv = generate_server(cargo_image::ntex_config).await;
-    let image = CargoImagePartial {
-      name: "nexthat/nanocl-get-started:latest".to_owned(),
-    };
-    let res = cargo_image::tests::create(&srv, &image).await?;
-    let mut stream = res.into_stream();
-    while let Some(chunk) = stream.next().await {
-      if let Err(err) = chunk {
-        panic!("Error while creating image {}", &err);
-      }
-    }
-    Ok(())
   }
 
   /// Perform basic list against cargoes
@@ -380,7 +364,7 @@ mod tests {
   /// Perform CRUD Test against cargoes
   #[ntex::test]
   async fn crud() -> TestRet {
-    ensure_test_image().await?;
+    cargo_image::tests::ensure_test_image().await?;
     let srv = generate_server(ntex_config).await;
 
     // Create
