@@ -71,3 +71,115 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(delete_proxy_template_by_name);
   config.service(inspect_proxy_template_by_name);
 }
+
+/// Proxy template unit tests
+#[cfg(test)]
+mod tests {
+
+  use super::*;
+
+  use ntex::http::StatusCode;
+
+  use crate::models::{ProxyTemplateModes, GenericDelete};
+  use crate::utils::tests::*;
+
+  /// Test utils to list proxy template
+  pub async fn list(srv: &TestServer) -> TestReqRet {
+    srv.get("/proxy/templates").send().await
+  }
+
+  /// Test utils to create proxy template
+  pub async fn create(
+    srv: &TestServer,
+    payload: &ProxyTemplateItem,
+  ) -> TestReqRet {
+    srv.post("/proxy/templates").send_json(&payload).await
+  }
+
+  /// Test utils to inspect proxy template by name
+  pub async fn inspect(srv: &TestServer, name: &str) -> TestReqRet {
+    srv.get(format!("/proxy/templates/{}", name)).send().await
+  }
+
+  /// Test utils to delete proxy template by name
+  pub async fn delete(srv: &TestServer, name: &str) -> TestReqRet {
+    srv
+      .delete(format!("/proxy/templates/{}", name))
+      .send()
+      .await
+  }
+
+  /// Basic test to list proxy template that return StatusCode::Ok
+  #[ntex::test]
+  async fn basic_list() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+
+    let res = list(&srv).await?;
+
+    assert_eq!(res.status(), StatusCode::OK);
+
+    Ok(())
+  }
+
+  /// Basic test that create, inspect and delete a proxy template
+  #[ntex::test]
+  async fn basic_create_inspect_delete() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+
+    // Create
+    let payload = ProxyTemplateItem {
+      name: "test".to_string(),
+      content: "test".to_string(),
+      mode: ProxyTemplateModes::Http,
+    };
+    let res = create(&srv, &payload).await?;
+    let status = res.status();
+    assert_eq!(
+      status,
+      StatusCode::CREATED,
+      "Expected creating a proxy template with status {} got {}",
+      StatusCode::CREATED,
+      status
+    );
+
+    // Inspect
+    let mut res = inspect(&srv, &payload.name).await?;
+    let status = res.status();
+    assert_eq!(
+      status,
+      StatusCode::OK,
+      "Expected inspecting a proxy template with status {} got {}",
+      StatusCode::OK,
+      status
+    );
+    let body: ProxyTemplateItem = res
+      .json()
+      .await
+      .expect("Expect to parse a proxy template item");
+    assert_eq!(
+      body.name, payload.name,
+      "Expected proxy template name to be {} got {}",
+      payload.name, body.name
+    );
+
+    // Delete
+    let mut res = delete(&srv, &payload.name).await?;
+    let status = res.status();
+    assert_eq!(
+      status,
+      StatusCode::OK,
+      "Expected deleting a proxy template with status {} got {}",
+      StatusCode::OK,
+      status
+    );
+    let body: GenericDelete =
+      res.json().await.expect("Expect to parse a generic delete");
+    assert_eq!(
+      body.count, 1,
+      "Expected deleted count to be 1 got {}",
+      body.count
+    );
+
+    Ok(())
+  }
+}
