@@ -114,8 +114,9 @@ mod tests {
   async fn basic_list() -> TestRet {
     let srv = generate_server(ntex_config).await;
 
-    let res = list(&srv).await?;
-
+    let mut res = list(&srv).await?;
+    let body: serde_json::Value = res.json().await?;
+    println!("proxy template list body: {:?}", body);
     assert_eq!(
       res.status(),
       StatusCode::OK,
@@ -138,8 +139,10 @@ mod tests {
       content: String::from("test"),
       mode: ProxyTemplateModes::Http,
     };
-    let res = create(&srv, &payload).await?;
+    let mut res = create(&srv, &payload).await?;
     let status = res.status();
+    let body: serde_json::Value = res.json().await?;
+    println!("body: {:?}", body);
     assert_eq!(
       status,
       StatusCode::CREATED,
