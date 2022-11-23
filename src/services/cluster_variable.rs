@@ -144,6 +144,7 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(get_cluster_variable_by_name);
 }
 
+/// Cluster variable unit test
 #[cfg(test)]
 mod tests {
   use ntex::http::StatusCode;

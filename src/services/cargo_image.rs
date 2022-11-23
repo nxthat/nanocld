@@ -7,6 +7,7 @@ use futures::StreamExt;
 
 use crate::models::CargoImagePartial;
 use crate::errors::HttpResponseError;
+use crate::models::GenericDelete;
 
 #[web::get("/cargoes/images")]
 async fn list_cargo_image(
@@ -105,7 +106,8 @@ async fn delete_cargo_image_by_name(
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let id_or_name = id_or_name.into_inner();
   docker_api.remove_image(&id_or_name, None, None).await?;
-  Ok(web::HttpResponse::Ok().into())
+  let res = GenericDelete { count: 1 };
+  Ok(web::HttpResponse::Ok().json(&res))
 }
 
 pub fn ntex_config(config: &mut web::ServiceConfig) {
@@ -115,82 +117,156 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(inspect_cargo_image);
 }
 
+/// Cargo image unit tests
 #[cfg(test)]
 pub mod tests {
 
+  use bollard::service::ImageInspect;
+  use ntex::http::StatusCode;
   use futures::{TryStreamExt, StreamExt};
 
-  use super::ntex_config;
-  use crate::utils::tests::*;
-  use crate::models::CargoImagePartial;
+  use super::*;
+  use crate::{utils::tests::*, models::GenericDelete};
 
+  /// Test utils to list cargo images
+  pub async fn list(srv: &TestServer) -> TestReqRet {
+    srv.get("/cargoes/images").send().await
+  }
+
+  /// Test utils to create cargo image
+  pub async fn create(
+    srv: &TestServer,
+    payload: &CargoImagePartial,
+  ) -> TestReqRet {
+    srv.post("/cargoes/images").send_json(payload).await
+  }
+
+  /// Test utils to inspect cargo image
+  pub async fn inspect(srv: &TestServer, id_or_name: &str) -> TestReqRet {
+    srv
+      .get(format!("/cargoes/images/{}", id_or_name))
+      .send()
+      .await
+  }
+
+  /// Test utils to delete cargo image
+  pub async fn delete(srv: &TestServer, id_or_name: &str) -> TestReqRet {
+    srv
+      .delete(format!("/cargoes/images/{}", id_or_name))
+      .send()
+      .await
+  }
+
+  /// Basic test to list cargo images
   #[ntex::test]
   pub async fn basic_list() -> TestRet {
     let srv = generate_server(ntex_config).await;
 
-    let resp = srv.get("/cargoes/images").send().await?;
+    let resp = list(&srv).await?;
     let status = resp.status();
-    assert!(status.is_success());
-    Ok(())
-  }
-
-  pub async fn create_cargo_image(srv: &TestServer, name: &str) -> TestRet {
-    println!("create cargo image {}", name);
-    let payload = CargoImagePartial {
-      name: name.to_owned(),
-    };
-    let resp = srv.post("/cargoes/images").send_json(&payload).await?;
-
-    let status = resp.status();
-
-    assert!(status.is_success());
-    let content_type = resp.header("content-type").unwrap().to_str().unwrap();
-    assert_eq!(content_type, "nanocl/streaming-v1");
-
-    let mut stream = resp.into_stream();
-
-    while let Some(chunk) = stream.next().await {
-      if let Err(err) = chunk {
-        panic!("Error while downloading image {}", &err);
-      }
-    }
-
-    Ok(())
-  }
-
-  pub async fn inspect_image(srv: &TestServer, name: &str) -> TestRet {
-    let resp = srv.get(format!("/cargoes/images/{}", &name)).send().await?;
-    let status = resp.status();
-    assert!(
-      status.is_success(),
-      "Expected status 200 while inspecting image {}, got {}",
-      name,
+    assert_eq!(
+      status,
+      StatusCode::OK,
+      "Expect basic to return status {} got {}",
+      StatusCode::OK,
       status
     );
+
     Ok(())
   }
 
-  pub async fn delete_image(srv: &TestServer, name: &str) -> TestRet {
-    let resp = srv
-      .delete(format!("/cargoes/images/{}", &name))
-      .send()
-      .await?;
+  /// Basic test to create cargo image with wrong name
+  #[ntex::test]
+  pub async fn basic_create_wrong_name() -> TestRet {
+    let srv = generate_server(ntex_config).await;
 
+    let payload = CargoImagePartial {
+      name: "test".to_string(),
+    };
+    let resp = create(&srv, &payload).await?;
     let status = resp.status();
-
-    assert!(status.is_success());
+    assert_eq!(
+      status,
+      StatusCode::BAD_REQUEST,
+      "Expect basic to return status {} got {}",
+      StatusCode::BAD_REQUEST,
+      status
+    );
 
     Ok(())
   }
 
-  /// Perform crud tests agains cargo images
+  /// Basic test to create, inspect and delete a cargo image
   #[ntex::test]
   async fn crud() -> TestRet {
     const TEST_IMAGE: &str = "busybox:unstable-musl";
     let srv = generate_server(ntex_config).await;
-    create_cargo_image(&srv, TEST_IMAGE).await?;
-    inspect_image(&srv, TEST_IMAGE).await?;
-    delete_image(&srv, TEST_IMAGE).await?;
+
+    // Create
+    let payload = CargoImagePartial {
+      name: TEST_IMAGE.to_owned(),
+    };
+    let res = create(&srv, &payload).await?;
+    let status = res.status();
+    assert_eq!(
+      status,
+      StatusCode::OK,
+      "Expect create to return status {} got {}",
+      StatusCode::OK,
+      status
+    );
+    let content_type = res
+      .header("content-type")
+      .expect("Expect create response to have content type header")
+      .to_str()
+      .unwrap();
+    assert_eq!(
+      content_type, "nanocl/streaming-v1",
+      "Expect content type header to be nanocl/streaming-v1 got {}",
+      content_type
+    );
+    let mut stream = res.into_stream();
+    while let Some(chunk) = stream.next().await {
+      if let Err(err) = chunk {
+        panic!("Error while creating image {}", &err);
+      }
+    }
+
+    // Inspect
+    let mut res = inspect(&srv, TEST_IMAGE).await?;
+    let status = res.status();
+    assert_eq!(
+      status,
+      StatusCode::OK,
+      "Expect inspect to return status {} got {}",
+      StatusCode::OK,
+      status
+    );
+    let _body: ImageInspect = res
+      .json()
+      .await
+      .expect("Expect inspect to return ImageInspect json data");
+
+    // Delete
+    let mut res = delete(&srv, TEST_IMAGE).await?;
+    let status = res.status();
+    assert_eq!(
+      status,
+      StatusCode::OK,
+      "Expect delete to return status {} got {}",
+      StatusCode::OK,
+      status
+    );
+    let body: GenericDelete = res
+      .json()
+      .await
+      .expect("Expect delete to return GenericDelete json data");
+    assert_eq!(
+      body.count, 1,
+      "Expect delete to return count 1 got {}",
+      body.count
+    );
+
     Ok(())
   }
 }

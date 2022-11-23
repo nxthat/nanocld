@@ -99,26 +99,46 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(start_cargo_instance_exec);
 }
 
+/// Cargo instances unit tests
 #[cfg(test)]
 mod tests {
+  use super::*;
+
   use bollard::exec::CreateExecResults;
   use bollard::service::ContainerSummary;
-
-  use super::ntex_config;
+  use ntex::http::StatusCode;
 
   use crate::utils::tests::*;
-  use crate::models::{CargoInstanceFilterQuery, CargoInstanceExecBody};
 
-  #[ntex::test]
-  async fn basic_list() -> TestRet {
-    let srv = generate_server(ntex_config).await;
+  /// Test utils to list cargo instances
+  pub async fn list(srv: &TestServer, namespace: Option<String>) -> TestReqRet {
     let query = CargoInstanceFilterQuery {
-      namespace: Some(String::from("system")),
+      namespace,
       ..Default::default()
     };
-    let mut resp = srv.get("/cargoes/instances").query(&query)?.send().await?;
-    assert!(resp.status().is_success());
-    let _: Vec<ContainerSummary> = resp.json().await?;
+    srv
+      .get("/cargoes/instances")
+      .query(&query)
+      .expect("Expect to bind cargo instance request query")
+      .send()
+      .await
+  }
+
+  #[ntex::test]
+  async fn list_namespace_system() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    let mut resp = list(&srv, Some(String::from("system"))).await?;
+    assert_eq!(
+      resp.status(),
+      StatusCode::OK,
+      "Expect test list to return {}, got {}",
+      StatusCode::OK,
+      resp.status()
+    );
+    let _: Vec<ContainerSummary> = resp
+      .json()
+      .await
+      .expect("Expect list to return Vector of ContainerSummary");
 
     Ok(())
   }

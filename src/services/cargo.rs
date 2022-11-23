@@ -36,6 +36,30 @@ async fn list_cargo(
   Ok(web::HttpResponse::Ok().json(&items))
 }
 
+/// Count cargo
+#[cfg_attr(feature = "dev", utoipa::path(
+  get,
+  path = "/cargoes/count",
+  params(
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
+  ),
+  responses(
+    (status = 200, description = "Generic delete", body = GenericCount),
+    (status = 400, description = "Generic database error", body = ApiError),
+    (status = 404, description = "Namespace name not valid", body = ApiError),
+  ),
+))]
+#[web::get("/cargoes/count")]
+async fn count_cargo(
+  pool: web::types::State<Pool>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
+  let res = repositories::cargo::count(nsp, &pool).await?;
+
+  Ok(web::HttpResponse::Ok().json(&res))
+}
+
 /// Create new cargo
 #[cfg_attr(feature = "dev", utoipa::path(
   post,
@@ -89,63 +113,6 @@ async fn create_cargo(
   }
   log::info!("cargo succefully created");
   Ok(web::HttpResponse::Created().json(&item))
-}
-
-/// Delete cargo by it's name
-#[cfg_attr(feature = "dev", utoipa::path(
-  delete,
-  path = "/cargoes/{name}",
-  params(
-    ("name" = String, Path, description = "Name of the cargo"),
-    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
-  ),
-  responses(
-    (status = 200, description = "Generic delete", body = GenericDelete),
-    (status = 400, description = "Generic database error", body = ApiError),
-    (status = 404, description = "Namespace name not valid", body = ApiError),
-  ),
-))]
-#[web::delete("/cargoes/{name}")]
-async fn delete_cargo_by_name(
-  pool: web::types::State<Pool>,
-  docker_api: web::types::State<bollard::Docker>,
-  name: web::types::Path<String>,
-  web::types::Query(qs): web::types::Query<GenericNspQuery>,
-) -> Result<web::HttpResponse, HttpResponseError> {
-  log::info!("asking cargo deletion {}", &name);
-  let key = utils::key::gen_key_from_nsp(&qs.namespace, &name.into_inner());
-
-  repositories::cargo::find_by_key(key.clone(), &pool).await?;
-  repositories::cargo_instance::delete_by_cargo_key(key.to_owned(), &pool)
-    .await?;
-  let res = repositories::cargo::delete_by_key(key.to_owned(), &pool).await?;
-  repositories::cargo_env::delete_by_cargo_key(key.to_owned(), &pool).await?;
-  utils::cargo::delete_container(key.to_owned(), &docker_api).await?;
-  Ok(web::HttpResponse::Ok().json(&res))
-}
-
-/// Count cargo
-#[cfg_attr(feature = "dev", utoipa::path(
-  get,
-  path = "/cargoes/count",
-  params(
-    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
-  ),
-  responses(
-    (status = 200, description = "Generic delete", body = GenericCount),
-    (status = 400, description = "Generic database error", body = ApiError),
-    (status = 404, description = "Namespace name not valid", body = ApiError),
-  ),
-))]
-#[web::get("/cargoes/count")]
-async fn count_cargo(
-  pool: web::types::State<Pool>,
-  web::types::Query(qs): web::types::Query<GenericNspQuery>,
-) -> Result<web::HttpResponse, HttpResponseError> {
-  let nsp = utils::key::resolve_nsp(&qs.namespace);
-  let res = repositories::cargo::count(nsp, &pool).await?;
-
-  Ok(web::HttpResponse::Ok().json(&res))
 }
 
 /// Inspect cargo by it's name
@@ -279,33 +246,109 @@ async fn patch_cargo_by_name(
   Ok(web::HttpResponse::Accepted().json(&updated_cargo))
 }
 
+/// Delete cargo by it's name
+#[cfg_attr(feature = "dev", utoipa::path(
+  delete,
+  path = "/cargoes/{name}",
+  params(
+    ("name" = String, Path, description = "Name of the cargo"),
+    ("namespace" = Option<String>, Query, description = "Name of the namespace where the cargo is stored"),
+  ),
+  responses(
+    (status = 200, description = "Generic delete", body = GenericDelete),
+    (status = 400, description = "Generic database error", body = ApiError),
+    (status = 404, description = "Namespace name not valid", body = ApiError),
+  ),
+))]
+#[web::delete("/cargoes/{name}")]
+async fn delete_cargo_by_name(
+  pool: web::types::State<Pool>,
+  docker_api: web::types::State<bollard::Docker>,
+  name: web::types::Path<String>,
+  web::types::Query(qs): web::types::Query<GenericNspQuery>,
+) -> Result<web::HttpResponse, HttpResponseError> {
+  log::info!("asking cargo deletion {}", &name);
+  let key = utils::key::gen_key_from_nsp(&qs.namespace, &name.into_inner());
+
+  repositories::cargo::find_by_key(key.clone(), &pool).await?;
+  repositories::cargo_instance::delete_by_cargo_key(key.to_owned(), &pool)
+    .await?;
+  let res = repositories::cargo::delete_by_key(key.to_owned(), &pool).await?;
+  repositories::cargo_env::delete_by_cargo_key(key.to_owned(), &pool).await?;
+  utils::cargo::delete_container(key.to_owned(), &docker_api).await?;
+  Ok(web::HttpResponse::Ok().json(&res))
+}
+
 pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(list_cargo);
-  config.service(create_cargo);
   config.service(count_cargo);
-  config.service(delete_cargo_by_name);
+  config.service(create_cargo);
   config.service(inspect_cargo_by_name);
   config.service(patch_cargo_by_name);
+  config.service(delete_cargo_by_name);
 }
 
 #[cfg(test)]
 mod tests {
+  use super::*;
+
+  use futures::TryStreamExt;
   use ntex::http::StatusCode;
 
   use crate::utils::tests::*;
   use crate::services::cargo_image;
-  use crate::models::{CargoPartial, CargoPatchPartial, CargoItem};
+  use crate::models::{CargoImagePartial, CargoItem};
 
-  use super::ntex_config;
+  /// Test utils to list cargoes
+  async fn list(srv: &TestServer) -> TestReqRet {
+    srv.get("/cargoes").send().await
+  }
 
-  /// Ensure the cargo image exists for the test to run
+  /// Test utils to count cargoes
+  async fn count(srv: &TestServer) -> TestReqRet {
+    srv.get("/cargoes/count").send().await
+  }
+
+  /// Test utils to create a cargo
+  async fn create(srv: &TestServer, cargo: &CargoPartial) -> TestReqRet {
+    srv.post("/cargoes").send_json(cargo).await
+  }
+
+  /// Test utils to inspect a cargo
+  async fn inspect(srv: &TestServer, name: &str) -> TestReqRet {
+    srv.get(format!("/cargoes/{}/inspect", name)).send().await
+  }
+
+  /// Test utils to patch a cargo
+  async fn patch(
+    srv: &TestServer,
+    name: &str,
+    cargo: &CargoPatchPartial,
+  ) -> TestReqRet {
+    srv
+      .patch(format!("/cargoes/{}", name))
+      .send_json(cargo)
+      .await
+  }
+
+  /// Test utils to delete a cargo
+  async fn delete(srv: &TestServer, name: &str) -> TestReqRet {
+    srv.delete(format!("/cargoes/{}", name)).send().await
+  }
+
+  /// Test utils to ensure the cargo image exists
   async fn ensure_test_image() -> TestRet {
     let srv = generate_server(cargo_image::ntex_config).await;
-    cargo_image::tests::create_cargo_image(
-      &srv,
-      "nexthat/nanocl-get-started:latest",
-    )
-    .await?;
+    let image = CargoImagePartial {
+      name: "nexthat/nanocl-get-started:latest".to_owned(),
+    };
+    let res = cargo_image::tests::create(&srv, &image).await?;
+    let mut stream = res.into_stream();
+    while let Some(chunk) = stream.next().await {
+      if let Err(err) = chunk {
+        panic!("Error while creating image {}", &err);
+      }
+    }
     Ok(())
   }
 
@@ -313,11 +356,12 @@ mod tests {
   #[ntex::test]
   async fn basic_list() -> TestRet {
     let srv = generate_server(ntex_config).await;
-    let resp = srv.get("/cargoes").send().await?;
+    let mut resp = list(&srv).await?;
     assert!(
       resp.status().is_success(),
       "Expect success while listing cargoes"
     );
+    let _body: Vec<CargoItem> = resp.json().await?;
     Ok(())
   }
 
@@ -325,7 +369,7 @@ mod tests {
   #[ntex::test]
   async fn basic_count() -> TestRet {
     let srv = generate_server(ntex_config).await;
-    let resp = srv.get("/cargoes/count").send().await?;
+    let resp = count(&srv).await?;
     assert!(
       resp.status().is_success(),
       "Expect success while counting cargoes"
@@ -339,13 +383,14 @@ mod tests {
     ensure_test_image().await?;
     let srv = generate_server(ntex_config).await;
 
-    // Create a new Cargo crud-test
+    // Create
     let new_cargo = CargoPartial {
+      environnements: Some(vec![String::from("TEST=1")]),
       name: String::from("crud-test"),
       image_name: String::from("nexthat/nanocl-get-started"),
       ..Default::default()
     };
-    let mut resp = srv.post("/cargoes").send_json(&new_cargo).await?;
+    let mut resp = create(&srv, &new_cargo).await?;
     assert!(
       resp.status().is_success(),
       "Expect create new cargo to success with payload : {:#?}",
@@ -358,11 +403,8 @@ mod tests {
       test_cargo.name, new_cargo.name
     );
 
-    // Inspect the created cargo
-    let mut resp = srv
-      .get(format!("/cargoes/{}/inspect", &test_cargo.name))
-      .send()
-      .await?;
+    // Inspect
+    let mut resp = inspect(&srv, &test_cargo.name).await?;
     assert!(
       resp.status().is_success(),
       "Expect success while inspecting created cargo {}",
@@ -375,44 +417,46 @@ mod tests {
       inspect_body.key, test_cargo.key
     );
 
-    // Patch the created cargo
+    // Patch
     let cargo_patch_payload = CargoPatchPartial {
+      environnements: Some(vec![String::from("TEST=2")]),
       domainname: Some(String::from("crud-test.internal")),
       ..Default::default()
     };
-    let resp = srv
-      .patch(format!("/cargoes/{}", &test_cargo.name))
-      .send_json(&cargo_patch_payload)
-      .await?;
+    let resp = patch(&srv, &test_cargo.name, &cargo_patch_payload).await?;
     assert!(
       resp.status().is_success(),
       "Expect success while patching cargo domainname to {:?}",
       cargo_patch_payload.domainname
     );
 
-    // Inspect the updated cargo
-    let mut resp = srv
-      .get(format!("/cargoes/{}/inspect", &test_cargo.name))
-      .send()
-      .await?;
+    // Inspect the patched cargo
+    let mut resp = inspect(&srv, &test_cargo.name).await?;
     assert!(
       resp.status().is_success(),
-      "Expect success while inspecting the updated cargo {}",
+      "Expect success while inspecting the patched cargo {}",
       test_cargo.name
     );
-    let updated_cargo: CargoItem = resp.json().await?;
+    let updated_cargo: CargoItemWithRelation = resp.json().await?;
 
     assert_eq!(
       updated_cargo.domainname, cargo_patch_payload.domainname,
       "Expect updated cargo domainname {:?} to match {:?}",
       updated_cargo.domainname, cargo_patch_payload.domainname
     );
+    let test_env = updated_cargo
+      .environnements
+      .expect("Expect environnements to be present")
+      .into_iter()
+      .find(|env| env.name == "TEST")
+      .expect("Expect environnement TEST to exist");
+    assert_eq!(
+      test_env.value, "2",
+      "Expect environnement TEST to be updated to 2"
+    );
 
     // Delete crud-test cargo
-    let resp = srv
-      .delete(format!("/cargoes/{}", &test_cargo.name))
-      .send()
-      .await?;
+    let resp = delete(&srv, &test_cargo.name).await?;
     assert!(
       resp.status().is_success(),
       "Expect success while deleting cargo {}",
@@ -420,10 +464,7 @@ mod tests {
     );
 
     // Inspect now just return a 404 not found
-    let resp = srv
-      .get(format!("/cargoes/{}", &test_cargo.name))
-      .send()
-      .await?;
+    let resp = inspect(&srv, &test_cargo.name).await?;
     assert_eq!(
       resp.status(),
       StatusCode::NOT_FOUND,
