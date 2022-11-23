@@ -160,10 +160,13 @@ pub mod tests {
 
   pub async fn inspect_image(srv: &TestServer, name: &str) -> TestRet {
     let resp = srv.get(format!("/cargoes/images/{}", &name)).send().await?;
-
     let status = resp.status();
-    assert!(status.is_success());
-
+    assert!(
+      status.is_success(),
+      "Expected status 200 while inspecting image {}, got {}",
+      name,
+      status
+    );
     Ok(())
   }
 

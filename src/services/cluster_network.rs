@@ -180,3 +180,165 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(delete_cluster_network_by_name);
   config.service(count_cluster_network_by_namespace);
 }
+
+/// Cluster network unit tests
+#[cfg(test)]
+pub mod tests {
+
+  use super::*;
+
+  use crate::utils::tests::*;
+  use crate::services::cluster;
+  use crate::models::{ClusterNetworkItem, GenericDelete};
+
+  /// Test utils function to list cluster networks
+  pub async fn list(srv: &TestServer, cluster_name: &str) -> TestReqRet {
+    srv.get(format!("/clusters/{cluster_name}")).send().await
+  }
+
+  /// Test utils function to create a new cluster network
+  pub async fn create(
+    srv: &TestServer,
+    cluster_name: &str,
+    network: &ClusterNetworkPartial,
+  ) -> TestReqRet {
+    srv
+      .post(format!("/clusters/{cluster_name}/networks"))
+      .send_json(network)
+      .await
+  }
+
+  /// Test utils function to delete a cluster network by name
+  pub async fn delete(
+    srv: &TestServer,
+    cluster_name: &str,
+    network_name: &str,
+  ) -> TestReqRet {
+    srv
+      .delete(format!("/clusters/{cluster_name}/networks/{network_name}"))
+      .send()
+      .await
+  }
+
+  /// Test utils function to inspect a cluster network by name
+  pub async fn inspect(
+    srv: &TestServer,
+    cluster_name: &str,
+    network_name: &str,
+  ) -> TestReqRet {
+    srv
+      .get(format!(
+        "/clusters/{cluster_name}/networks/{network_name}/inspect"
+      ))
+      .send()
+      .await
+  }
+
+  /// Basic list when cluster a cluster doesn't exists that return a StatusCode::NOT_FOUND
+  #[ntex::test]
+  async fn basic_list_cluster_not_exists() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    let res = list(&srv, "test").await?;
+    assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    Ok(())
+  }
+
+  /// Basic create when cluster doesn't exists that return a StatusCode::NOT_FOUND
+  #[ntex::test]
+  async fn basic_create_cluster_not_exists() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    let network = ClusterNetworkPartial {
+      name: "test".to_string(),
+    };
+    let res = create(&srv, "test", &network).await?;
+    assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    Ok(())
+  }
+
+  /// Test to create, inspect and delete a cluster unit-test-net with a network test-net
+  #[ntex::test]
+  async fn basic_create_inspect_delete() -> TestRet {
+    let srv_cluster = generate_server(cluster::ntex_config).await;
+    let srv = generate_server(ntex_config).await;
+    let cluster_name = "unit-test-net";
+    let network_name = "test-net";
+
+    // Create cluster
+    let res = cluster::tests::create(&srv_cluster, &cluster_name).await?;
+    assert_eq!(
+      res.status(),
+      StatusCode::CREATED,
+      "Expected status {} when creating a cluster {} but got {}",
+      StatusCode::CREATED,
+      cluster_name,
+      res.status()
+    );
+
+    // Create network
+    let network = ClusterNetworkPartial {
+      name: network_name.to_string(),
+    };
+    let mut res = create(&srv, cluster_name, &network).await?;
+    assert_eq!(res.status(), StatusCode::CREATED);
+    let body: ClusterNetworkItem = res
+      .json()
+      .await
+      .expect("Expect a valid cluster network json body when creating a cluster network");
+    assert_eq!(
+      body.name, network_name,
+      "Expected network name {} but got {}",
+      network_name, body.name
+    );
+
+    // Inspect network
+    let mut res = inspect(&srv, cluster_name, network_name).await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let body: ClusterNetworkItem = res.json().await.expect("Expect a valid cluster network json body when inspecting a cluster network");
+    assert_eq!(
+      body.name, network_name,
+      "Expected network name {} but got {}",
+      network_name, body.name
+    );
+
+    // Delete network
+    let mut res = delete(&srv, cluster_name, network_name).await?;
+    assert_eq!(
+      res.status(),
+      StatusCode::OK,
+      "Expected status {} when deleting a cluster network but got {}",
+      StatusCode::OK,
+      res.status()
+    );
+
+    let body: GenericDelete = res.json().await.expect(
+      "Expect a generic delete json body when deleting a cluster network",
+    );
+    assert_eq!(
+      body.count, 1,
+      "Expected 1 deleted network but got {}",
+      body.count
+    );
+
+    // Delete cluster
+    let mut res = cluster::tests::delete(&srv_cluster, cluster_name).await?;
+    assert_eq!(
+      res.status(),
+      StatusCode::OK,
+      "Expected status {} when deleting a cluster but got {}",
+      StatusCode::OK,
+      res.status()
+    );
+
+    let _body: GenericDelete = res
+      .json()
+      .await
+      .expect("Expect a generic delete json body when deleting a cluster");
+    assert_eq!(
+      _body.count, 1,
+      "Expected 1 deleted cluster but got {}",
+      _body.count
+    );
+
+    Ok(())
+  }
+}
