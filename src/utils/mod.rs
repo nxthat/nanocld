@@ -1,7 +1,6 @@
 pub mod errors;
 
 pub mod key;
-pub mod node;
 pub mod cargo;
 pub mod docker;
 pub mod cluster;

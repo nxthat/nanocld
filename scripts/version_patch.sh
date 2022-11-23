@@ -12,6 +12,5 @@ echo "[BUILD] Creating version.rs"
 cat > ./src/version.rs <<- EOM
 pub const ARCH: &str = "${arch}";
 pub const VERSION: &str = "${version}";
-pub const COMMIT_ID: &str = "${commit_id}";
-
+pub const COMMIT_ID: &str = "${commit_id}";\n
 EOM

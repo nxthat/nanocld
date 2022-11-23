@@ -7,7 +7,6 @@ use ntex::web;
 // use rustls::{Certificate, PrivateKey, ServerConfig};
 // use rustls_pemfile::{certs, pkcs8_private_keys};
 
-use crate::openapi;
 use crate::services;
 use crate::models::DaemonState;
 
@@ -51,7 +50,9 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
   log::info!("Preparing server");
   let hosts = daemon_state.config.hosts.to_owned();
   let mut server = web::HttpServer::new(move || {
-    web::App::new()
+    // App need to be mutable when feature dev is enabled
+    #[allow(unused_variables)]
+    let mut app = web::App::new()
       // bind config state
       .state(daemon_state.config.clone())
       // bind postgre pool to state
@@ -62,8 +63,6 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
       .wrap(web::middleware::Logger::default())
       // Set Json body max size
       .app_state(web::types::JsonConfig::default().limit(4096))
-      // configure /explorer
-      .configure(openapi::ntex_config)
       // configure system service
       .configure(services::system::ntex_config)
       // configure namespace service
@@ -81,7 +80,16 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
       // configure nginx template service
       .configure(services::proxy_template::ntex_config)
       // configure cargo service
-      .configure(services::cargo::ntex_config)
+      .configure(services::cargo::ntex_config);
+
+    // configure openapi if dev feature is enabled
+    #[cfg(feature = "dev")]
+    {
+      use crate::openapi;
+      app = app.configure(openapi::ntex_config);
+    }
+
+    app
   });
   let mut count = 0;
   let len = hosts.len();
