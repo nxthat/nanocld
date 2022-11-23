@@ -32,14 +32,14 @@ jobs:
       run: sudo chmod 777 /run/docker.sock && sudo mkdir /run/nanocl && sudo mkdir /var/lib/nanocl && sudo mkdir -p ./vm_images && sudo chmod 777 -R /run/nanocl && sudo chmod 777 -R /var/lib/nanocl
     - name: Setup
       run: >-
-        wget -c https://github.com/nxthat/nanocl/releases/download/v0.1.8/nanocl.0.1.8.tar.gz;
-        docker load -i nanocl.0.1.8.tar.gz;
+        wget -c https://github.com/nxthat/nanocl/releases/download/v0.1.8/nanocl_0.1.8_amd64.deb;
+        sudo dpkg -i nanocl_0.1.8_amd64.deb;
         sudo useradd -U nanocl;
         NANOCL_GID=$(getent group nanocl | cut -d: -f3);
-        docker run -i --rm -e NANOCL_GID=$NANOCL_GID -v /run/docker.sock:/run/docker.sock nanocl:0.1.8 setup;
+        nanocl setup;
         sleep 10;
-        docker run -i --rm -e NANOCL_GID=$NANOCL_GID -v /run/nanocl/nanocl.sock:/run/nanocl/nanocl.sock nanocl:0.1.8 controller add dns;
-        docker run -i --rm -e NANOCL_GID=$NANOCL_GID -v /run/nanocl/nanocl.sock:/run/nanocl/nanocl.sock nanocl:0.1.8 controller add proxy;
+        nanocl controller add dns;
+        nanocl controller add proxy;
     - name: Run tests
       run: cargo make cov-ci
     - uses: codecov/codecov-action@v3
