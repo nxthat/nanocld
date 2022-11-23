@@ -51,7 +51,7 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
   let hosts = daemon_state.config.hosts.to_owned();
   let mut server = web::HttpServer::new(move || {
     // App need to be mutable when feature dev is enabled
-    #[allow(unused_variables)]
+    #[allow(unused_mut)]
     let mut app = web::App::new()
       // bind config state
       .state(daemon_state.config.clone())

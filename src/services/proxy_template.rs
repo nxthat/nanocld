@@ -27,7 +27,7 @@ async fn list_proxy_template(
   post,
   path = "/proxy/templates",
   responses(
-    (status = 201, description = "Nginx template created", body = ProxyTemplateItem)
+    (status = 201, description = "The new proxy Template created", body = ProxyTemplateItem)
   )
 ))]
 #[web::post("/proxy/templates")]
@@ -116,7 +116,13 @@ mod tests {
 
     let res = list(&srv).await?;
 
-    assert_eq!(res.status(), StatusCode::OK);
+    assert_eq!(
+      res.status(),
+      StatusCode::OK,
+      "Expect basic list to return {} got {}",
+      StatusCode::OK,
+      res.status()
+    );
 
     Ok(())
   }
@@ -128,8 +134,8 @@ mod tests {
 
     // Create
     let payload = ProxyTemplateItem {
-      name: "test".to_string(),
-      content: "test".to_string(),
+      name: String::from("unit-test-template"),
+      content: String::from("test"),
       mode: ProxyTemplateModes::Http,
     };
     let res = create(&srv, &payload).await?;
