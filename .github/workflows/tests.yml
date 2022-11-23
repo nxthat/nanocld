@@ -37,6 +37,7 @@ jobs:
         sudo useradd -U nanocl;
         NANOCL_GID=$(getent group nanocl | cut -d: -f3);
         docker run -e NANOCL_GID=$NANOCL_GID -v /run/docker.sock:/run/docker.sock nanocl:0.1.7 setup;
+        sleep 10
     - name: Run tests
       run: cargo make cov-ci
     - uses: codecov/codecov-action@v3
