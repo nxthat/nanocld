@@ -41,9 +41,6 @@ pub use nginx_log::*;
 mod cargo_image;
 pub use cargo_image::*;
 
-mod node;
-pub use node::*;
-
 mod system;
 pub use system::*;
 

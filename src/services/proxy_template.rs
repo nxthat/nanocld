@@ -74,7 +74,7 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
 
 /// Proxy template unit tests
 #[cfg(test)]
-mod tests {
+pub mod tests {
 
   use super::*;
 
