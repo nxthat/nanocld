@@ -44,6 +44,9 @@ pub use cargo_image::*;
 mod node;
 pub use node::*;
 
+mod system;
+pub use system::*;
+
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 pub type DBConn = PooledConnection<ConnectionManager<PgConnection>>;
 

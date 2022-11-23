@@ -1,3 +1,4 @@
+#[cfg(feature = "dev")]
 use ntex::web;
 #[cfg(feature = "dev")]
 use serde_json::json;
@@ -108,9 +109,7 @@ async fn get_api_specs() -> Result<web::HttpResponse, web::Error> {
   );
 }
 
-pub fn ntex_config(_config: &mut web::ServiceConfig) {
-  #[cfg(feature = "dev")]
-  {
-    _config.service(get_api_specs);
-  }
+#[cfg(feature = "dev")]
+pub fn ntex_config(config: &mut web::ServiceConfig) {
+  config.service(get_api_specs);
 }

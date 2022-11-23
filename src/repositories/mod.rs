@@ -1,8 +1,6 @@
 //! Functions to manipulate model in database
 pub mod errors;
 
-pub mod node;
-
 pub mod namespace;
 
 pub mod proxy_template;
