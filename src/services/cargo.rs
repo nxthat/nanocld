@@ -288,16 +288,17 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
   config.service(delete_cargo_by_name);
 }
 
+/// Unit tests for cargo module
 #[cfg(test)]
 pub mod tests {
+
   use super::*;
 
-  use futures::TryStreamExt;
   use ntex::http::StatusCode;
 
   use crate::utils::tests::*;
   use crate::services::cargo_image;
-  use crate::models::{CargoImagePartial, CargoItem};
+  use crate::models::CargoItem;
 
   /// Test utils to list cargoes
   pub async fn list(srv: &TestServer) -> TestReqRet {

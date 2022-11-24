@@ -189,11 +189,14 @@ pub mod tests {
 
   use crate::utils::tests::*;
   use crate::services::cluster;
-  use crate::models::{ClusterNetworkItem, GenericDelete};
+  use crate::models::{ClusterNetworkItem, GenericDelete, GenericCount};
 
   /// Test utils function to list cluster networks
   pub async fn list(srv: &TestServer, cluster_name: &str) -> TestReqRet {
-    srv.get(format!("/clusters/{cluster_name}")).send().await
+    srv
+      .get(format!("/clusters/{cluster_name}/networks"))
+      .send()
+      .await
   }
 
   /// Test utils function to create a new cluster network
@@ -206,6 +209,11 @@ pub mod tests {
       .post(format!("/clusters/{cluster_name}/networks"))
       .send_json(network)
       .await
+  }
+
+  /// Test utils function to count networks inside a namespace
+  pub async fn count(srv: &TestServer) -> TestReqRet {
+    srv.get(format!("/networks/count")).send().await
   }
 
   /// Test utils function to delete a cluster network by name
@@ -240,6 +248,17 @@ pub mod tests {
     let srv = generate_server(ntex_config).await;
     let res = list(&srv, "test").await?;
     assert_eq!(res.status(), StatusCode::NOT_FOUND);
+    Ok(())
+  }
+
+  /// Basic network count inside a namespace
+  #[ntex::test]
+  async fn basic_count_namespace() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    let mut res = count(&srv).await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let body: GenericCount = res.json().await?;
+    assert_eq!(body.count, 0);
     Ok(())
   }
 
@@ -298,6 +317,13 @@ pub mod tests {
       body.name, network_name,
       "Expected network name {} but got {}",
       network_name, body.name
+    );
+
+    // List cluster networks
+    let mut res = list(&srv, cluster_name).await?;
+    assert_eq!(res.status(), StatusCode::OK);
+    let _body: Vec<ClusterNetworkItem> = res.json().await.expect(
+      "Expect a valid cluster network json body when listing cluster networks",
     );
 
     // Delete network
