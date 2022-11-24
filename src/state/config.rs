@@ -64,3 +64,108 @@ pub fn init(args: &Cli) -> Result<DaemonConfig, DaemonError> {
   // Merge cli args and config file with priority to args
   Ok(merge_config(&args, &file_config))
 }
+
+/// Config unit test
+#[cfg(test)]
+mod tests {
+  use std::os::unix::prelude::PermissionsExt;
+
+  use super::*;
+
+  /// Test merge config
+  #[test]
+  fn test_merge_config() {
+    let args = Cli {
+      hosts: Some(vec![String::from("unix:///run/nanocl/nanocl.sock")]),
+      state_dir: Some(String::from("/var/lib/nanocl")),
+      docker_host: Some(String::from("/run/docker.sock")),
+      config_dir: String::from("/etc/nanocl"),
+      init: false,
+    };
+
+    let config = DaemonConfigFile {
+      hosts: Some(vec![String::from("unix:///run/nanocl/nanocl.sock")]),
+      state_dir: Some(String::from("/var/lib/nanocl")),
+      docker_host: Some(String::from("/run/docker.sock")),
+    };
+
+    let merged = merge_config(&args, &config);
+
+    assert_eq!(merged.hosts, args.hosts.unwrap());
+    assert_eq!(merged.state_dir, args.state_dir.unwrap());
+    assert_eq!(merged.docker_host, args.docker_host.unwrap());
+  }
+
+  /// Test read config file
+  /// It should return a default config if the file does not exist
+  /// It should return a config if the file exist
+  /// It should return an error if the file is not a valid yaml
+  /// It should return an error if the file is not readable
+  /// It should return an error if the file is not a file
+  #[test]
+  fn test_read_config_file() {
+    let config_dir = String::from("/tmp");
+    let config_path = std::path::Path::new(&config_dir).join("nanocl.conf");
+
+    // Ensure the test file is removed
+    if config_path.exists() {
+      std::fs::remove_file(&config_path).unwrap();
+    }
+
+    // It should return a default config if the file does not exist
+    let config = read_config_file(&config_dir);
+    assert!(config.is_ok());
+    assert_eq!(config.unwrap(), DaemonConfigFile::default());
+
+    // It should return a config if the file exist
+    let content = r#"state_dir: /var/lib/nanocl"#;
+    std::fs::write(&config_path, content).unwrap();
+    let config = read_config_file(&config_dir);
+    assert!(config.is_ok());
+    assert_eq!(
+      config.unwrap(),
+      DaemonConfigFile {
+        state_dir: Some(String::from("/var/lib/nanocl")),
+        ..Default::default()
+      }
+    );
+    // It should return an error if the file is not a valid yaml
+    let content = r#"state_dir; /var/lib/nanocl\n"#;
+    std::fs::write(&config_path, content).unwrap();
+    let config = read_config_file(&config_dir);
+    assert!(config.is_err());
+
+    // It should return an error if the file is not readable
+    std::fs::set_permissions(
+      &config_path,
+      std::fs::Permissions::from_mode(0o000),
+    )
+    .unwrap();
+    let config = read_config_file(&config_dir);
+    assert!(config.is_err());
+
+    // It should return an error if the file is not a file
+    std::fs::remove_file(&config_path).unwrap();
+    std::fs::create_dir(&config_path).unwrap();
+    let config = read_config_file(&config_dir);
+    assert!(config.is_err());
+    std::fs::remove_dir_all(&config_path).unwrap();
+  }
+
+  /// Test init config
+  #[test]
+  fn test_init_config() {
+    let args = Cli {
+      hosts: Some(vec![String::from("unix:///run/nanocl/nanocl.sock")]),
+      state_dir: Some(String::from("/var/lib/nanocl")),
+      docker_host: Some(String::from("/run/docker.sock")),
+      config_dir: String::from("/etc/nanocl"),
+      init: false,
+    };
+
+    let config = init(&args).unwrap();
+    assert_eq!(config.hosts, args.hosts.unwrap());
+    assert_eq!(config.state_dir, args.state_dir.unwrap());
+    assert_eq!(config.docker_host, args.docker_host.unwrap());
+  }
+}

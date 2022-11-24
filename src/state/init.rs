@@ -254,3 +254,29 @@ pub async fn init(args: &Cli) -> Result<DaemonState, DaemonError> {
     docker_api,
   })
 }
+
+/// Init unit test
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  use crate::{utils::tests::*, cli::Cli};
+
+  /// Test init
+  #[ntex::test]
+  async fn basic_init() -> TestRet {
+    // Init cli args
+    let args = Cli {
+      init: false,
+      hosts: None,
+      docker_host: None,
+      state_dir: None,
+      config_dir: String::from("/etc/nanocl"),
+    };
+
+    // test function init
+    let _ = init(&args).await?;
+
+    Ok(())
+  }
+}

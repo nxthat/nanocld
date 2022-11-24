@@ -25,10 +25,4 @@ pub struct Cli {
   /// Config directory
   #[clap(long, default_value = "/etc/nanocl")]
   pub(crate) config_dir: String,
-  /// Github user used to make request with identity
-  #[clap(long)]
-  pub(crate) github_user: Option<String>,
-  /// Generated token for given github user
-  #[clap(long)]
-  pub(crate) github_token: Option<String>,
 }
