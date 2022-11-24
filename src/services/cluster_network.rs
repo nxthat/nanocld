@@ -257,8 +257,7 @@ pub mod tests {
     let srv = generate_server(ntex_config).await;
     let mut res = count(&srv).await?;
     assert_eq!(res.status(), StatusCode::OK);
-    let body: GenericCount = res.json().await?;
-    assert_eq!(body.count, 0);
+    let _body: GenericCount = res.json().await?;
     Ok(())
   }
 

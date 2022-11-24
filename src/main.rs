@@ -25,10 +25,10 @@ mod repositories;
 /// - Easy
 #[ntex::main]
 async fn main() -> std::io::Result<()> {
-  // Parsing command line arguments
+  // Parse command line arguments
   let args = cli::Cli::parse();
 
-  // Building env logger
+  // Build env logger
   if std::env::var("LOG_LEVEL").is_err() {
     std::env::set_var("LOG_LEVEL", "nanocld=info,warn,error,nanocld=debug");
   }
