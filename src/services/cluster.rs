@@ -614,7 +614,7 @@ pub mod tests {
       status
     );
 
-    // Join
+    // Join success
     let payload = ClusterJoinBody {
       cargo: cargo.name.to_owned(),
       network: network.name.to_owned(),
@@ -628,6 +628,19 @@ pub mod tests {
       cargo.name,
       cluster_name,
       StatusCode::OK,
+      status
+    );
+
+    // Join with conflict
+    let res = join_cargo(&srv, cluster_name, &payload).await?;
+    let status = res.status();
+    assert_eq!(
+      status,
+      StatusCode::CONFLICT,
+      "Expect join cargo with name {} to cluster with name {} to return with status {}, got {}",
+      cargo.name,
+      cluster_name,
+      StatusCode::CONFLICT,
       status
     );
 
