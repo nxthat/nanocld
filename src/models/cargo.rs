@@ -61,14 +61,12 @@ pub struct CargoPatchItem {
 /// this structure ensure read and write in database
 #[derive(
   Debug,
-  Clone,
   Serialize,
   Deserialize,
   Queryable,
   Identifiable,
   Insertable,
   Associations,
-  AsChangeset,
 )]
 #[diesel(primary_key(key))]
 #[diesel(table_name = cargoes)]

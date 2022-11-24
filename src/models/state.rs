@@ -4,7 +4,6 @@ use bollard::Docker;
 use super::Pool;
 use super::config::DaemonConfig;
 
-#[derive(Clone)]
 pub struct DaemonState {
   pub(crate) pool: Pool,
   pub(crate) docker_api: Docker,

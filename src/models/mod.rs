@@ -35,9 +35,6 @@ pub use cargo_env::*;
 mod proxy_template;
 pub use proxy_template::*;
 
-mod nginx_log;
-pub use nginx_log::*;
-
 mod cargo_image;
 pub use cargo_image::*;
 
