@@ -249,12 +249,13 @@ mod tests {
   /// Test to create read and destroy a variable when cluster exists
   #[ntex::test]
   async fn create_read_destroy_when_cluster_exists() -> TestRet {
+    // Create the cluster that will store the variable
     let cluster_name = "unit-test-var";
     let cluster_srv = generate_server(cluster::ntex_config).await;
     cluster::tests::create(&cluster_srv, cluster_name).await?;
 
+    // Create the variable
     let srv = generate_server(ntex_config).await;
-
     let new_var = ClusterVariablePartial {
       name: String::from("unit-test"),
       value: String::from("yoloh"),
@@ -266,6 +267,8 @@ mod tests {
       cluster_name,
       new_var
     );
+
+    // Read the variable
     let mut resp = get_by_name(&srv, &cluster_name, &new_var.name).await?;
     assert!(
       resp.status().is_success(),
@@ -279,6 +282,24 @@ mod tests {
       "Expect cluster variable value {} to be {}",
       body.value, new_var.value
     );
+
+    // List variables inside the cluster
+    let mut resp = list(&srv, &cluster_name).await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success when listing variables in cluster {}",
+      cluster_name,
+    );
+    let body: Vec<ClusterVariableItem> = resp.json().await?;
+    assert_eq!(
+      body.len(),
+      1,
+      "Expect cluster {} to have 1 variable, got {}",
+      cluster_name,
+      body.len()
+    );
+
+    // Delete the variable
     let resp = delete(&srv, &cluster_name, &new_var.name).await?;
     assert!(
       resp.status().is_success(),
@@ -287,6 +308,7 @@ mod tests {
       cluster_name
     );
 
+    // Delete the cluster
     cluster::tests::delete(&cluster_srv, cluster_name).await?;
     Ok(())
   }
