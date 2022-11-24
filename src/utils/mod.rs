@@ -79,14 +79,18 @@ pub mod tests {
   }
 
   pub async fn generate_server(config: Config) -> test::TestServer {
-    let docker_api = gen_docker_client();
+    // Build a test env logger
+    let _ = env_logger::builder().is_test(true).try_init();
+    // Build a test daemon config
     let daemon_config = DaemonConfig {
       state_dir: String::from("/var/lib/nanocl"),
       ..Default::default()
     };
-
+    // Create docker_api
+    let docker_api = gen_docker_client();
+    // Create postgres pool
     let pool = gen_postgre_pool().await;
-
+    // Create test server
     test::server(move || {
       App::new()
         .state(daemon_config.clone())
