@@ -11,7 +11,7 @@ use crate::models::{
 
 use crate::errors::HttpResponseError;
 
-/// List cargo
+/// Endpoint to list cargoes
 #[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/cargoes",
@@ -36,7 +36,7 @@ async fn list_cargo(
   Ok(web::HttpResponse::Ok().json(&items))
 }
 
-/// Count cargo
+/// Endpoint to count cargoes
 #[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/cargoes/count",
@@ -60,7 +60,7 @@ async fn count_cargo(
   Ok(web::HttpResponse::Ok().json(&res))
 }
 
-/// Create new cargo
+/// Endpoint to create a new cargo
 #[cfg_attr(feature = "dev", utoipa::path(
   post,
   request_body = CargoPartial,
@@ -409,6 +409,44 @@ pub mod tests {
 
     // Delete the dummy cargo
     let resp = delete(&srv, "test-bad-patch").await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while deleting cargo"
+    );
+    Ok(())
+  }
+
+  /// Test valid env variable in patch
+  #[ntex::test]
+  async fn patch_valid_env() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    // Create a dummy cargo
+    let cargo = CargoPartial {
+      name: "test-good-patch".to_owned(),
+      image_name: String::from("nexthat/nanocl-get-started"),
+      ..Default::default()
+    };
+    let resp = create(&srv, &cargo).await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while creating cargo"
+    );
+
+    // Patch with valid env
+    let cargo = CargoPatchPartial {
+      environnements: Some(vec![String::from("GOOD_ENV=2323")]),
+      ..Default::default()
+    };
+    let resp = patch(&srv, "test-good-patch", &cargo).await?;
+    let status = resp.status();
+    assert_eq!(
+      status,
+      StatusCode::ACCEPTED,
+      "Expect success while patching cargo with valid env"
+    );
+
+    // Delete the dummy cargo
+    let resp = delete(&srv, "test-good-patch").await?;
     assert!(
       resp.status().is_success(),
       "Expect success while deleting cargo"

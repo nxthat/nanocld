@@ -117,26 +117,6 @@ pub async fn find_by_key(
   }
 }
 
-pub async fn _find_by_image_name(
-  image_name: String,
-  pool: &web::types::State<Pool>,
-) -> Result<Vec<CargoItem>, HttpResponseError> {
-  use crate::schema::cargoes::dsl;
-
-  let mut conn = controllers::store::get_pool_conn(pool)?;
-  let res = web::block(move || {
-    dsl::cargoes
-      .filter(dsl::image_name.eq(image_name))
-      .load(&mut conn)
-  })
-  .await;
-
-  match res {
-    Err(err) => Err(db_blocking_error(err)),
-    Ok(items) => Ok(items),
-  }
-}
-
 pub async fn update_by_key(
   nsp: String,
   name: String,
