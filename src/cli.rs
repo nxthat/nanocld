@@ -26,3 +26,44 @@ pub struct Cli {
   #[clap(long, default_value = "/etc/nanocl")]
   pub(crate) config_dir: String,
 }
+
+/// Cli arguments unit test
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  /// Test cli arguments with default values
+  #[test]
+  fn test_cli_with_default() {
+    let args = Cli::parse_from(&["nanocl"]);
+    assert_eq!(args.hosts, None);
+    assert_eq!(args.init, false);
+    assert_eq!(args.docker_host, None);
+    assert_eq!(args.state_dir, None);
+    assert_eq!(args.config_dir, String::from("/etc/nanocl"));
+  }
+
+  /// Test cli arguments with custom values
+  #[test]
+  fn test_cli_with_custom() {
+    let args = Cli::parse_from(&[
+      "nanocl",
+      "-H",
+      "unix:///run/nanocl.sock",
+      "--docker-host",
+      "/run/docker.sock",
+      "--state-dir",
+      "/var/lib/nanocl",
+      "--config-dir",
+      "/etc/nanocl",
+    ]);
+    assert_eq!(
+      args.hosts,
+      Some(vec![String::from("unix:///run/nanocl.sock")])
+    );
+    assert_eq!(args.init, false);
+    assert_eq!(args.docker_host, Some(String::from("/run/docker.sock")));
+    assert_eq!(args.state_dir, Some(String::from("/var/lib/nanocl")));
+    assert_eq!(args.config_dir, String::from("/etc/nanocl"));
+  }
+}
