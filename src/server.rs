@@ -20,7 +20,9 @@ use crate::models::DaemonState;
 //     .collect()
 // }
 
-pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
+pub async fn start<'a>(
+  daemon_state: DaemonState,
+) -> std::io::Result<ntex::server::Server> {
   // load ssl keys
 
   // let key_file = &mut BufReader::new(
@@ -123,12 +125,40 @@ pub async fn start<'a>(daemon_state: DaemonState) -> std::io::Result<()> {
     }
     count += 1;
   }
-  #[cfg(debug_assertions)]
-  {
-    server = server.bind("0.0.0.0:8383")?;
-    log::info!("Listening on http://0.0.0.0:8383");
-  }
   // server = server.bind_rustls("0.0.0.0:8443", server_config)?;
   log::info!("Server ready");
-  server.run().await
+  Ok(server.run())
+}
+
+/// Server init test
+#[cfg(test)]
+mod tests {
+  use clap::Parser;
+
+  use super::*;
+
+  use crate::cli::Cli;
+  use crate::state;
+  use crate::utils::tests::*;
+
+  /// Test to create a server on unix socket
+  #[ntex::test]
+  async fn test_server_on_tmp_unix_socket() -> TestRet {
+    let args =
+      Cli::parse_from(&vec!["nanocl", "-H", "unix:///tmp/nanocl_test.sock"]);
+    let daemon_state = state::init(&args).await?;
+    let _result = start(daemon_state).await;
+    println!("{:#?}", _result);
+    Ok(())
+  }
+
+  /// Test to create a server on tcp socket
+  #[ntex::test]
+  async fn test_server_on_tcp_socket() -> TestRet {
+    let args = Cli::parse_from(&vec!["nanocl", "-H", "tcp://127.0.0.1:9999"]);
+    let daemon_state = state::init(&args).await?;
+    let _result = start(daemon_state).await;
+    println!("{:#?}", _result);
+    Ok(())
+  }
 }

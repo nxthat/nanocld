@@ -48,9 +48,9 @@ async fn main() -> std::io::Result<()> {
     return Ok(());
   }
 
-  server::start(daemon_state).await?;
-
   // start http server
+  let srv = server::start(daemon_state).await?;
+  srv.await?;
   log::info!("shutdown");
   Ok(())
 }
