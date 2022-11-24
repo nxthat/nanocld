@@ -5,21 +5,8 @@ use utoipa::ToSchema;
 
 use crate::schema::cargo_instances;
 
-use super::cargo::CargoItem;
-use super::cluster::ClusterItem;
-use super::cluster_network::ClusterNetworkItem;
-
 /// Structure definition of a cluster cargo item in database
-#[derive(
-  Debug,
-  Serialize,
-  Deserialize,
-  Queryable,
-  Insertable,
-  Identifiable,
-  Associations,
-  AsChangeset,
-)]
+#[derive(Queryable, Insertable)]
 #[diesel(primary_key(key))]
 #[diesel(table_name = cargo_instances)]
 #[diesel(belongs_to(CargoItem, foreign_key = cargo_key))]
@@ -34,19 +21,11 @@ pub struct CargoInstanceItem {
 }
 
 /// Structure used as body parameter to create a cluster cargo
-#[derive(Debug, Serialize, Deserialize)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoInstancePartial {
   pub(crate) cargo_key: String,
   pub(crate) cluster_key: String,
   pub(crate) network_key: String,
-}
-
-/// Structure used to parse path parameter of cargo instance
-#[derive(Debug, Serialize, Deserialize)]
-pub struct CargoInstancePath {
-  pub(crate) cluster_name: String,
-  pub(crate) cargo_name: String,
 }
 
 /// Data use to filter containers by cluster cargo or namespace.

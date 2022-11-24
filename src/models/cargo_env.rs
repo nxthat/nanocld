@@ -5,7 +5,6 @@ use utoipa::ToSchema;
 
 use crate::schema::cargo_environnements;
 
-#[derive(Debug, Clone)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoEnvPartial {
   pub(crate) cargo_key: String,
@@ -13,15 +12,7 @@ pub struct CargoEnvPartial {
   pub(crate) value: String,
 }
 
-#[derive(
-  Debug,
-  Serialize,
-  Deserialize,
-  Queryable,
-  Insertable,
-  Identifiable,
-  AsChangeset,
-)]
+#[derive(Debug, Serialize, Deserialize, Queryable, Insertable)]
 #[diesel(primary_key(key))]
 #[diesel(table_name = cargo_environnements)]
 #[cfg_attr(feature = "dev", derive(ToSchema))]

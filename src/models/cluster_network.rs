@@ -25,7 +25,6 @@ pub struct ClusterNetworkPartial {
   Identifiable,
   Insertable,
   Associations,
-  AsChangeset,
 )]
 #[diesel(primary_key(key))]
 #[diesel(table_name = cluster_networks)]

@@ -5,18 +5,7 @@ use utoipa::ToSchema;
 
 use crate::schema::cluster_variables;
 
-use super::cluster::ClusterItem;
-
-#[derive(
-  Debug,
-  Serialize,
-  Deserialize,
-  Queryable,
-  Identifiable,
-  Insertable,
-  Associations,
-  AsChangeset,
-)]
+#[derive(Serialize, Deserialize, Queryable, Insertable)]
 #[diesel(primary_key(key))]
 #[diesel(table_name = cluster_variables)]
 #[diesel(belongs_to(ClusterItem, foreign_key = cluster_key))]

@@ -21,14 +21,7 @@ pub struct ClusterPartial {
 /// Cluster used to encapsulate networks
 /// this structure ensure read and write in database
 #[derive(
-  Debug,
-  Clone,
-  Serialize,
-  Deserialize,
-  Identifiable,
-  Insertable,
-  AsChangeset,
-  Queryable,
+  Debug, Clone, Serialize, Deserialize, Identifiable, Insertable, Queryable,
 )]
 #[diesel(primary_key(key))]
 #[diesel(table_name = clusters)]
