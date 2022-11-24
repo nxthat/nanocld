@@ -81,37 +81,30 @@ async fn create_cargo(
   web::types::Json(payload): web::types::Json<CargoPartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = utils::key::resolve_nsp(&qs.namespace);
-  log::info!(
-    "creating cargo for namespace {} with payload {:?}",
-    &nsp,
-    payload,
-  );
   let environnements = payload.environnements.to_owned();
-  let item = repositories::cargo::create(nsp, payload, &pool).await?;
+  let mut envs: Vec<(String, String)> = Vec::new();
   if let Some(environnements) = environnements {
-    let mut envs: Vec<CargoEnvPartial> = Vec::new();
-    let cargo_envs = environnements
-      .into_iter()
-      .try_fold(&mut envs, |acc, env_item| {
-        let splited = env_item.split('=').collect::<Vec<&str>>();
-        if splited.len() != 2 {
-          return Err(HttpResponseError {
-            msg: format!("env item {} is not a valid format", env_item),
-            status: StatusCode::BAD_REQUEST,
-          });
-        }
-        let env = CargoEnvPartial {
-          cargo_key: item.key.to_owned(),
-          name: splited[0].into(),
-          value: splited[1].into(),
-        };
-        acc.push(env);
-        Ok::<&mut Vec<CargoEnvPartial>, HttpResponseError>(acc)
-      })?
-      .to_vec();
-    repositories::cargo_env::create_many(cargo_envs, &pool).await?;
+    for env in environnements {
+      let splited = env.split('=').collect::<Vec<&str>>();
+      if splited.len() != 2 {
+        return Err(HttpResponseError {
+          msg: format!("env item {} is not a valid format", env),
+          status: StatusCode::UNPROCESSABLE_ENTITY,
+        });
+      }
+      envs.push((splited[0].to_owned(), splited[1].to_owned()));
+    }
   }
-  log::info!("cargo succefully created");
+  let item = repositories::cargo::create(nsp, payload, &pool).await?;
+  let envs = envs
+    .into_iter()
+    .map(|(name, value)| CargoEnvPartial {
+      name,
+      value,
+      cargo_key: item.key.to_owned(),
+    })
+    .collect::<Vec<CargoEnvPartial>>();
+  repositories::cargo_env::create_many(envs, &pool).await?;
   Ok(web::HttpResponse::Created().json(&item))
 }
 
@@ -137,7 +130,6 @@ async fn inspect_cargo_by_name(
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
-  log::info!("asking cargo inspection {}", &name);
   let key = utils::key::gen_key_from_nsp(&qs.namespace, &name);
   let res = repositories::cargo::find_by_key(key.to_owned(), &pool).await?;
   let qs = CargoInstanceFilterQuery {
@@ -267,7 +259,6 @@ async fn delete_cargo_by_name(
   name: web::types::Path<String>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  log::info!("asking cargo deletion {}", &name);
   let key = utils::key::gen_key_from_nsp(&qs.namespace, &name.into_inner());
 
   repositories::cargo::find_by_key(key.clone(), &pool).await?;
@@ -358,6 +349,69 @@ pub mod tests {
     assert!(
       resp.status().is_success(),
       "Expect success while counting cargoes"
+    );
+    Ok(())
+  }
+
+  /// Perform create with invalid env variable against cargoes
+  #[ntex::test]
+  async fn create_invalid_env() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    let cargo = CargoPartial {
+      name: "test-bad-env".to_owned(),
+      image_name: String::from("nexthat/nanocl-get-started"),
+      environnements: Some(vec![String::from("BAD_ENV2323")]),
+      ..Default::default()
+    };
+    let resp = create(&srv, &cargo).await?;
+    assert!(
+      resp.status() == StatusCode::UNPROCESSABLE_ENTITY,
+      "Expect unprocessable entity while creating cargo with invalid env"
+    );
+    Ok(())
+  }
+
+  /// Test invalid env variable in patch
+  #[ntex::test]
+  async fn patch_invalid_env() -> TestRet {
+    let srv = generate_server(ntex_config).await;
+    // Create a dummy cargo
+    let cargo = CargoPartial {
+      name: "test-bad-patch".to_owned(),
+      image_name: String::from("nexthat/nanocl-get-started"),
+      ..Default::default()
+    };
+    let resp = create(&srv, &cargo).await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while creating cargo"
+    );
+
+    // Inspect the dummy cargo
+    let resp = inspect(&srv, "test-bad-patch").await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while inspecting cargo"
+    );
+
+    // Patch with invalid env
+    let cargo = CargoPatchPartial {
+      environnements: Some(vec![String::from("BAD_ENV2323")]),
+      ..Default::default()
+    };
+    let resp = patch(&srv, "test-bad-patch", &cargo).await?;
+    let status = resp.status();
+    assert_eq!(
+      status,
+      StatusCode::UNPROCESSABLE_ENTITY,
+      "Expect unprocessable entity while patching cargo with invalid env"
+    );
+
+    // Delete the dummy cargo
+    let resp = delete(&srv, "test-bad-patch").await?;
+    assert!(
+      resp.status().is_success(),
+      "Expect success while deleting cargo"
     );
     Ok(())
   }
