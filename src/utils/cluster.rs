@@ -265,16 +265,16 @@ pub async fn start(
       };
 
       let config_file = render_template(template.content, &template_data)?;
-      std::fs::write(&file_path, config_file).map_err(|err| {
-        HttpResponseError {
+      tokio::fs::write(&file_path, config_file)
+        .await
+        .map_err(|err| HttpResponseError {
           msg: format!(
             "Unable to write config file {} {}",
             &file_path.display(),
             err
           ),
           status: StatusCode::INTERNAL_SERVER_ERROR,
-        }
-      })?;
+        })?;
 
       let mut cargoes = stream::iter(&cargoes);
 
@@ -314,6 +314,7 @@ pub async fn start(
           dns_settings[0],
           &config.state_dir,
         )
+        .await
         .map_err(|err| err.to_http_error())?;
       }
 
