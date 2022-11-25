@@ -62,7 +62,7 @@ pub fn init(args: &Cli) -> Result<DaemonConfig, DaemonError> {
   };
 
   // Merge cli args and config file with priority to args
-  Ok(merge_config(&args, &file_config))
+  Ok(merge_config(args, &file_config))
 }
 
 /// Config unit test

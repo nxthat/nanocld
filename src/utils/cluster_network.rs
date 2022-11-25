@@ -29,7 +29,7 @@ pub async fn create_network(
   labels.insert(String::from("cluster_key"), cluster_key.to_owned());
   let net_id = gen_key(&cluster_key, &item.name);
   let network_existing =
-    repositories::cluster_network::find_by_key(net_id.clone(), &pool)
+    repositories::cluster_network::find_by_key(net_id.clone(), pool)
       .await
       .is_ok();
   if network_existing {
@@ -103,7 +103,7 @@ pub async fn create_network(
     item,
     id,
     default_gateway.to_owned(),
-    &pool,
+    pool,
   )
   .await?;
 

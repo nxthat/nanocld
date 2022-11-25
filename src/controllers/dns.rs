@@ -62,13 +62,12 @@ async fn write_dns_default_conf(path: &PathBuf) -> std::io::Result<()> {
   if path.exists() {
     return Ok(());
   }
-  let content = format!(
-    "bind-interfaces\n \
+  let content = "bind-interfaces\n \
 interface=nanoclinternal0\n \
 server=8.8.8.8\n \
 server=8.8.4.4\n \
 conf-dir=/etc/dnsmasq.d/,*.conf\n"
-  );
+    .to_owned();
   let mut f = fs::File::create(path).await?;
   f.write_all(content.as_bytes()).await?;
   f.sync_data().await?;
@@ -88,10 +87,12 @@ pub async fn add_dns_entry(
 ) -> Result<(), DnsError> {
   let file_path = Path::new(state_dir).join("dnsmasq/dnsmasq.d/dns_entry.conf");
   if !file_path.exists() {
-    fs::create_dir_all(file_path.parent().ok_or(std::io::Error::new(
-      std::io::ErrorKind::NotFound,
-      "Parent directory not found".to_string(),
-    ))?)
+    fs::create_dir_all(file_path.parent().ok_or_else(|| {
+      std::io::Error::new(
+        std::io::ErrorKind::NotFound,
+        "Parent directory not found".to_string(),
+      )
+    })?)
     .await?;
     fs::File::create(&file_path).await?;
   }
@@ -112,7 +113,7 @@ pub async fn add_dns_entry(
       .append(true)
       .open(file_path)
       .await?;
-    file.write(&new_dns_entry.as_bytes()).await?;
+    file.write_all(new_dns_entry.as_bytes()).await?;
   }
 
   Ok(())

@@ -130,7 +130,7 @@ async fn delete_cluster_by_name(
     .iter()
     .map(|name| async move {
       let template =
-        repositories::proxy_template::get_by_name(name.to_owned(), &pool_ptr)
+        repositories::proxy_template::get_by_name(name.to_owned(), pool_ptr)
           .await?;
       let template_dir = match template.mode {
         ProxyTemplateModes::Http => state_path.join("nginx/sites-enabled"),
@@ -398,7 +398,7 @@ pub mod tests {
     srv
       .get("/clusters")
       .query(query)
-      .expect(&format!("List cluster with query {:#?}", query))
+      .unwrap_or_else(|_| panic!("List cluster with query {:#?}", query))
       .send()
       .await
   }

@@ -143,14 +143,12 @@ async fn register_system_network(arg: &ArgState) -> Result<(), DaemonError> {
     name: arg.sys_network.to_owned(),
   };
 
-  let docker_network_id =
-    docker_network
-      .to_owned()
-      .id
-      .ok_or(DaemonError::HttpResponse(HttpResponseError {
-        msg: String::from("Unable to get network ID of system-nano-internal0"),
-        status: StatusCode::INTERNAL_SERVER_ERROR,
-      }))?;
+  let docker_network_id = docker_network.to_owned().id.ok_or_else(|| {
+    DaemonError::HttpResponse(HttpResponseError {
+      msg: String::from("Unable to get network ID of system-nano-internal0"),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    })
+  })?;
 
   let default_gateway = utils::docker::get_default_gateway(&docker_network)?;
 

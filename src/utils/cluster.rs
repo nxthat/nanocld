@@ -279,7 +279,7 @@ pub async fn start(
       let mut cargoes = stream::iter(&cargoes);
 
       while let Some((_, item)) = cargoes.next().await {
-        if None == item.dns_entry {
+        if item.dns_entry.is_none() {
           continue;
         }
         let item_string =

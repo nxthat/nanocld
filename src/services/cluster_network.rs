@@ -213,7 +213,7 @@ pub mod tests {
 
   /// Test utils function to count networks inside a namespace
   pub async fn count(srv: &TestServer) -> TestReqRet {
-    srv.get(format!("/networks/count")).send().await
+    srv.get("/networks/count").send().await
   }
 
   /// Test utils function to delete a cluster network by name
@@ -282,7 +282,7 @@ pub mod tests {
     let network_name = "test-net";
 
     // Create cluster
-    let res = cluster::tests::create(&srv_cluster, &cluster_name).await?;
+    let res = cluster::tests::create(&srv_cluster, cluster_name).await?;
     assert_eq!(
       res.status(),
       StatusCode::CREATED,

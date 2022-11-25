@@ -269,7 +269,7 @@ mod tests {
     );
 
     // Read the variable
-    let mut resp = get_by_name(&srv, &cluster_name, &new_var.name).await?;
+    let mut resp = get_by_name(&srv, cluster_name, &new_var.name).await?;
     assert!(
       resp.status().is_success(),
       "Expect success when inspecting a variable in cluster {} with name {}",
@@ -284,7 +284,7 @@ mod tests {
     );
 
     // List variables inside the cluster
-    let mut resp = list(&srv, &cluster_name).await?;
+    let mut resp = list(&srv, cluster_name).await?;
     assert!(
       resp.status().is_success(),
       "Expect success when listing variables in cluster {}",
@@ -300,7 +300,7 @@ mod tests {
     );
 
     // Delete the variable
-    let resp = delete(&srv, &cluster_name, &new_var.name).await?;
+    let resp = delete(&srv, cluster_name, &new_var.name).await?;
     assert!(
       resp.status().is_success(),
       "Expect success when deleting variable {} in cluster {}",
