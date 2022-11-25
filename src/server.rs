@@ -101,8 +101,8 @@ pub async fn start<'a>(
       let addr = host.replace("unix://", "");
       server = match server.bind_uds(&addr) {
         Err(err) => {
-          log::error!("Unable to bind server on {} got error {}", &addr, &err);
-          std::process::exit(1);
+          log::error!("Error binding to unix socket: {}", err);
+          return Err(err);
         }
         Ok(server) => server,
       };
@@ -111,8 +111,8 @@ pub async fn start<'a>(
       let addr = host.replace("tcp://", "");
       server = match server.bind(&addr) {
         Err(err) => {
-          log::error!("Unable to bind server on {} got error {}", &addr, &err);
-          std::process::exit(1);
+          log::error!("Error binding to tcp socket: {}", err);
+          return Err(err);
         }
         Ok(server) => server,
       };
@@ -147,8 +147,8 @@ mod tests {
     let args =
       Cli::parse_from(&vec!["nanocl", "-H", "unix:///tmp/nanocl_test.sock"]);
     let daemon_state = state::init(&args).await?;
-    let _result = start(daemon_state).await;
-    println!("{:#?}", _result);
+    let server = start(daemon_state).await;
+    assert!(server.is_ok(), "Expect server to be ready to run");
     Ok(())
   }
 
@@ -157,8 +157,33 @@ mod tests {
   async fn test_server_on_tcp_socket() -> TestRet {
     let args = Cli::parse_from(&vec!["nanocl", "-H", "tcp://127.0.0.1:9999"]);
     let daemon_state = state::init(&args).await?;
-    let _result = start(daemon_state).await;
-    println!("{:#?}", _result);
+    let server = start(daemon_state).await;
+    assert!(server.is_ok(), "Expect server to be ready to run");
+    Ok(())
+  }
+
+  ///  Test to create 2 server on same tcp socket
+  /// Expect the 2nd one to fail
+  #[ntex::test]
+  async fn test_server_on_same_tcp_socket() -> TestRet {
+    let args = Cli::parse_from(&vec!["nanocl", "-H", "tcp://127.0.0.1:9888"]);
+    let daemon_state = state::init(&args).await?;
+    let server = start(daemon_state).await;
+    assert!(server.is_ok(), "Expect server to be ready to run");
+    let daemon_state = state::init(&args).await?;
+    let server2 = start(daemon_state).await;
+    assert!(server2.is_err(), "Expect server to fail to run");
+    Ok(())
+  }
+
+  /// Test to create a server on unix socket where path is not valid
+  /// Expect the server to fail
+  #[ntex::test]
+  async fn test_server_on_invalid_unix_socket() -> TestRet {
+    let args = Cli::parse_from(&vec!["nanocl", "-H", "unix:///root/test.sock"]);
+    let daemon_state = state::init(&args).await?;
+    let server = start(daemon_state).await;
+    assert!(server.is_err(), "Expect server to fail to run");
     Ok(())
   }
 }
