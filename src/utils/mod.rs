@@ -60,7 +60,13 @@ pub mod tests {
 
   pub fn before() {
     // Build a test env logger
-    let _ = env_logger::builder().is_test(true).try_init();
+    if std::env::var("LOG_LEVEL").is_err() {
+      std::env::set_var("LOG_LEVEL", "nanocld=info,warn,error,nanocld=debug");
+    }
+    let _ = env_logger::Builder::new()
+      .parse_env("LOG_LEVEL")
+      .is_test(true)
+      .try_init();
   }
 
   pub fn gen_docker_client() -> bollard::Docker {
