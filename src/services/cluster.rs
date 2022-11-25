@@ -1,12 +1,16 @@
 //! File to handle cluster routes
+use std::path::Path;
+
+use futures::stream::FuturesUnordered;
 use ntex::web;
 use futures::stream;
 use futures::StreamExt;
 use ntex::http::StatusCode;
-
+use tokio::fs;
 use crate::models::DaemonConfig;
 use crate::models::ClusterTemplatePartial;
 use crate::models::DeleteClusterTemplatePath;
+use crate::models::ProxyTemplateModes;
 use crate::{utils, repositories};
 use crate::utils::cluster::JoinCargoOptions;
 use crate::models::{
@@ -85,6 +89,7 @@ async fn delete_cluster_by_name(
   docker_api: web::types::State<bollard::Docker>,
   name: web::types::Path<String>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
+  config: web::types::State<DaemonConfig>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
   let nsp = utils::key::resolve_nsp(&qs.namespace);
@@ -114,9 +119,35 @@ async fn delete_cluster_by_name(
       .await?;
   }
 
-  utils::cluster::delete_networks(item, &docker_api, &pool).await?;
+  utils::cluster::delete_networks(item.to_owned(), &docker_api, &pool).await?;
   log::debug!("deleting cluster cargo");
-  let res = repositories::cluster::delete_by_key(key, &pool).await?;
+
+  let key = &item.key;
+  let pool_ptr = &pool;
+  let state_path = Path::new(&config.state_dir);
+  item
+    .proxy_templates
+    .iter()
+    .map(|name| async move {
+      let template =
+        repositories::proxy_template::get_by_name(name.to_owned(), pool_ptr)
+          .await?;
+      let template_dir = match template.mode {
+        ProxyTemplateModes::Http => state_path.join("nginx/sites-enabled"),
+        ProxyTemplateModes::Stream => state_path.join("nginx/stream-enabled"),
+      };
+      let template_path = template_dir.join(format!("{}.{}.conf", &key, &name));
+      // We ensure file is deleted, if file dont exist we do nothing
+      let _ = fs::remove_file(template_path).await;
+      Ok::<(), HttpResponseError>(())
+    })
+    .collect::<FuturesUnordered<_>>()
+    .collect::<Vec<_>>()
+    .await
+    .into_iter()
+    .collect::<Result<Vec<()>, HttpResponseError>>()?;
+
+  let res = repositories::cluster::delete_by_key(item.key, &pool).await?;
   Ok(web::HttpResponse::Ok().json(&res))
 }
 
@@ -367,7 +398,7 @@ pub mod tests {
     srv
       .get("/clusters")
       .query(query)
-      .expect(&format!("List cluster with query {:#?}", query))
+      .unwrap_or_else(|_| panic!("List cluster with query {:#?}", query))
       .send()
       .await
   }
@@ -557,6 +588,7 @@ pub mod tests {
     let cargo = CargoPartial {
       name: "utcj".to_owned(),
       image_name: "nexthat/nanocl-get-started:latest".to_owned(),
+      dns_entry: Some(String::from("test.get-started.internal:127.0.0.1")),
       ..Default::default()
     };
     let res = cargo::tests::create(&cargo_srv, &cargo).await?;

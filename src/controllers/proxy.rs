@@ -34,6 +34,7 @@ pub async fn reload_config(docker_api: &Docker) -> Result<(), DockerError> {
 }
 
 /// Register our proxy controller as a cargo
+/// So it will be self managed by the system
 ///
 /// ## Arguments
 /// [arg](ArgState) Reference to argument state

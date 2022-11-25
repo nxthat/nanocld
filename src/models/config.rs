@@ -7,7 +7,7 @@ pub struct DaemonConfig {
   pub(crate) docker_host: String,
 }
 
-#[derive(Debug, PartialEq, Default, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Default, Serialize, Deserialize)]
 pub struct DaemonConfigFile {
   pub(crate) hosts: Option<Vec<String>>,
   pub(crate) docker_host: Option<String>,

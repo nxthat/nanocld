@@ -64,7 +64,7 @@ pub async fn start<'a>(
       // Default logger middleware
       .wrap(web::middleware::Logger::default())
       // Set Json body max size
-      .app_state(web::types::JsonConfig::default().limit(4096))
+      .state(web::types::JsonConfig::default().limit(4096))
       // configure system service
       .configure(services::system::ntex_config)
       // configure namespace service
