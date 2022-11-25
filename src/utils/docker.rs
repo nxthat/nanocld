@@ -181,7 +181,7 @@ mod tests {
 
   use crate::utils::tests::*;
 
-  /// Test to get default gateway of a docker system-nano-internal0 network
+  /// Test to get default gateway of system-nano-internal0 network
   #[ntex::test]
   async fn get_nanocl_internal_gateway() -> TestRet {
     let docker = gen_docker_client();
@@ -195,7 +195,7 @@ mod tests {
     Ok(())
   }
 
-  /// Test to get default gateway of a docker host network
+  /// Test to get default gateway of host network
   /// This should fail because host network doesn't have a gateway
   #[ntex::test]
   async fn get_host_network_gateway() -> TestRet {

@@ -18,10 +18,9 @@ use crate::errors::{HttpResponseError, IntoHttpResponseError};
 
 use super::cargo::CreateCargoContainerOpts;
 
-#[derive(Debug)]
 pub struct JoinCargoOptions {
-  pub(crate) cluster: ClusterItem,
   pub(crate) cargo: CargoItem,
+  pub(crate) cluster: ClusterItem,
   pub(crate) network: ClusterNetworkItem,
   pub(crate) is_creating_relation: bool,
 }

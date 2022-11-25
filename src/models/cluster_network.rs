@@ -18,13 +18,7 @@ pub struct ClusterNetworkPartial {
 /// Cluster network item
 /// this structure ensure read and write in database
 #[derive(
-  Debug,
-  Serialize,
-  Deserialize,
-  Queryable,
-  Identifiable,
-  Insertable,
-  Associations,
+  Serialize, Deserialize, Queryable, Identifiable, Insertable, Associations,
 )]
 #[diesel(primary_key(key))]
 #[diesel(table_name = cluster_networks)]
