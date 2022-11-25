@@ -183,6 +183,26 @@ mod tests {
     name: String,
     ip_address: String,
   }
+  /// Test write default dns config file
+  #[test]
+  fn test_write_dns_default_conf() {
+    let config_file_path = Path::new("/tmp").join("dnsmasq.conf");
+    if config_file_path.exists() {
+      fs::remove_file(&config_file_path).unwrap();
+    }
+    write_dns_default_conf(&config_file_path).unwrap();
+    assert!(config_file_path.exists());
+    let content = fs::read_to_string(&config_file_path).unwrap();
+    assert_eq!(
+      content,
+      "bind-interfaces\n \
+      interface=nanoclinternal0\n \
+      server=8.8.8.8\n \
+      server=8.8.4.4\n \
+      conf-dir=/etc/dnsmasq.d/,*.conf\n"
+    );
+    fs::remove_file(config_file_path).unwrap();
+  }
 
   #[ntex::test]
   async fn manipulate_dns_entry() -> TestRet {

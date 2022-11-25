@@ -5,47 +5,9 @@ use bollard::container::StartContainerOptions;
 use bollard::errors::Error as DockerError;
 use bollard::models::Network;
 use bollard::network::InspectNetworkOptions;
-use ntex::{web, rt};
-use ntex::util::Bytes;
-use ntex::channel::mpsc::{self, Receiver};
 use ntex::http::StatusCode;
-use futures::StreamExt;
 
 use crate::errors::HttpResponseError;
-
-#[allow(dead_code)]
-pub async fn build_image(
-  image_name: String,
-  docker_api: web::types::State<bollard::Docker>,
-) -> Result<Receiver<Result<Bytes, web::error::Error>>, HttpResponseError> {
-  let (tx, rx_body) = mpsc::channel();
-  rt::spawn(async move {
-    let mut stream = docker_api.create_image(
-      Some(bollard::image::CreateImageOptions {
-        from_image: image_name,
-        ..Default::default()
-      }),
-      None,
-      None,
-    );
-    while let Some(result) = stream.next().await {
-      match result {
-        Err(err) => {
-          let err = ntex::web::Error::new(web::error::InternalError::default(
-            format!("{:?}", err),
-            StatusCode::INTERNAL_SERVER_ERROR,
-          ));
-          let _ = tx.send(Err::<_, web::error::Error>(err));
-        }
-        Ok(result) => {
-          let data = serde_json::to_string(&result).unwrap();
-          let _ = tx.send(Ok::<_, web::error::Error>(Bytes::from(data)));
-        }
-      }
-    }
-  });
-  Ok(rx_body)
-}
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ComponentState {
@@ -207,4 +169,112 @@ pub fn get_default_gateway(
     .to_owned();
 
   Ok(default_gateway)
+}
+
+/// Docker utils unit tests
+#[cfg(test)]
+mod tests {
+
+  use super::*;
+
+  use bollard::{network::InspectNetworkOptions, container::StopContainerOptions};
+
+  use crate::utils::tests::*;
+
+  /// Test to get default gateway of a docker system-nano-internal0 network
+  #[ntex::test]
+  async fn get_nanocl_internal_gateway() -> TestRet {
+    let docker = gen_docker_client();
+    let network = docker
+      .inspect_network(
+        "system-nano-internal0",
+        None::<InspectNetworkOptions<String>>,
+      )
+      .await?;
+    let _gateway = get_default_gateway(&network);
+    Ok(())
+  }
+
+  /// Test to get default gateway of a docker host network
+  /// This should fail because host network doesn't have a gateway
+  #[ntex::test]
+  async fn get_host_network_gateway() -> TestRet {
+    let docker = gen_docker_client();
+    let network = docker
+      .inspect_network("host", None::<InspectNetworkOptions<String>>)
+      .await?;
+    let gateway = get_default_gateway(&network);
+    assert!(gateway.is_err(), "Expect get_default_gateway to fail");
+    Ok(())
+  }
+
+  /// Test to generate labels with a namespace gg
+  #[ntex::test]
+  async fn gen_labels_with_namespace_test() -> TestRet {
+    let labels = gen_labels_with_namespace("gg");
+    assert_eq!(labels.get("namespace"), Some(&"gg"));
+    Ok(())
+  }
+
+  /// Test to get network state of system-nano-internal0 network
+  /// This should return NetworkState::Ready
+  #[ntex::test]
+  async fn get_network_state_test() -> TestRet {
+    let docker = gen_docker_client();
+    let state = get_network_state("system-nano-internal0", &docker).await?;
+    assert_eq!(state, NetworkState::Ready);
+    Ok(())
+  }
+
+  /// Test to get network state of a non existing network
+  /// This should return NetworkState::NotFound
+  #[ntex::test]
+  async fn get_network_state_not_found_test() -> TestRet {
+    let docker = gen_docker_client();
+    let state = get_network_state("non-existing-network", &docker).await?;
+    assert_eq!(state, NetworkState::NotFound);
+    Ok(())
+  }
+
+  /// Test to get component state of the store container
+  /// This should return ComponentState::Running
+  #[ntex::test]
+  async fn get_component_state_test() -> TestRet {
+    let docker = gen_docker_client();
+    let state = get_component_state("store", &docker).await;
+    assert_eq!(state, ComponentState::Running);
+    Ok(())
+  }
+
+  /// Test to get component state of a non existing container
+  /// This should return ComponentState::Uninstalled
+  #[ntex::test]
+  async fn get_component_state_not_found_test() -> TestRet {
+    let docker = gen_docker_client();
+    let state = get_component_state("non-existing-container", &docker).await;
+    assert_eq!(state, ComponentState::Uninstalled);
+    Ok(())
+  }
+
+  /// Test to get component state of a stopped container
+  /// This should return ComponentState::Stopped
+  #[ntex::test]
+  async fn get_component_state_stopped_test() -> TestRet {
+    let docker = gen_docker_client();
+
+    // Stop system-nano-dns container
+    docker
+      .stop_container("system-nano-dns", None::<StopContainerOptions>)
+      .await?;
+
+    // Get the state of system-nano-dns container
+    let state = get_component_state("system-nano-dns", &docker).await;
+    assert_eq!(state, ComponentState::Stopped);
+
+    // Start system-nano-dns container
+    docker
+      .start_container("system-nano-dns", None::<StartContainerOptions<String>>)
+      .await?;
+    Ok(())
+  }
 }
