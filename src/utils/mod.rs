@@ -58,6 +58,11 @@ pub mod tests {
 
   type Config = fn(&mut ServiceConfig);
 
+  pub fn before() {
+    // Build a test env logger
+    let _ = env_logger::builder().is_test(true).try_init();
+  }
+
   pub fn gen_docker_client() -> bollard::Docker {
     let socket_path = env::var("DOCKER_SOCKET_PATH")
       .unwrap_or_else(|_| String::from("/run/docker.sock"));
@@ -79,8 +84,7 @@ pub mod tests {
   }
 
   pub async fn generate_server(config: Config) -> test::TestServer {
-    // Build a test env logger
-    let _ = env_logger::builder().is_test(true).try_init();
+    before();
     // Build a test daemon config
     let daemon_config = DaemonConfig {
       state_dir: String::from("/var/lib/nanocl"),

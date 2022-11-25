@@ -118,10 +118,14 @@ pub async fn start<'a>(
       };
       log::info!("Listening on {}", &host);
     } else {
-      log::warn!(
-        "Warning {} is not valid use tcp:// or unix:// as protocol",
+      log::error!(
+        "Error {} is not valid use tcp:// or unix:// as protocol",
         host
       );
+      return Err(std::io::Error::new(
+        std::io::ErrorKind::Other,
+        "Invalid protocol",
+      ));
     }
     count += 1;
   }
@@ -144,6 +148,7 @@ mod tests {
   /// Test to create a server on unix socket
   #[ntex::test]
   async fn test_server_on_tmp_unix_socket() -> TestRet {
+    before();
     let args =
       Cli::parse_from(&vec!["nanocl", "-H", "unix:///tmp/nanocl_test.sock"]);
     let daemon_state = state::init(&args).await?;
@@ -155,6 +160,7 @@ mod tests {
   /// Test to create a server on tcp socket
   #[ntex::test]
   async fn test_server_on_tcp_socket() -> TestRet {
+    before();
     let args = Cli::parse_from(&vec!["nanocl", "-H", "tcp://127.0.0.1:9999"]);
     let daemon_state = state::init(&args).await?;
     let server = start(daemon_state).await;
@@ -166,6 +172,7 @@ mod tests {
   /// Expect the 2nd one to fail
   #[ntex::test]
   async fn test_server_on_same_tcp_socket() -> TestRet {
+    before();
     let args = Cli::parse_from(&vec!["nanocl", "-H", "tcp://127.0.0.1:9888"]);
     let daemon_state = state::init(&args).await?;
     let server = start(daemon_state).await;
@@ -180,7 +187,20 @@ mod tests {
   /// Expect the server to fail
   #[ntex::test]
   async fn test_server_on_invalid_unix_socket() -> TestRet {
+    before();
     let args = Cli::parse_from(&vec!["nanocl", "-H", "unix:///root/test.sock"]);
+    let daemon_state = state::init(&args).await?;
+    let server = start(daemon_state).await;
+    assert!(server.is_err(), "Expect server to fail to run");
+    Ok(())
+  }
+
+  /// Test with invalid host uri
+  /// Expect the server to fail
+  #[ntex::test]
+  async fn test_server_on_invalid_host() -> TestRet {
+    before();
+    let args = Cli::parse_from(&vec!["nanocl", "-H", "not_valid"]);
     let daemon_state = state::init(&args).await?;
     let server = start(daemon_state).await;
     assert!(server.is_err(), "Expect server to fail to run");
