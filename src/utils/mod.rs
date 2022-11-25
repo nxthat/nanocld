@@ -43,8 +43,6 @@ where
 
 #[cfg(test)]
 pub mod tests {
-  extern crate env_logger;
-
   use ntex::web::*;
   use ntex::http::client::ClientResponse;
   use ntex::http::client::error::SendRequestError;
