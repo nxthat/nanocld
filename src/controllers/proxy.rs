@@ -40,7 +40,7 @@ pub async fn reload_config(docker_api: &Docker) -> Result<(), DockerError> {
 /// [arg](ArgState) Reference to argument state
 pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&arg.sys_namespace, "proxy");
-  if repositories::cargo::find_by_key(key, &arg.s_pool)
+  if repositories::cargo::find_by_key(key, &arg.pool)
     .await
     .is_ok()
   {
@@ -80,7 +80,7 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
   repositories::cargo::create(
     arg.sys_namespace.to_owned(),
     proxy_cargo,
-    &arg.s_pool,
+    &arg.pool,
   )
   .await?;
 

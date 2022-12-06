@@ -17,7 +17,7 @@ use crate::models::{
 ///
 /// - [nsp](String) namespace of the cluster
 /// - [item](ClusterPartial) - Cluster to create without id and other generated data
-/// - [pool](web::types::State<Pool>) - Posgresql database pool
+/// - [pool](Pool) - Posgresql database pool
 ///
 /// # Examples
 ///
@@ -33,7 +33,7 @@ use crate::models::{
 pub async fn create_for_namespace(
   nsp: String,
   item: ClusterPartial,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
   let mut conn = controllers::store::get_pool_conn(pool)?;
@@ -62,7 +62,7 @@ pub async fn create_for_namespace(
 
 pub async fn count(
   namespace: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
@@ -98,7 +98,7 @@ pub async fn count(
 /// ```
 pub async fn find_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
@@ -131,7 +131,7 @@ pub async fn find_by_key(
 /// ```
 pub async fn find_by_namespace(
   nsp: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<ClusterItem>, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
@@ -163,7 +163,7 @@ pub async fn find_by_namespace(
 /// ```
 pub async fn delete_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
@@ -184,7 +184,7 @@ pub async fn delete_by_key(
 pub async fn patch_proxy_templates(
   key: String,
   proxy_templates: Vec<String>,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ClusterItem, HttpResponseError> {
   use crate::schema::clusters::dsl;
 
@@ -203,7 +203,7 @@ pub async fn patch_proxy_templates(
 
 pub async fn list_cargo(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<CargoItem>, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
   use crate::schema::cargoes;
@@ -227,7 +227,7 @@ pub async fn list_cargo(
 
 pub async fn list_variable(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<ClusterVariableItem>, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 

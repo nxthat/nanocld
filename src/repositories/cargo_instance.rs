@@ -9,7 +9,7 @@ use crate::repositories::errors::db_blocking_error;
 
 pub async fn create(
   item: CargoInstancePartial,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<CargoInstanceItem, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
 
@@ -35,7 +35,7 @@ pub async fn create(
 
 pub async fn get_by_cluster_key(
   cluster_key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<CargoInstanceItem>, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
 
@@ -54,7 +54,7 @@ pub async fn get_by_cluster_key(
 
 pub async fn delete_by_cluster_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
 
@@ -72,7 +72,7 @@ pub async fn delete_by_cluster_key(
 
 pub async fn _delete_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
 
@@ -90,7 +90,7 @@ pub async fn _delete_by_key(
 
 pub async fn delete_by_cargo_key(
   cargo_key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
 
@@ -108,7 +108,7 @@ pub async fn delete_by_cargo_key(
 
 pub async fn find_by_cargo_key(
   cargo_key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<CargoInstanceItem>, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
 
@@ -128,7 +128,7 @@ pub async fn find_by_cargo_key(
 
 pub async fn get_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<CargoInstanceItem, HttpResponseError> {
   use crate::schema::cargo_instances::dsl;
 

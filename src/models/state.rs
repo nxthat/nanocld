@@ -1,4 +1,3 @@
-use ntex::web;
 use bollard::Docker;
 
 use super::Pool;
@@ -12,7 +11,7 @@ pub struct DaemonState {
 
 pub struct ArgState {
   pub(crate) config: DaemonConfig,
-  pub(crate) s_pool: web::types::State<Pool>,
+  pub(crate) pool: Pool,
   pub(crate) docker_api: Docker,
   pub(crate) default_namespace: String,
   pub(crate) sys_cluster: String,

@@ -9,7 +9,7 @@ use super::errors::db_blocking_error;
 
 pub async fn create(
   item: CargoEnvPartial,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<CargoEnvItem, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
@@ -37,7 +37,7 @@ pub async fn create(
 pub async fn exist_in_cargo(
   name: String,
   cargo_key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<bool, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
@@ -61,7 +61,7 @@ pub async fn patch_for_cargo(
   name: String,
   cargo_key: String,
   value: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<CargoEnvItem, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
@@ -85,7 +85,7 @@ pub async fn patch_for_cargo(
 
 pub async fn create_many(
   items: Vec<CargoEnvPartial>,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<CargoEnvItem>, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
@@ -116,7 +116,7 @@ pub async fn create_many(
 
 pub async fn delete_by_cargo_key(
   cargo_key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 
@@ -136,7 +136,7 @@ pub async fn delete_by_cargo_key(
 
 pub async fn list_by_cargo_key(
   cargo_key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<CargoEnvItem>, HttpResponseError> {
   use crate::schema::cargo_environnements::dsl;
 

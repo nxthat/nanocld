@@ -12,7 +12,7 @@ use super::errors::db_blocking_error;
 
 pub async fn find_by_namespace(
   nsp: NamespaceItem,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<CargoItem>, HttpResponseError> {
   let mut conn = controllers::store::get_pool_conn(pool)?;
 
@@ -27,7 +27,7 @@ pub async fn find_by_namespace(
 pub async fn create(
   nsp: String,
   item: CargoPartial,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
@@ -61,7 +61,7 @@ pub async fn create(
 
 pub async fn count(
   namespace: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
@@ -82,7 +82,7 @@ pub async fn count(
 
 pub async fn delete_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
@@ -101,7 +101,7 @@ pub async fn delete_by_key(
 
 pub async fn find_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 
@@ -121,7 +121,7 @@ pub async fn update_by_key(
   nsp: String,
   name: String,
   item: CargoPatchPartial,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<CargoItem, HttpResponseError> {
   use crate::schema::cargoes::dsl;
 

@@ -13,7 +13,7 @@ use super::errors::db_blocking_error;
 pub async fn create(
   cluster_key: String,
   item: ClusterVariablePartial,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ClusterVariableItem, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
@@ -39,7 +39,7 @@ pub async fn create(
 
 pub async fn list_by_cluster(
   cluster_key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<ClusterVariableItem>, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
@@ -58,7 +58,7 @@ pub async fn list_by_cluster(
 
 pub async fn delete_by_cluster_key(
   cluster_key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
@@ -78,7 +78,7 @@ pub async fn delete_by_cluster_key(
 
 pub async fn delete_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 
@@ -96,7 +96,7 @@ pub async fn delete_by_key(
 
 pub async fn find_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ClusterVariableItem, HttpResponseError> {
   use crate::schema::cluster_variables::dsl;
 

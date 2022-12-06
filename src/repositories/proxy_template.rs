@@ -8,7 +8,7 @@ use crate::errors::HttpResponseError;
 use crate::repositories::errors::db_blocking_error;
 
 pub async fn list(
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<ProxyTemplateItem>, HttpResponseError> {
   use crate::schema::proxy_templates::dsl;
 
@@ -23,7 +23,7 @@ pub async fn list(
 
 pub async fn create(
   item: ProxyTemplateItem,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ProxyTemplateItem, HttpResponseError> {
   use crate::schema::proxy_templates::dsl;
 
@@ -43,7 +43,7 @@ pub async fn create(
 
 pub async fn get_by_name(
   name: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ProxyTemplateItem, HttpResponseError> {
   use crate::schema::proxy_templates::dsl;
 
@@ -63,7 +63,7 @@ pub async fn get_by_name(
 
 pub async fn delete_by_name(
   name: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::proxy_templates::dsl;
 

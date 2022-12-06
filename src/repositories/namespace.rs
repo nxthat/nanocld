@@ -29,7 +29,7 @@ use super::errors::db_blocking_error;
 /// ```
 pub async fn create(
   item: NamespacePartial,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
@@ -63,7 +63,7 @@ pub async fn create(
 /// repositories::namespace::list(&pool).await;
 /// ```
 pub async fn list(
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<NamespaceItem>, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
@@ -92,7 +92,7 @@ pub async fn list(
 /// ```
 pub async fn inspect_by_name(
   name: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
@@ -126,7 +126,7 @@ pub async fn inspect_by_name(
 /// ```
 pub async fn delete_by_name(
   name: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 
@@ -145,7 +145,7 @@ pub async fn delete_by_name(
 
 pub async fn find_by_name(
   name: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<NamespaceItem, HttpResponseError> {
   use crate::schema::namespaces::dsl;
 

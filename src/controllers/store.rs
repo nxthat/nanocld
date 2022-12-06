@@ -95,14 +95,12 @@ pub async fn create_pool(host: String) -> Pool {
 ///
 /// ## Arguments
 /// [pool](web::types::State<Pool>) a pool wrapped in ntex State
-pub fn get_pool_conn(
-  pool: &web::types::State<Pool>,
-) -> Result<DBConn, HttpResponseError> {
+pub fn get_pool_conn(pool: &Pool) -> Result<DBConn, HttpResponseError> {
   let conn = match pool.get() {
     Ok(conn) => conn,
-    Err(_) => {
+    Err(err) => {
       return Err(HttpResponseError {
-        msg: String::from("unable to connect to nanocl-db"),
+        msg: format!("Cannot get connection from pool got error: {}", &err),
         status: StatusCode::INTERNAL_SERVER_ERROR,
       });
     }
@@ -176,7 +174,7 @@ pub async fn boot(
 /// [arg](ArgState) Reference to argument state
 pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&arg.sys_namespace, "store");
-  if repositories::cargo::find_by_key(key, &arg.s_pool)
+  if repositories::cargo::find_by_key(key, &arg.pool)
     .await
     .is_ok()
   {
@@ -200,7 +198,7 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
   let cargo = repositories::cargo::create(
     arg.sys_namespace.to_owned(),
     store_cargo,
-    &arg.s_pool,
+    &arg.pool,
   )
   .await?;
 
@@ -212,7 +210,7 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
     network_key,
   };
 
-  repositories::cargo_instance::create(cargo_instance, &arg.s_pool).await?;
+  repositories::cargo_instance::create(cargo_instance, &arg.pool).await?;
 
   Ok(())
 }

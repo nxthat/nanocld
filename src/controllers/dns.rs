@@ -138,7 +138,7 @@ pub async fn restart(docker_api: &Docker) -> Result<(), DnsError> {
 pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&arg.sys_namespace, "dns");
 
-  if repositories::cargo::find_by_key(key, &arg.s_pool)
+  if repositories::cargo::find_by_key(key, &arg.pool)
     .await
     .is_ok()
   {
@@ -175,7 +175,7 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
   repositories::cargo::create(
     arg.sys_namespace.to_owned(),
     dns_cargo,
-    &arg.s_pool,
+    &arg.pool,
   )
   .await?;
 

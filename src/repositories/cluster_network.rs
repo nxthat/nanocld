@@ -12,7 +12,7 @@ use super::errors::db_blocking_error;
 
 pub async fn list_for_cluster(
   cluster: ClusterItem,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<Vec<ClusterNetworkItem>, HttpResponseError> {
   let mut conn = controllers::store::get_pool_conn(pool)?;
 
@@ -28,7 +28,7 @@ pub async fn list_for_cluster(
 
 pub async fn count_by_namespace(
   namespace: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericCount, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
 
@@ -53,7 +53,7 @@ pub async fn create_for_cluster(
   item: ClusterNetworkPartial,
   docker_network_id: String,
   default_gateway: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ClusterNetworkItem, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
 
@@ -84,7 +84,7 @@ pub async fn create_for_cluster(
 
 pub async fn delete_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<GenericDelete, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
   let mut conn = controllers::store::get_pool_conn(pool)?;
@@ -104,7 +104,7 @@ pub async fn delete_by_key(
 
 pub async fn find_by_key(
   key: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<ClusterNetworkItem, HttpResponseError> {
   use crate::schema::cluster_networks::dsl;
   let mut conn = controllers::store::get_pool_conn(pool)?;

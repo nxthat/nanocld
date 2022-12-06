@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use std::path::Path;
 use std::{time, thread};
 
-use ntex::web;
 use ntex::http::StatusCode;
 
 use bollard::Docker;
@@ -57,27 +56,25 @@ async fn ensure_system_network(docker_api: &Docker) -> Result<(), DaemonError> {
 async fn ensure_store(
   config: &DaemonConfig,
   docker_api: &Docker,
-) -> Result<(Pool, web::types::State<Pool>), DaemonError> {
+) -> Result<Pool, DaemonError> {
   log::info!("Booting store");
   controllers::store::boot(config, docker_api).await?;
   // We wait 500ms to ensure store is booted
   // It's a tricky hack to avoid some error printed by postgresql connector for now.
-  let sleep_time = time::Duration::from_millis(500);
-  thread::sleep(sleep_time);
+  thread::sleep(time::Duration::from_millis(500));
   log::info!("Store booted");
   let postgres_ip = controllers::store::get_store_ip_addr(docker_api).await?;
   log::info!("Connecting to store");
   // Connect to postgresql
   let pool = controllers::store::create_pool(postgres_ip.to_owned()).await;
-  let s_pool = web::types::State::new(pool.to_owned());
-  let mut conn = controllers::store::get_pool_conn(&s_pool)?;
+  let mut conn = controllers::store::get_pool_conn(&pool)?;
   log::info!("Store connected");
   log::info!("Running migrations");
   // This will run the necessary migrations.
   // See the documentation for `MigrationHarness` for
   // all available methods.
   conn.run_pending_migrations(MIGRATIONS)?;
-  Ok((pool, s_pool))
+  Ok(pool)
 }
 
 /// Ensure existance of specific namespace in our store.
@@ -87,7 +84,7 @@ async fn ensure_store(
 /// User can registed they own namespace to ensure better encaptusation of projects.
 async fn register_namespace(
   name: &str,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<(), DaemonError> {
   match repositories::namespace::inspect_by_name(name.to_owned(), pool).await {
     Err(_err) => {
@@ -105,7 +102,7 @@ async fn register_namespace(
 /// This cluster is the default cluster where our controllers will be created.
 async fn register_system_cluster(
   sys_nsp: String,
-  pool: &web::types::State<Pool>,
+  pool: &Pool,
 ) -> Result<(), DaemonError> {
   if repositories::cluster::find_by_key(String::from("system-nano"), pool)
     .await
@@ -125,7 +122,7 @@ async fn register_system_cluster(
 async fn register_system_network(arg: &ArgState) -> Result<(), DaemonError> {
   let cluster_key = utils::key::gen_key(&arg.sys_namespace, &arg.sys_cluster);
   let key = utils::key::gen_key(&cluster_key, &arg.sys_network);
-  if repositories::cluster_network::find_by_key(key, &arg.s_pool)
+  if repositories::cluster_network::find_by_key(key, &arg.pool)
     .await
     .is_ok()
   {
@@ -158,7 +155,7 @@ async fn register_system_network(arg: &ArgState) -> Result<(), DaemonError> {
     network,
     docker_network_id,
     default_gateway.to_owned(),
-    &arg.s_pool,
+    &arg.pool,
   )
   .await?;
 
@@ -169,7 +166,7 @@ async fn register_system_network(arg: &ArgState) -> Result<(), DaemonError> {
 /// We are running inside us it's that crazy ?
 async fn register_daemon(arg: &ArgState) -> Result<(), DaemonError> {
   let key = utils::key::gen_key(&arg.sys_namespace, "daemon");
-  if repositories::cargo::find_by_key(key, &arg.s_pool)
+  if repositories::cargo::find_by_key(key, &arg.pool)
     .await
     .is_ok()
   {
@@ -194,7 +191,7 @@ async fn register_daemon(arg: &ArgState) -> Result<(), DaemonError> {
   let cargo = repositories::cargo::create(
     arg.sys_namespace.to_owned(),
     store_cargo,
-    &arg.s_pool,
+    &arg.pool,
   )
   .await?;
 
@@ -206,7 +203,7 @@ async fn register_daemon(arg: &ArgState) -> Result<(), DaemonError> {
     network_key,
   };
 
-  repositories::cargo_instance::create(cargo_instance, &arg.s_pool).await?;
+  repositories::cargo_instance::create(cargo_instance, &arg.pool).await?;
 
   Ok(())
 }
@@ -214,9 +211,9 @@ async fn register_daemon(arg: &ArgState) -> Result<(), DaemonError> {
 /// Register all dependencies needed
 /// Default Namespace, Cluster, Network, and Controllers will be registered in our store
 async fn register_dependencies(arg: &ArgState) -> Result<(), DaemonError> {
-  register_namespace(&arg.default_namespace, &arg.s_pool).await?;
-  register_namespace(&arg.sys_namespace, &arg.s_pool).await?;
-  register_system_cluster(arg.sys_namespace.to_owned(), &arg.s_pool).await?;
+  register_namespace(&arg.default_namespace, &arg.pool).await?;
+  register_namespace(&arg.sys_namespace, &arg.pool).await?;
+  register_system_cluster(arg.sys_namespace.to_owned(), &arg.pool).await?;
   register_system_network(arg).await?;
   controllers::store::register(arg).await?;
   controllers::proxy::register(arg).await?;
@@ -235,10 +232,10 @@ pub async fn init(args: &Cli) -> Result<DaemonState, DaemonError> {
     bollard::API_DEFAULT_VERSION,
   )?;
   ensure_system_network(&docker_api).await?;
-  let (pool, s_pool) = ensure_store(&config, &docker_api).await?;
+  let pool = ensure_store(&config, &docker_api).await?;
   let arg_state = ArgState {
+    pool: pool.to_owned(),
     config: config.to_owned(),
-    s_pool,
     docker_api: docker_api.to_owned(),
     default_namespace: String::from("global"),
     sys_cluster: String::from("nano"),
