@@ -1,4 +1,4 @@
-use bollard::service::{RestartPolicy, RestartPolicyNameEnum};
+use bollard::service::{RestartPolicy, RestartPolicyNameEnum, ContainerConfig};
 use ntex::web;
 use ntex::http::StatusCode;
 use std::collections::HashMap;
@@ -31,23 +31,22 @@ pub async fn create_containers<'a>(
     &opts.cargo,
     &opts.labels,
   );
-  if docker_api
-    .inspect_image(&opts.cargo.image_name)
-    .await
-    .is_err()
-  {
+  let config = serde_json::from_value::<bollard::container::Config<&str>>(
+    opts.cargo.config,
+  )
+  .unwrap();
+  let image = config.image.unwrap_or_default();
+  if docker_api.inspect_image(&image).await.is_err() {
     return Err(HttpResponseError {
       msg: format!(
         "Unable to create cargo container image {} is not available.",
-        &opts.cargo.image_name,
+        &image,
       ),
       status: StatusCode::BAD_REQUEST,
     });
   }
   let mut count = 0;
   let mut container_ids: Vec<String> = Vec::new();
-  let image_name = opts.cargo.image_name.clone();
-  let image = Some(image_name.to_owned());
   let mut labels: HashMap<String, String> = match opts.labels {
     None => HashMap::new(),
     Some(labels) => labels.to_owned(),
@@ -57,48 +56,30 @@ pub async fn create_containers<'a>(
     opts.cargo.namespace_name.to_owned(),
   );
   labels.insert(String::from("cargo"), opts.cargo.key.to_owned());
-  while count < opts.cargo.replicas {
-    let mut name = format!(
-      "{}-{}-{}",
-      &opts.cargo.namespace_name, &opts.cluster_name, &opts.cargo.name,
-    );
-    if count != 0 {
-      name += &("-".to_owned() + &count.to_string());
-    }
+  // while count < opts.cargo.replicas {
+  let mut name = format!(
+    "{}-{}-{}",
+    &opts.cargo.namespace_name, &opts.cluster_name, &opts.cargo.name,
+  );
+  if count != 0 {
+    name += &("-".to_owned() + &count.to_string());
+  }
 
-    log::debug!("passing env {:#?}", &opts.environnements);
+  log::debug!("passing env {:#?}", &opts.environnements);
 
-    let mut network_mode = Some(opts.network_key.to_owned());
-    if let Some(net_mode) = &opts.cargo.network_mode {
+  let mut network_mode = Some(opts.network_key.to_owned());
+  if let Some(host_config) = config.host_config {
+    if let Some(net_mode) = &host_config.network_mode {
       network_mode = Some(net_mode.to_owned());
     }
-
-    let options = bollard::container::CreateContainerOptions { name };
-    let config = bollard::container::Config {
-      image: image.to_owned(),
-      hostname: opts.cargo.hostname.to_owned(),
-      domainname: opts.cargo.domainname.to_owned(),
-      tty: Some(true),
-      labels: Some(labels.to_owned()),
-      env: Some(opts.environnements.to_owned()),
-      attach_stdout: Some(true),
-      attach_stderr: Some(true),
-      host_config: Some(bollard::models::HostConfig {
-        restart_policy: Some(RestartPolicy {
-          name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
-          maximum_retry_count: None,
-        }),
-        binds: Some(opts.cargo.binds.to_owned()),
-        cap_add: opts.cargo.cap_add.to_owned(),
-        network_mode,
-        ..Default::default()
-      }),
-      ..Default::default()
-    };
-    let res = docker_api.create_container(Some(options), config).await?;
-    container_ids.push(res.id);
-    count += 1;
   }
+
+  let options = bollard::container::CreateContainerOptions { name };
+
+  let res = docker_api.create_container(Some(options), config).await?;
+  container_ids.push(res.id);
+  count += 1;
+  // }
   Ok(container_ids)
 }
 

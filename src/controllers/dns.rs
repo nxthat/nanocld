@@ -158,18 +158,26 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
     format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
     format!("{}:/etc/dnsmasq.d/", dir_path.display()),
   ]);
+
+  let config = bollard::container::Config {
+    image: Some("nanocl-dns:0.0.2"),
+    domainname: Some("dns"),
+    hostname: Some("dns"),
+    host_config: Some(bollard::container::HostConfig {
+      binds,
+      cap_add: Some(vec!["NET_ADMIN"]),
+      restart_policy: Some(bollard::container::RestartPolicy {
+        name: "unless-stopped",
+        maximum_retry_count: 0,
+      }),
+      ..Default::default()
+    }),
+    ..Default::default()
+  };
+
   let dns_cargo = CargoPartial {
     name: String::from("dns"),
-    image_name: String::from("nanocl-dns:0.0.2"),
-    environnements: None,
-    binds,
-    replicas: Some(1),
-    dns_entry: None,
-    domainname: Some(String::from("dns")),
-    hostname: Some(String::from("dns")),
-    network_mode: Some(String::from("host")),
-    restart_policy: Some(String::from("unless-stopped")),
-    cap_add: Some(vec![String::from("NET_ADMIN")]),
+    config,
   };
 
   repositories::cargo::create(

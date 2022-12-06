@@ -1,7 +1,7 @@
 //! File used to describe daemon boot
-use std::collections::HashMap;
 use std::path::Path;
 use std::{time, thread};
+use std::collections::HashMap;
 
 use ntex::http::StatusCode;
 
@@ -175,18 +175,20 @@ async fn register_daemon(arg: &ArgState) -> Result<(), DaemonError> {
   println!("state dir {}", &arg.config.state_dir);
   let path = Path::new(&arg.config.state_dir);
   let binds = vec![format!("{}:/var/lib/nanocl", path.display())];
+
+  let host_config = bollard::models::HostConfig {
+    binds: Some(binds),
+    ..Default::default()
+  };
+
+  let config = bollard::container::Config {
+    image: Some("nanocl-daemon:0.1.11"),
+    ..Default::default()
+  };
+
   let store_cargo = CargoPartial {
     name: String::from("daemon"),
-    image_name: String::from("nanocl-daemon:0.1.11"),
-    environnements: None,
-    binds: Some(binds),
-    replicas: Some(1),
-    dns_entry: None,
-    domainname: Some(String::from("daemon")),
-    hostname: Some(String::from("daemon")),
-    network_mode: Some(String::from("host")),
-    restart_policy: Some(String::from("unless-stopped")),
-    cap_add: None,
+    config,
   };
   let cargo = repositories::cargo::create(
     arg.sys_namespace.to_owned(),

@@ -14,31 +14,13 @@ use super::namespace::NamespaceItem;
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoPartial {
   pub(crate) name: String,
-  pub(crate) image_name: String,
-  pub(crate) environnements: Option<Vec<String>>,
-  pub(crate) binds: Option<Vec<String>>,
-  pub(crate) replicas: Option<i64>,
-  pub(crate) dns_entry: Option<String>,
-  pub(crate) domainname: Option<String>,
-  pub(crate) hostname: Option<String>,
-  pub(crate) network_mode: Option<String>,
-  pub(crate) restart_policy: Option<String>,
-  pub(crate) cap_add: Option<Vec<String>>,
+  pub(crate) config: serde_json::Value,
 }
 
 #[derive(Default, Serialize, Deserialize)]
 pub struct CargoPatchPartial {
   pub(crate) name: Option<String>,
-  pub(crate) image_name: Option<String>,
-  pub(crate) binds: Option<Vec<String>>,
-  pub(crate) replicas: Option<i64>,
-  pub(crate) dns_entry: Option<String>,
-  pub(crate) domainname: Option<String>,
-  pub(crate) hostname: Option<String>,
-  pub(crate) environnements: Option<Vec<String>>,
-  pub(crate) network_mode: Option<String>,
-  pub(crate) restart_policy: Option<String>,
-  pub(crate) cap_add: Option<Vec<String>>,
+  pub(crate) config: serde_json::Value,
 }
 
 #[derive(AsChangeset)]
@@ -46,15 +28,7 @@ pub struct CargoPatchPartial {
 pub struct CargoPatchItem {
   pub(crate) key: Option<String>,
   pub(crate) name: Option<String>,
-  pub(crate) image_name: Option<String>,
-  pub(crate) binds: Option<Vec<String>>,
-  pub(crate) replicas: Option<i64>,
-  pub(crate) dns_entry: Option<String>,
-  pub(crate) domainname: Option<String>,
-  pub(crate) hostname: Option<String>,
-  pub(crate) network_mode: Option<String>,
-  pub(crate) restart_policy: Option<String>,
-  pub(crate) cap_add: Option<Vec<String>>,
+  pub(crate) config: serde_json::Value,
 }
 
 /// Cargo item is an definition to container create image and start them
@@ -76,15 +50,7 @@ pub struct CargoItem {
   pub(crate) key: String,
   pub(crate) namespace_name: String,
   pub(crate) name: String,
-  pub(crate) image_name: String,
-  pub(crate) binds: Vec<String>,
-  pub(crate) replicas: i64,
-  pub(crate) dns_entry: Option<String>,
-  pub(crate) domainname: Option<String>,
-  pub(crate) hostname: Option<String>,
-  pub(crate) network_mode: Option<String>,
-  pub(crate) restart_policy: Option<String>,
-  pub(crate) cap_add: Option<Vec<String>>,
+  pub(crate) config: serde_json::Value,
 }
 
 /// Cargo item with his relation
@@ -94,15 +60,7 @@ pub struct CargoItemWithRelation {
   pub(crate) key: String,
   pub(crate) namespace_name: String,
   pub(crate) name: String,
-  pub(crate) image_name: String,
-  pub(crate) binds: Vec<String>,
-  pub(crate) replicas: i64,
-  pub(crate) dns_entry: Option<String>,
-  pub(crate) domainname: Option<String>,
-  pub(crate) hostname: Option<String>,
-  pub(crate) network_mode: Option<String>,
-  pub(crate) restart_policy: Option<String>,
-  pub(crate) cap_add: Option<Vec<String>>,
+  pub(crate) config: serde_json::Value,
   pub(crate) environnements: Option<Vec<CargoEnvItem>>,
   pub(crate) containers: Vec<bollard::models::ContainerSummary>,
 }

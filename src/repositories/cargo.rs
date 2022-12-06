@@ -37,15 +37,7 @@ pub async fn create(
       key: nsp.to_owned() + "-" + &item.name,
       name: item.name.clone(),
       namespace_name: nsp,
-      image_name: item.image_name,
-      binds: item.binds.unwrap_or_default(),
-      replicas: item.replicas.unwrap_or(1),
-      dns_entry: item.dns_entry,
-      domainname: item.domainname,
-      hostname: item.hostname,
-      network_mode: item.network_mode,
-      restart_policy: item.restart_policy,
-      cap_add: item.cap_add,
+      config: item.config,
     };
     diesel::insert_into(dsl::cargoes)
       .values(&new_item)
@@ -136,15 +128,7 @@ pub async fn update_by_key(
     let data = CargoPatchItem {
       key,
       name: item.name,
-      image_name: item.image_name,
-      binds: item.binds,
-      replicas: item.replicas,
-      dns_entry: item.dns_entry,
-      domainname: item.domainname,
-      hostname: item.hostname,
-      network_mode: item.network_mode,
-      restart_policy: item.restart_policy,
-      cap_add: item.cap_add,
+      config: item.config,
     };
     diesel::update(
       dsl::cargoes.filter(dsl::key.eq(&format!("{}-{}", &nsp, &name))),

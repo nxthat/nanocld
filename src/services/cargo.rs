@@ -462,10 +462,12 @@ pub mod tests {
 
     // Create
     let new_cargo = CargoPartial {
-      environnements: Some(vec![String::from("TEST=1")]),
       name: String::from("crud-test"),
-      image_name: String::from("nexthat/nanocl-get-started"),
-      ..Default::default()
+      config: bollard::container::Config {
+        image_name: String::from("nexthat/nanocl-get-started"),
+        env: Some(vec![String::from("TEST=1")]),
+        ..Default::default()
+      },
     };
     let mut resp = create(&srv, &new_cargo).await?;
     assert!(
@@ -496,8 +498,11 @@ pub mod tests {
 
     // Patch
     let cargo_patch_payload = CargoPatchPartial {
-      environnements: Some(vec![String::from("TEST=2")]),
-      domainname: Some(String::from("crud-test.internal")),
+      config: bollard::container::Config {
+        env: Some(vec![String::from("TEST=2")]),
+        domainname: Some(String::from("crud-test.internal")),
+        ..Default::default()
+      },
       ..Default::default()
     };
     let resp = patch(&srv, &test_cargo.name, &cargo_patch_payload).await?;
@@ -517,12 +522,15 @@ pub mod tests {
     let updated_cargo: CargoItemWithRelation = resp.json().await?;
 
     assert_eq!(
-      updated_cargo.domainname, cargo_patch_payload.domainname,
-      "Expect updated cargo domainname {:?} to match {:?}",
-      updated_cargo.domainname, cargo_patch_payload.domainname
+      updated_cargo.config, cargo_patch_payload.config,
+      "Expect updated cargo config {:?} to match {:?}",
+      updated_cargo.config, cargo_patch_payload.config,
     );
     let test_env = updated_cargo
-      .environnements
+      .config
+      .get("env")
+      .unwrap()
+      .as_array()
       .expect("Expect environnements to be present")
       .into_iter()
       .find(|env| env.name == "TEST")
