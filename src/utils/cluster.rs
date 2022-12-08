@@ -16,7 +16,7 @@ use crate::models::{
 
 use crate::errors::{HttpResponseError, IntoHttpResponseError};
 
-use super::cargo::CreateCargoContainerOpts;
+use super::cargo::CreateCargoInstanceOpts;
 
 pub struct JoinCargoOptions {
   pub(crate) cargo: CargoItem,
@@ -389,7 +389,7 @@ pub async fn join_cargo(
       acc
     })
     .to_vec();
-  let create_opts = CreateCargoContainerOpts {
+  let create_opts = CreateCargoInstanceOpts {
     cargo: &opts.cargo,
     network_key: &opts.network.key,
     cluster_name: &opts.cluster.name,
@@ -398,7 +398,7 @@ pub async fn join_cargo(
   };
 
   let container_ids =
-    utils::cargo::create_containers(create_opts, docker_api).await?;
+    utils::cargo::create_instances(create_opts, docker_api).await?;
 
   if let Some(net_mode) = &opts.cargo.network_mode {
     // if netmod is host we cannot join any other network so we skip this part

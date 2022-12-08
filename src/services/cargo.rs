@@ -137,8 +137,7 @@ async fn inspect_cargo_by_name(
     cluster: None,
     namespace: qs.namespace.to_owned(),
   };
-  let containers =
-    utils::cargo_instance::list_cargo_instance(qs, &docker_api).await?;
+  let containers = utils::cargo::list_instances(qs, &docker_api).await?;
   let environnements = if let Ok(envs) =
     repositories::cargo_env::list_by_cargo_key(key, &pool).await
   {
@@ -233,7 +232,7 @@ async fn patch_cargo_by_name(
     repositories::cargo::update_by_key(nsp, name, payload, &pool).await?;
 
   // Update containers
-  utils::cargo::update_containers(key, &daemon_config, &docker_api, &pool)
+  utils::cargo::update_instances(key, &daemon_config, &docker_api, &pool)
     .await?;
   Ok(web::HttpResponse::Accepted().json(&updated_cargo))
 }
@@ -266,7 +265,7 @@ async fn delete_cargo_by_name(
     .await?;
   let res = repositories::cargo::delete_by_key(key.to_owned(), &pool).await?;
   repositories::cargo_env::delete_by_cargo_key(key.to_owned(), &pool).await?;
-  utils::cargo::delete_container(key.to_owned(), &docker_api).await?;
+  utils::cargo::delete_instances(key.to_owned(), &docker_api).await?;
   Ok(web::HttpResponse::Ok().json(&res))
 }
 

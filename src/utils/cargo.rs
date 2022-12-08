@@ -1,10 +1,11 @@
 use bollard::service::{RestartPolicy, RestartPolicyNameEnum};
+use futures::stream::FuturesUnordered;
 use ntex::web;
 use ntex::http::StatusCode;
 use std::collections::HashMap;
 use futures::{StreamExt, stream};
 
-use crate::models::DaemonConfig;
+use crate::models::{DaemonConfig, CargoInstanceFilterQuery};
 use crate::{repositories, utils};
 
 use crate::models::{CargoItem, Pool};
@@ -13,8 +14,35 @@ use crate::errors::HttpResponseError;
 
 use super::cluster::JoinCargoOptions;
 
+pub async fn list_instances(
+  qs: CargoInstanceFilterQuery,
+  docker_api: &web::types::State<bollard::Docker>,
+) -> Result<Vec<bollard::models::ContainerSummary>, HttpResponseError> {
+  let namespace = utils::key::resolve_nsp(&qs.namespace);
+  let mut filters = HashMap::new();
+  let default_label = format!("namespace={}", &namespace);
+  let mut labels = vec![default_label];
+  if let Some(ref cluster) = qs.cluster {
+    let label = format!("cluster={}-{}", &namespace, &cluster);
+    labels.push(label);
+  }
+  if let Some(ref cargo) = qs.cargo {
+    let label = format!("cargo={}-{}", &namespace, &cargo);
+    labels.push(label);
+  }
+  filters.insert(String::from("label"), labels);
+  let options = Some(bollard::container::ListContainersOptions::<String> {
+    all: true,
+    filters,
+    ..Default::default()
+  });
+  let containers = docker_api.list_containers(options).await?;
+
+  Ok(containers)
+}
+
 #[derive(Debug)]
-pub struct CreateCargoContainerOpts<'a> {
+pub struct CreateCargoInstanceOpts<'a> {
   pub(crate) cargo: &'a CargoItem,
   pub(crate) cluster_name: &'a str,
   pub(crate) network_key: &'a str,
@@ -22,8 +50,8 @@ pub struct CreateCargoContainerOpts<'a> {
   pub(crate) labels: Option<&'a mut HashMap<String, String>>,
 }
 
-pub async fn create_containers<'a>(
-  opts: CreateCargoContainerOpts<'a>,
+pub async fn create_instances<'a>(
+  opts: CreateCargoInstanceOpts<'a>,
   docker_api: &web::types::State<bollard::Docker>,
 ) -> Result<Vec<String>, HttpResponseError> {
   log::debug!(
@@ -102,68 +130,40 @@ pub async fn create_containers<'a>(
   Ok(container_ids)
 }
 
-pub async fn list_containers(
-  cargo_key: String,
-  docker_api: &web::types::State<bollard::Docker>,
-) -> Result<Vec<bollard::models::ContainerSummary>, HttpResponseError> {
-  let target_cluster = &format!("cargo={}", &cargo_key);
-  let mut filters = HashMap::new();
-  filters.insert("label", vec![target_cluster.as_str()]);
-  let options = Some(bollard::container::ListContainersOptions {
-    all: true,
-    filters,
-    ..Default::default()
-  });
-  let containers = docker_api.list_containers(options).await?;
-  Ok(containers)
-}
-
-pub async fn delete_container(
+pub async fn delete_instances(
   cargo_key: String,
   docker_api: &web::types::State<bollard::Docker>,
 ) -> Result<(), HttpResponseError> {
-  let containers = list_containers(cargo_key, docker_api).await?;
-
-  let mut stream = stream::iter(containers);
-
-  while let Some(container) = stream.next().await {
-    let id = container.id.ok_or(HttpResponseError {
-      msg: String::from("unable to get container id"),
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-    })?;
-    let options = Some(bollard::container::RemoveContainerOptions {
-      force: true,
-      ..Default::default()
-    });
-    docker_api.remove_container(&id, options).await?;
-  }
-
-  // TODO test perf against stream
-  // containers
-  //   .into_iter()
-  //   .map(|container| async move {
-  //     let id = container.id.ok_or(HttpResponseError {
-  //       msg: String::from("unable to get container id"),
-  //       status: StatusCode::INTERNAL_SERVER_ERROR,
-  //     })?;
-  //     let options = Some(bollard::container::RemoveContainerOptions {
-  //       force: true,
-  //       ..Default::default()
-  //     });
-  //     docker_api.remove_container(&id, options).await?;
-  //     Ok::<_, HttpResponseError>(())
-  //   })
-  //   .collect::<FuturesUnordered<_>>()
-  //   .collect::<Vec<_>>()
-  //   .await
-  //   .into_iter()
-  //   .collect::<Result<Vec<()>, HttpResponseError>>()?;
+  let qs = CargoInstanceFilterQuery {
+    cargo: Some(cargo_key.to_owned()),
+    ..Default::default()
+  };
+  let instances = list_instances(qs, docker_api).await?;
+  instances
+    .into_iter()
+    .map(|container| async move {
+      let id = container.id.ok_or(HttpResponseError {
+        msg: String::from("unable to get container id"),
+        status: StatusCode::INTERNAL_SERVER_ERROR,
+      })?;
+      let options = Some(bollard::container::RemoveContainerOptions {
+        force: true,
+        ..Default::default()
+      });
+      docker_api.remove_container(&id, options).await?;
+      Ok::<_, HttpResponseError>(())
+    })
+    .collect::<FuturesUnordered<_>>()
+    .collect::<Vec<_>>()
+    .await
+    .into_iter()
+    .collect::<Result<Vec<()>, HttpResponseError>>()?;
 
   Ok(())
 }
 
 /// Regenerate containers for a given cargo
-pub async fn update_containers(
+pub async fn update_instances(
   cargo_key: String,
   daemon_config: &web::types::State<DaemonConfig>,
   docker_api: &web::types::State<bollard::Docker>,
@@ -191,22 +191,22 @@ pub async fn update_containers(
     .await?;
 
     // Containers to remove after update
-    let cntr = utils::cluster::list_containers(
-      &cluster_cargo.cluster_key,
-      &cluster_cargo.cargo_key,
-      docker_api,
-    )
-    .await?;
+    let qs = CargoInstanceFilterQuery {
+      cargo: Some(cluster_cargo.cargo_key.to_owned()),
+      cluster: Some(cluster_cargo.cluster_key.to_owned()),
+      ..Default::default()
+    };
+    let instances = list_instances(qs, docker_api).await?;
 
-    let mut scntr = stream::iter(cntr.to_owned());
+    let mut instance_stream = stream::iter(instances.to_owned());
 
     let mut count = 0;
-    while let Some(cnt) = scntr.next().await {
+    while let Some(instance) = instance_stream.next().await {
       let options = bollard::container::RenameContainerOptions {
         name: format!("{}-tmp-{}", &cargo.name, &count),
       };
       docker_api
-        .rename_container(&cnt.id.unwrap_or_default(), options)
+        .rename_container(&instance.id.unwrap_or_default(), options)
         .await?;
       count += 1;
     }
@@ -222,7 +222,7 @@ pub async fn update_containers(
 
     utils::cluster::start(&cluster, daemon_config, pool, docker_api).await?;
 
-    let mut scntr = stream::iter(cntr);
+    let mut scntr = stream::iter(instances);
 
     while let Some(container) = scntr.next().await {
       let options = Some(bollard::container::RemoveContainerOptions {

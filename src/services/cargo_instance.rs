@@ -15,8 +15,7 @@ async fn list_cargo_instance(
   web::types::Query(qs): web::types::Query<CargoInstanceFilterQuery>,
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let containers =
-    utils::cargo_instance::list_cargo_instance(qs, &docker_api).await?;
+  let containers = utils::cargo::list_instances(qs, &docker_api).await?;
   Ok(web::HttpResponse::Ok().json(&containers))
 }
 

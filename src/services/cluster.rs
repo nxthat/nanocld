@@ -106,8 +106,7 @@ async fn delete_cluster_by_name(
 
   repositories::cargo_instance::delete_by_cluster_key(key.to_owned(), &pool)
     .await?;
-  let containers =
-    utils::cargo_instance::list_cargo_instance(qs, &docker_api).await?;
+  let containers = utils::cargo::list_instances(qs, &docker_api).await?;
   let mut stream = stream::iter(containers);
   while let Some(container) = stream.next().await {
     let options = bollard::container::RemoveContainerOptions {
@@ -636,7 +635,7 @@ pub mod tests {
     );
 
     // Add proxy template to cluster
-    let res = add_template(&srv, &cluster_name, &proxy_template.name).await?;
+    let res = add_template(&srv, cluster_name, &proxy_template.name).await?;
     let status = res.status();
     assert_eq!(
       status,
@@ -689,8 +688,7 @@ pub mod tests {
     );
 
     // Remove proxy template to cluster
-    let res =
-      remove_template(&srv, &cluster_name, &proxy_template.name).await?;
+    let res = remove_template(&srv, cluster_name, &proxy_template.name).await?;
     let status = res.status();
     assert_eq!(
       status,

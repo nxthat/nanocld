@@ -5,7 +5,6 @@ pub mod cargo;
 pub mod docker;
 pub mod cluster;
 pub mod cluster_network;
-pub mod cargo_instance;
 pub mod cluster_variable;
 
 use serde::Serialize;
