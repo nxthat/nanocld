@@ -131,11 +131,13 @@ pub async fn create_instances<'a>(
 }
 
 pub async fn delete_instances(
-  cargo_key: String,
+  namespace: String,
+  cargo: String,
   docker_api: &web::types::State<bollard::Docker>,
 ) -> Result<(), HttpResponseError> {
   let qs = CargoInstanceFilterQuery {
-    cargo: Some(cargo_key.to_owned()),
+    cargo: Some(cargo.to_owned()),
+    namespace: Some(namespace.to_owned()),
     ..Default::default()
   };
   let instances = list_instances(qs, docker_api).await?;
@@ -192,9 +194,9 @@ pub async fn update_instances(
 
     // Containers to remove after update
     let qs = CargoInstanceFilterQuery {
-      cargo: Some(cluster_cargo.cargo_key.to_owned()),
-      cluster: Some(cluster_cargo.cluster_key.to_owned()),
-      ..Default::default()
+      cargo: Some(cargo.name.to_owned()),
+      cluster: Some(cluster.name.to_owned()),
+      namespace: Some(cargo.namespace_name.to_owned()),
     };
     let instances = list_instances(qs, docker_api).await?;
 

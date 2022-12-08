@@ -258,14 +258,17 @@ async fn delete_cargo_by_name(
   name: web::types::Path<String>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let key = utils::key::gen_key_from_nsp(&qs.namespace, &name.into_inner());
+  let name = name.into_inner();
+  let nsp = utils::key::resolve_nsp(&qs.namespace);
+  let key = utils::key::gen_key(&nsp, &name);
 
   repositories::cargo::find_by_key(key.clone(), &pool).await?;
   repositories::cargo_instance::delete_by_cargo_key(key.to_owned(), &pool)
     .await?;
   let res = repositories::cargo::delete_by_key(key.to_owned(), &pool).await?;
   repositories::cargo_env::delete_by_cargo_key(key.to_owned(), &pool).await?;
-  utils::cargo::delete_instances(key.to_owned(), &docker_api).await?;
+  utils::cargo::delete_instances(nsp.to_owned(), name.to_owned(), &docker_api)
+    .await?;
   Ok(web::HttpResponse::Ok().json(&res))
 }
 
