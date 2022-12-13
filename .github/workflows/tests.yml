@@ -33,11 +33,6 @@ jobs:
     - name: Setup
       run: >-
         docker pull cockroachdb/cockroach:v21.2.17;
-        sudo useradd -U nanocl;
-        sudo mkdir /run/nanocl;
-        sudo mkdir /var/lib/nanocl;
-        sudo chmod 777 -R /var/lib/nanocl;
-        sudo chmod 777 -R /run/nanocl;
         cargo run -- --init;
         sleep 10;
     - name: Run tests
