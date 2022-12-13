@@ -29,7 +29,12 @@ jobs:
     - name: Install ubuntu dependencies
       run: sudo sh ./scripts/ubuntu.deps.sh
     - name: Ci file perm
-      run: sudo chmod 777 /run/docker.sock && sudo mkdir /run/nanocl && sudo mkdir /var/lib/nanocl && sudo mkdir -p ./vm_images && sudo chmod 777 -R /run/nanocl && sudo chmod 777 -R /var/lib/nanocl
+      run: >-
+        sudo chmod 777 /run/docker.sock;
+        sudo mkdir /run/nanocl;
+        sudo mkdir /var/lib/nanocl;
+        sudo chmod 777 -R /run/nanocl;
+        sudo chmod 777 -R /var/lib/nanocl;
     - name: Setup
       run: >-
         docker pull cockroachdb/cockroach:v21.2.17;
