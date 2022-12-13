@@ -1,17 +1,17 @@
 // @generated automatically by Diesel CLI.
 
 pub mod sql_types {
-  // #[derive(diesel::sql_types::SqlType)]
-  // #[diesel(postgres_type(name = "node_modes"))]
-  // pub struct NodeModes;
-
-  // #[derive(diesel::sql_types::SqlType)]
-  // #[diesel(postgres_type(name = "ssh_auth_modes"))]
-  // pub struct SshAuthModes;
+  #[derive(diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "node_modes"))]
+  pub struct NodeModes;
 
   #[derive(diesel::sql_types::SqlType)]
   #[diesel(postgres_type(name = "proxy_template_modes"))]
   pub struct ProxyTemplateModes;
+
+  #[derive(diesel::sql_types::SqlType)]
+  #[diesel(postgres_type(name = "ssh_auth_modes"))]
+  pub struct SshAuthModes;
 }
 
 diesel::table! {
@@ -37,15 +37,9 @@ diesel::table! {
         key -> Varchar,
         namespace_name -> Varchar,
         name -> Varchar,
-        image_name -> Varchar,
-        binds -> Array<Text>,
+        config -> Jsonb,
         replicas -> Int8,
         dns_entry -> Nullable<Varchar>,
-        domainname -> Nullable<Varchar>,
-        hostname -> Nullable<Varchar>,
-        network_mode -> Nullable<Varchar>,
-        restart_policy -> Nullable<Varchar>,
-        cap_add -> Nullable<Array<Text>>,
     }
 }
 
@@ -109,20 +103,20 @@ diesel::table! {
     }
 }
 
-// diesel::table! {
-//     use diesel::sql_types::*;
-//     use super::sql_types::NodeModes;
-//     use super::sql_types::SshAuthModes;
+diesel::table! {
+    use diesel::sql_types::*;
+    use super::sql_types::NodeModes;
+    use super::sql_types::SshAuthModes;
 
-//     nodes (name) {
-//         name -> Varchar,
-//         mode -> NodeModes,
-//         ip_address -> Varchar,
-//         ssh_auth_mode -> SshAuthModes,
-//         ssh_user -> Varchar,
-//         ssh_credential -> Varchar,
-//     }
-// }
+    nodes (name) {
+        name -> Varchar,
+        mode -> NodeModes,
+        ip_address -> Varchar,
+        ssh_auth_mode -> SshAuthModes,
+        ssh_user -> Varchar,
+        ssh_credential -> Varchar,
+    }
+}
 
 diesel::table! {
     use diesel::sql_types::*;
@@ -150,6 +144,6 @@ diesel::allow_tables_to_appear_in_same_query!(
   clusters,
   namespaces,
   nginx_logs,
-  // nodes,
+  nodes,
   proxy_templates,
 );

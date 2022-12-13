@@ -584,10 +584,14 @@ pub mod tests {
     );
 
     // Create cargo
+    let config = bollard::container::Config {
+      image: Some(String::from("nexthat/nanocl-get-started:latest")),
+      ..Default::default()
+    };
     let cargo = CargoPartial {
       name: "utcj".to_owned(),
-      image_name: "nexthat/nanocl-get-started:latest".to_owned(),
-      dns_entry: Some(String::from("test.get-started.internal:127.0.0.1")),
+      config: serde_json::to_value(config).unwrap(),
+      dns_entry: Some(String::from("127.0.0.1:test.get-started.internal")),
       ..Default::default()
     };
     let res = cargo::tests::create(&cargo_srv, &cargo).await?;
