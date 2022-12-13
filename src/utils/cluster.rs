@@ -318,10 +318,10 @@ pub async fn start(
         .map_err(|err| err.to_http_error())?;
       }
 
-      controllers::dns::restart(docker_api)
-        .await
-        .map_err(|err| err.to_http_error())?;
-      controllers::proxy::reload_config(docker_api).await?;
+      // Ignore error if we can't restart the dns server
+      let _ = controllers::dns::restart(docker_api).await;
+      // Ignore error if we can't reload the proxy config
+      let _ = controllers::proxy::reload_config(docker_api).await;
     }
   }
   Ok(())

@@ -32,7 +32,7 @@ jobs:
       run: >-
         sudo chmod 777 /run/docker.sock;
         sudo mkdir /run/nanocl;
-        sudo mkdir /var/lib/nanocl;
+        sudo mkdir -p /var/lib/nanocl/nginx/sites-enabled;
         sudo chmod 777 -R /run/nanocl;
         sudo chmod 777 -R /var/lib/nanocl;
     - name: Setup
