@@ -158,18 +158,33 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
     format!("{}:/etc/dnsmasq.conf", config_file_path.display()),
     format!("{}:/etc/dnsmasq.d/", dir_path.display()),
   ]);
+
+  let config = bollard::container::Config {
+    image: Some(String::from("nanocl-dns:0.0.2")),
+    hostname: Some(String::from("dns")),
+    domainname: Some(String::from("dns")),
+    host_config: Some(bollard::models::HostConfig {
+      binds,
+      network_mode: Some(String::from("host")),
+      restart_policy: Some(bollard::models::RestartPolicy {
+        name: Some(bollard::models::RestartPolicyNameEnum::UNLESS_STOPPED),
+        ..Default::default()
+      }),
+      cap_add: Some(vec![String::from("NET_ADMIN")]),
+      ..Default::default()
+    }),
+    ..Default::default()
+  };
+
   let dns_cargo = CargoPartial {
     name: String::from("dns"),
-    image_name: String::from("nanocl-dns:0.0.2"),
     environnements: None,
-    binds,
     replicas: Some(1),
     dns_entry: None,
-    domainname: Some(String::from("dns")),
-    hostname: Some(String::from("dns")),
-    network_mode: Some(String::from("host")),
-    restart_policy: Some(String::from("unless-stopped")),
-    cap_add: Some(vec![String::from("NET_ADMIN")]),
+    config: serde_json::to_value(config).map_err(|e| HttpResponseError {
+      msg: format!("Unable to serialize container config {}", e),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    })?,
   };
 
   repositories::cargo::create(

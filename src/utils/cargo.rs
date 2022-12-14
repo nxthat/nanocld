@@ -59,23 +59,31 @@ pub async fn create_instances<'a>(
     &opts.cargo,
     &opts.labels,
   );
-  if docker_api
-    .inspect_image(&opts.cargo.image_name)
-    .await
-    .is_err()
-  {
+
+  let cargo_config =
+    serde_json::from_value::<bollard::container::Config<String>>(
+      opts.cargo.config.to_owned(),
+    )
+    .map_err(|e| HttpResponseError {
+      msg: format!("Unable to parse cargo config: {}", e),
+      status: StatusCode::BAD_REQUEST,
+    })?;
+
+  let host_config = cargo_config.to_owned().host_config.unwrap_or_default();
+
+  let image = cargo_config.to_owned().image.unwrap_or_default();
+
+  if docker_api.inspect_image(&image).await.is_err() {
     return Err(HttpResponseError {
       msg: format!(
         "Unable to create cargo container image {} is not available.",
-        &opts.cargo.image_name,
+        &image,
       ),
       status: StatusCode::BAD_REQUEST,
     });
   }
   let mut count = 0;
   let mut container_ids: Vec<String> = Vec::new();
-  let image_name = opts.cargo.image_name.clone();
-  let image = Some(image_name.to_owned());
   let mut labels: HashMap<String, String> = match opts.labels {
     None => HashMap::new(),
     Some(labels) => labels.to_owned(),
@@ -96,16 +104,18 @@ pub async fn create_instances<'a>(
 
     log::debug!("passing env {:#?}", &opts.environnements);
 
-    let mut network_mode = Some(opts.network_key.to_owned());
-    if let Some(net_mode) = &opts.cargo.network_mode {
-      network_mode = Some(net_mode.to_owned());
+    let mut net_mode = Some(opts.network_key.to_owned());
+
+    if let Some(ref network_mode) = host_config.network_mode {
+      net_mode = Some(network_mode.to_owned());
     }
 
-    let options = bollard::container::CreateContainerOptions { name };
+    let options = bollard::container::CreateContainerOptions {
+      name,
+      ..Default::default()
+    };
+
     let config = bollard::container::Config {
-      image: image.to_owned(),
-      hostname: opts.cargo.hostname.to_owned(),
-      domainname: opts.cargo.domainname.to_owned(),
       tty: Some(true),
       labels: Some(labels.to_owned()),
       env: Some(opts.environnements.to_owned()),
@@ -116,12 +126,10 @@ pub async fn create_instances<'a>(
           name: Some(RestartPolicyNameEnum::UNLESS_STOPPED),
           maximum_retry_count: None,
         }),
-        binds: Some(opts.cargo.binds.to_owned()),
-        cap_add: opts.cargo.cap_add.to_owned(),
-        network_mode,
-        ..Default::default()
+        network_mode: net_mode,
+        ..host_config.to_owned()
       }),
-      ..Default::default()
+      ..cargo_config.to_owned()
     };
     let res = docker_api.create_container(Some(options), config).await?;
     container_ids.push(res.id);

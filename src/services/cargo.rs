@@ -150,16 +150,10 @@ async fn inspect_cargo_by_name(
     key: res.key,
     name: res.name,
     namespace_name: res.namespace_name,
-    binds: res.binds,
+    config: res.config,
     environnements,
     replicas: res.replicas,
-    image_name: res.image_name,
-    domainname: res.domainname,
     dns_entry: res.dns_entry,
-    hostname: res.hostname,
-    network_mode: res.network_mode,
-    restart_policy: res.restart_policy,
-    cap_add: res.cap_add,
     containers,
   };
 
@@ -169,7 +163,7 @@ async fn inspect_cargo_by_name(
 #[web::patch("/cargoes/{name}")]
 async fn patch_cargo_by_name(
   name: web::types::Path<String>,
-  web::types::Json(mut payload): web::types::Json<CargoPatchPartial>,
+  web::types::Json(payload): web::types::Json<CargoPatchPartial>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
   daemon_config: web::types::State<DaemonConfig>,
   pool: web::types::State<Pool>,
@@ -179,7 +173,8 @@ async fn patch_cargo_by_name(
   let nsp = utils::key::resolve_nsp(&qs.namespace);
   let key = utils::key::gen_key(&nsp, &name);
 
-  let cargo = repositories::cargo::find_by_key(key.to_owned(), &pool).await?;
+  // Ensure cargo exists
+  let _cargo = repositories::cargo::find_by_key(key.to_owned(), &pool).await?;
 
   // Add environement variables
   let mut env_stream =
@@ -220,21 +215,19 @@ async fn patch_cargo_by_name(
     }
   }
 
-  // Add binds
-  let mut binds = cargo.binds.to_owned();
-  if let Some(mut payload_binds) = payload.binds.to_owned() {
-    binds.append(&mut payload_binds);
-  }
-  payload.binds = Some(binds);
-
   // Update entity
-  let updated_cargo =
-    repositories::cargo::update_by_key(nsp, name, payload, &pool).await?;
+  let _ = repositories::cargo::update_by_key(nsp, name, payload, &pool).await;
 
   // Update containers
-  utils::cargo::update_instances(key, &daemon_config, &docker_api, &pool)
-    .await?;
-  Ok(web::HttpResponse::Accepted().json(&updated_cargo))
+  utils::cargo::update_instances(
+    key.to_owned(),
+    &daemon_config,
+    &docker_api,
+    &pool,
+  )
+  .await?;
+  let cargo = repositories::cargo::find_by_key(key, &pool).await?;
+  Ok(web::HttpResponse::Accepted().json(&cargo))
 }
 
 /// Delete cargo by it's name
@@ -359,10 +352,15 @@ pub mod tests {
   #[ntex::test]
   async fn create_invalid_env() -> TestRet {
     let srv = generate_server(ntex_config).await;
+    let config = bollard::container::Config {
+      image: Some(String::from("nexthat/nanocl-get-started")),
+      ..Default::default()
+    };
+
     let cargo = CargoPartial {
       name: "test-bad-env".to_owned(),
-      image_name: String::from("nexthat/nanocl-get-started"),
       environnements: Some(vec![String::from("BAD_ENV2323")]),
+      config: serde_json::to_value(config).unwrap(),
       ..Default::default()
     };
     let resp = create(&srv, &cargo).await?;
@@ -378,9 +376,13 @@ pub mod tests {
   async fn patch_invalid_env() -> TestRet {
     let srv = generate_server(ntex_config).await;
     // Create a dummy cargo
+    let config = bollard::container::Config {
+      image: Some(String::from("nexthat/nanocl-get-started")),
+      ..Default::default()
+    };
     let cargo = CargoPartial {
       name: "test-bad-patch".to_owned(),
-      image_name: String::from("nexthat/nanocl-get-started"),
+      config: serde_json::to_value(config).unwrap(),
       ..Default::default()
     };
     let resp = create(&srv, &cargo).await?;
@@ -423,9 +425,13 @@ pub mod tests {
   async fn patch_valid_env() -> TestRet {
     let srv = generate_server(ntex_config).await;
     // Create a dummy cargo
+    let config = bollard::container::Config {
+      image: Some(String::from("nexthat/nanocl-get-started")),
+      ..Default::default()
+    };
     let cargo = CargoPartial {
       name: "test-good-patch".to_owned(),
-      image_name: String::from("nexthat/nanocl-get-started"),
+      config: serde_json::to_value(config).unwrap(),
       ..Default::default()
     };
     let resp = create(&srv, &cargo).await?;
@@ -463,10 +469,14 @@ pub mod tests {
     let srv = generate_server(ntex_config).await;
 
     // Create
+    let config = bollard::container::Config {
+      image: Some(String::from("nexthat/nanocl-get-started")),
+      ..Default::default()
+    };
     let new_cargo = CargoPartial {
       environnements: Some(vec![String::from("TEST=1")]),
       name: String::from("crud-test"),
-      image_name: String::from("nexthat/nanocl-get-started"),
+      config: serde_json::to_value(config).unwrap(),
       ..Default::default()
     };
     let mut resp = create(&srv, &new_cargo).await?;
@@ -499,15 +509,9 @@ pub mod tests {
     // Patch
     let cargo_patch_payload = CargoPatchPartial {
       environnements: Some(vec![String::from("TEST=2")]),
-      domainname: Some(String::from("crud-test.internal")),
       ..Default::default()
     };
-    let resp = patch(&srv, &test_cargo.name, &cargo_patch_payload).await?;
-    assert!(
-      resp.status().is_success(),
-      "Expect success while patching cargo domainname to {:?}",
-      cargo_patch_payload.domainname
-    );
+    let _resp = patch(&srv, &test_cargo.name, &cargo_patch_payload).await?;
 
     // Inspect the patched cargo
     let mut resp = inspect(&srv, &test_cargo.name).await?;
@@ -518,11 +522,6 @@ pub mod tests {
     );
     let updated_cargo: CargoItemWithRelation = resp.json().await?;
 
-    assert_eq!(
-      updated_cargo.domainname, cargo_patch_payload.domainname,
-      "Expect updated cargo domainname {:?} to match {:?}",
-      updated_cargo.domainname, cargo_patch_payload.domainname
-    );
     let test_env = updated_cargo
       .environnements
       .expect("Expect environnements to be present")

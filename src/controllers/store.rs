@@ -42,6 +42,27 @@ fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
   }
 }
 
+fn gen_store_config<'a>(
+  name: &'a str,
+  config: &DaemonConfig,
+) -> bollard::container::Config<&'a str> {
+  let image = Some("cockroachdb/cockroach:v21.2.17");
+  let mut labels = utils::docker::gen_labels_with_namespace("system");
+  labels.insert("namespace", "system");
+  labels.insert("cluster", "system-nano");
+  labels.insert("cargo", "system-store");
+  let host_config = Some(gen_store_host_conf(config));
+  Config {
+    image,
+    labels: Some(labels),
+    host_config,
+    hostname: Some(name),
+    domainname: Some(name),
+    cmd: Some(vec!["start-single-node", "--insecure"]),
+    ..Default::default()
+  }
+}
+
 /// Create system store cargo instance
 ///
 /// ## Arguments
@@ -53,23 +74,14 @@ async fn create_system_store(
   config: &DaemonConfig,
   docker_api: &Docker,
 ) -> Result<(), DockerError> {
-  let image = Some("cockroachdb/cockroach:v21.2.17");
-  let mut labels = utils::docker::gen_labels_with_namespace("system");
-  labels.insert("namespace", "system");
-  labels.insert("cluster", "system-nano");
-  labels.insert("cargo", "system-store");
-  let host_config = Some(gen_store_host_conf(config));
-  let options = Some(CreateContainerOptions { name });
-  let config = Config {
-    image,
-    labels: Some(labels),
-    host_config,
-    hostname: Some(name),
-    domainname: Some(name),
-    cmd: Some(vec!["start-single-node", "--insecure"]),
+  let options = Some(CreateContainerOptions {
+    name,
     ..Default::default()
-  };
-  docker_api.create_container(options, config).await?;
+  });
+  let config = gen_store_config(name, config);
+  docker_api
+    .create_container(options, config.to_owned())
+    .await?;
   Ok(())
 }
 
@@ -173,27 +185,26 @@ pub async fn boot(
 /// ## Arguments
 /// [arg](ArgState) Reference to argument state
 pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
-  let key = utils::key::gen_key(&arg.sys_namespace, "store");
+  let name = "store";
+  let key = utils::key::gen_key(&arg.sys_namespace, name);
   if repositories::cargo::find_by_key(key, &arg.pool)
     .await
     .is_ok()
   {
     return Ok(());
   }
-  let path = Path::new(&arg.config.state_dir).join("store/data");
-  let binds = vec![format!("{}:/cockroach/cockroach-data", path.display())];
+
+  let config = gen_store_config(name, &arg.config);
+
   let store_cargo = CargoPartial {
-    name: String::from("store"),
-    image_name: String::from("cockroachdb/cockroach:v21.2.17"),
+    name: name.into(),
     environnements: None,
-    binds: Some(binds),
     replicas: Some(1),
     dns_entry: None,
-    domainname: Some(String::from("store")),
-    hostname: Some(String::from("store")),
-    network_mode: None,
-    restart_policy: Some(String::from("unless-stopped")),
-    cap_add: None,
+    config: serde_json::to_value(config).map_err(|err| HttpResponseError {
+      msg: format!("unable to serialize store config: {}", err),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    })?,
   };
   let cargo = repositories::cargo::create(
     arg.sys_namespace.to_owned(),

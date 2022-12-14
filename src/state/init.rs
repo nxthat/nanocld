@@ -175,18 +175,31 @@ async fn register_daemon(arg: &ArgState) -> Result<(), DaemonError> {
   println!("state dir {}", &arg.config.state_dir);
   let path = Path::new(&arg.config.state_dir);
   let binds = vec![format!("{}:/var/lib/nanocl", path.display())];
+
+  let config = bollard::container::Config {
+    image: Some("nanocl-daemon:0.1.11"),
+    domainname: Some("daemon"),
+    host_config: Some(bollard::models::HostConfig {
+      network_mode: Some("host".into()),
+      restart_policy: Some(bollard::models::RestartPolicy {
+        name: Some(bollard::models::RestartPolicyNameEnum::UNLESS_STOPPED),
+        ..Default::default()
+      }),
+      binds: Some(binds),
+      ..Default::default()
+    }),
+    ..Default::default()
+  };
+
   let store_cargo = CargoPartial {
     name: String::from("daemon"),
-    image_name: String::from("nanocl-daemon:0.1.11"),
     environnements: None,
-    binds: Some(binds),
     replicas: Some(1),
     dns_entry: None,
-    domainname: Some(String::from("daemon")),
-    hostname: Some(String::from("daemon")),
-    network_mode: Some(String::from("host")),
-    restart_policy: Some(String::from("unless-stopped")),
-    cap_add: None,
+    config: serde_json::to_value(config).map_err(|err| HttpResponseError {
+      msg: format!("Unable to serialize config: {}", err),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    })?,
   };
   let cargo = repositories::cargo::create(
     arg.sys_namespace.to_owned(),

@@ -318,10 +318,10 @@ pub async fn start(
         .map_err(|err| err.to_http_error())?;
       }
 
-      controllers::dns::restart(docker_api)
-        .await
-        .map_err(|err| err.to_http_error())?;
-      controllers::proxy::reload_config(docker_api).await?;
+      // Ignore error if we can't restart the dns server
+      let _ = controllers::dns::restart(docker_api).await;
+      // Ignore error if we can't reload the proxy config
+      let _ = controllers::proxy::reload_config(docker_api).await;
     }
   }
   Ok(())
@@ -400,13 +400,22 @@ pub async fn join_cargo(
   let container_ids =
     utils::cargo::create_instances(create_opts, docker_api).await?;
 
-  if let Some(net_mode) = &opts.cargo.network_mode {
-    // if netmod is host we cannot join any other network so we skip this part
-    if net_mode == "host" {
-      if opts.is_creating_relation {
-        repositories::cargo_instance::create(cluster_cargo, pool).await?;
+  let config = serde_json::from_value::<bollard::container::Config<String>>(
+    opts.cargo.config.to_owned(),
+  )
+  .map_err(|err| HttpResponseError {
+    msg: format!("unable to parse cargo config {:#?}", err),
+    status: StatusCode::INTERNAL_SERVER_ERROR,
+  })?;
+
+  if let Some(host_config) = config.host_config {
+    if let Some(network_mode) = host_config.network_mode {
+      if network_mode == "host" {
+        if opts.is_creating_relation {
+          repositories::cargo_instance::create(cluster_cargo, pool).await?;
+        }
+        return Ok(container_ids);
       }
-      return Ok(container_ids);
     }
   }
 

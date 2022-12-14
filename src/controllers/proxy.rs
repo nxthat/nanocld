@@ -5,8 +5,9 @@ use bollard::{
   errors::Error as DockerError,
   exec::{CreateExecOptions, StartExecOptions},
 };
+use ntex::http::StatusCode;
 
-use crate::{utils, repositories};
+use crate::{utils, repositories, errors::HttpResponseError};
 use crate::models::{ArgState, CargoPartial};
 use crate::errors::DaemonError;
 
@@ -63,18 +64,32 @@ pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
     format!("{}:/etc/nginx/streams-enabled", stream_path.display()),
     format!("{}:/etc/letsencrypt", letsencrypt_path.display()),
   ]);
-  let proxy_cargo = CargoPartial {
-    name: String::from("proxy"),
-    image_name: String::from("nanocl-proxy:0.0.1"),
-    environnements: None,
-    binds,
-    replicas: Some(1),
-    dns_entry: None,
+
+  let config = bollard::container::Config {
+    image: Some(String::from("nanocl-proxy:0.0.1")),
     domainname: Some(String::from("proxy")),
     hostname: Some(String::from("proxy")),
-    network_mode: Some(String::from("host")),
-    restart_policy: Some(String::from("unless-stopped")),
-    cap_add: None,
+    host_config: Some(bollard::models::HostConfig {
+      binds,
+      network_mode: Some(String::from("host")),
+      restart_policy: Some(bollard::models::RestartPolicy {
+        name: Some(bollard::models::RestartPolicyNameEnum::UNLESS_STOPPED),
+        ..Default::default()
+      }),
+      ..Default::default()
+    }),
+    ..Default::default()
+  };
+
+  let proxy_cargo = CargoPartial {
+    name: String::from("proxy"),
+    environnements: None,
+    replicas: Some(1),
+    dns_entry: None,
+    config: serde_json::to_value(config).map_err(|err| HttpResponseError {
+      msg: format!("Unable to serialize container config {} ", err),
+      status: StatusCode::INTERNAL_SERVER_ERROR,
+    })?,
   };
 
   repositories::cargo::create(
