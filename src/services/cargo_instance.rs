@@ -10,7 +10,7 @@ use crate::utils;
 use crate::models::{CargoInstanceExecBody, CargoInstanceFilterQuery};
 use crate::errors::HttpResponseError;
 
-/// Endpoint to list installed cargoes images
+/// Endpoint to list existing cargo instances
 #[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/cargoes/instances",
@@ -33,6 +33,19 @@ async fn list_cargo_instance(
   Ok(web::HttpResponse::Ok().json(&containers))
 }
 
+/// Endpoint to create a cargo instance command to execute
+#[cfg_attr(feature = "dev", utoipa::path(
+  post,
+  path = "/cargoes/instances/{name}/exec",
+  request_body = CargoInstanceExecBody,
+  params(
+    ("name" = String, Path, description = "Name of the cargo instance to execute command on"),
+  ),
+  responses(
+    (status = 200, description = "Create exec result with his id", body = CreateExecResults),
+    (status = 400, description = "Generic database error", body = ApiError),
+  ),
+))]
 #[web::post("/cargoes/instances/{name}/exec")]
 async fn create_cargo_instance_exec(
   name: web::types::Path<String>,
@@ -58,6 +71,18 @@ async fn create_cargo_instance_exec(
   Ok(web::HttpResponse::Created().json(&exec_instance))
 }
 
+/// Endpoint to start a cargo instance command by it's id
+#[cfg_attr(feature = "dev", utoipa::path(
+  post,
+  path = "/cargoes/instances/exec/{id}/start",
+  params(
+    ("id" = String, Path, description = "Exec instance id to start"),
+  ),
+  responses(
+    (status = 200, description = "Stream of the output of the command", content_type = "nanocl/streaming-v1", body = String),
+    (status = 400, description = "Generic database error", body = ApiError),
+  ),
+))]
 #[web::post("/cargoes/instances/exec/{id}/start")]
 async fn start_cargo_instance_exec(
   id: web::types::Path<String>,

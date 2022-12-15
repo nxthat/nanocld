@@ -37,6 +37,7 @@ pub struct CargoInstanceFilterQuery {
 }
 
 /// Structure used to create an exec instance inside a container
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 #[derive(Serialize, Deserialize)]
 pub struct CargoInstanceExecBody {
   pub(crate) attach_stdin: Option<bool>,

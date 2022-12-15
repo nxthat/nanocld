@@ -35,7 +35,10 @@ use ntex_files as fs;
     cargo::delete_cargo_by_name,
     cargo::count_cargo,
 
+    // Cargo instance
     cargo_instance::list_cargo_instance,
+    cargo_instance::create_cargo_instance_exec,
+    cargo_instance::start_cargo_instance_exec,
 
     // Cluster
     cluster::list_cluster,
@@ -95,6 +98,8 @@ use ntex_files as fs;
     schemas(MountPointTypeEnum),
     schemas(EndpointSettings),
     schemas(PortTypeEnum),
+    schemas(CargoInstanceExecBody),
+    schemas(CreateExecResults),
 
     // Cluster
     schemas(ClusterItem),

@@ -734,3 +734,12 @@ impl ::std::convert::AsRef<str> for PortTypeEnum {
     }
   }
 }
+
+/// Result type for the [Create Exec API](Docker::create_exec())
+#[cfg(feature = "dev")]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, ToSchema)]
+#[serde(rename_all = "PascalCase")]
+#[allow(missing_docs)]
+pub struct CreateExecResults {
+  pub id: String,
+}

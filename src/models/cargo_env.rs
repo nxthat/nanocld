@@ -12,10 +12,10 @@ pub struct CargoEnvPartial {
   pub(crate) value: String,
 }
 
+#[cfg_attr(feature = "dev", derive(ToSchema))]
 #[derive(Debug, Serialize, Deserialize, Queryable, Insertable)]
 #[diesel(primary_key(key))]
 #[diesel(table_name = cargo_environnements)]
-#[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoEnvItem {
   pub(crate) key: String,
   pub(crate) cargo_key: String,
