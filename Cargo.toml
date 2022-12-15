@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 [features]
 default = []
-dev = ["dep:utoipa"]
+dev = ["dep:utoipa", "dep:ntex-files"]
 
 [profile.dev]
 opt-level = 0
@@ -47,7 +47,7 @@ chrono = { version = "0.4.22", features = ["serde"]}
 notify = { version = "5.0.0", features = ["serde"] }
 serde = { version = "1.0.148", features = ["derive"] }
 uuid = { version = "1.2", features = ["serde", "v4"] }
-ntex = { version = "=0.5.31", features = ["rustls", "tokio"] }
+ntex = { version = "0.5.31", features = ["rustls", "tokio"] }
 diesel-derive-enum = { version = "2.0.0-rc.0", features = ["postgres"] }
 diesel = { version = "2.0.1", features = ["postgres", "r2d2", "chrono", "uuid", "serde_json"] }
 rustls = "0.20.7"
@@ -58,3 +58,5 @@ tokio = { version = "1.22.0", features = ["fs"] }
 
 # [patch.crates.io]
 # bollard = { git = "https://github.com/leon3s/bollard" }
+ntex-files = { version = "0.1", git = "https://github.com/ntex-rs/ntex-extras.git", optional = true }
+time = { version = "0.3.17", features = ["formatting", "macros", "parsing", "serde", "serde-well-known"] }

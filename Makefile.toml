@@ -9,7 +9,7 @@ args = ["clean"]
 
 [tasks.dev]
 command = "cargo"
-args = ["run"]
+args = ["run", "--features", "dev"]
 
 [tasks.cov-ci]
 command = "cargo"

@@ -124,11 +124,15 @@ pub async fn start<'a>(
       );
       return Err(std::io::Error::new(
         std::io::ErrorKind::Other,
-        "Invalid protocol",
+        "Invalid protocol use tcp:// or unix://",
       ));
     }
     count += 1;
   }
+  #[cfg(feature = "dev")]
+  {
+    server = server.bind("0.0.0.0:29875")?;
+  };
   // server = server.bind_rustls("0.0.0.0:8443", server_config)?;
   log::info!("Server ready");
   Ok(server.run())
