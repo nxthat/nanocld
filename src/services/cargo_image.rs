@@ -1,3 +1,6 @@
+/*
+* Endpoints to manipulate cargo images
+*/
 use ntex::rt;
 use ntex::web;
 use ntex::http::StatusCode;
@@ -102,15 +105,18 @@ async fn create_cargo_image(
             format!("{:?}", err),
             StatusCode::INTERNAL_SERVER_ERROR,
           ));
-          let result = tx.send(Err::<_, web::error::Error>(err));
-          if result.is_err() {
-            break;
-          }
+          let _ = tx.send(Err::<_, web::error::Error>(err));
+          break;
         }
         Ok(result) => {
           let data = match serde_json::to_string(&result) {
             Err(err) => {
-              log::error!("unable to stringify create image info {:#?}", err);
+              let err =
+                ntex::web::Error::new(web::error::InternalError::default(
+                  format!("{:?}", err),
+                  StatusCode::INTERNAL_SERVER_ERROR,
+                ));
+              let _ = tx.send(Err::<_, web::error::Error>(err));
               break;
             }
             Ok(data) => data,
@@ -128,8 +134,10 @@ async fn create_cargo_image(
           data.splice(0..0, len_bytes);
           data.push(b'\n');
 
-          let result = tx.send(Ok::<_, web::error::Error>(Bytes::from(data)));
-          if result.is_err() {
+          if tx
+            .send(Ok::<_, web::error::Error>(Bytes::from(data)))
+            .is_err()
+          {
             break;
           }
         }
@@ -145,7 +153,7 @@ async fn create_cargo_image(
   )
 }
 
-/// Endpoint to download a cargo image
+/// Endpoint to delete a cargo image
 #[cfg_attr(feature = "dev", utoipa::path(
   delete,
   path = "/cargoes/images/{id_or_name}",

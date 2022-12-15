@@ -41,6 +41,11 @@ pub use cargo_image::*;
 mod system;
 pub use system::*;
 
+#[cfg(feature = "dev")]
+mod openapi;
+#[cfg(feature = "dev")]
+pub use openapi::*;
+
 pub type Pool = r2d2::Pool<ConnectionManager<PgConnection>>;
 pub type DBConn = PooledConnection<ConnectionManager<PgConnection>>;
 

@@ -10,6 +10,20 @@ use crate::utils;
 use crate::models::{CargoInstanceExecBody, CargoInstanceFilterQuery};
 use crate::errors::HttpResponseError;
 
+/// Endpoint to list installed cargoes images
+#[cfg_attr(feature = "dev", utoipa::path(
+  get,
+  path = "/cargoes/instances",
+  params(
+    ("namespace" = Option<String>, Query, description = "Namespace to search in"),
+    ("cluster" = Option<String>, Query, description = "Cluster to search in"),
+    ("cargo" = Option<String>, Query, description = "Cargo to search in"),
+  ),
+  responses(
+    (status = 200, description = "List of installed images", body = [ContainerSummary]),
+    (status = 400, description = "Generic database error", body = ApiError),
+  ),
+))]
 #[web::get("/cargoes/instances")]
 async fn list_cargo_instance(
   web::types::Query(qs): web::types::Query<CargoInstanceFilterQuery>,
