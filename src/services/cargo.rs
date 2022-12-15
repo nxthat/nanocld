@@ -81,6 +81,24 @@ async fn create_cargo(
   web::types::Json(payload): web::types::Json<CargoPartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let nsp = utils::key::resolve_nsp(&qs.namespace);
+  // Ensure the config is a valid json object that can be parsed as bollard::container::Config
+  let config = serde_json::from_value::<bollard::container::Config<String>>(
+    payload.config.to_owned(),
+  )
+  .map_err(|e| HttpResponseError {
+    msg: format!("config is not a valid json: {}", e),
+    status: StatusCode::UNPROCESSABLE_ENTITY,
+  })?;
+
+  // Ensure the image is present
+  if config.image.is_none() {
+    return Err(HttpResponseError {
+      msg: "config.image is required".to_owned(),
+      status: StatusCode::UNPROCESSABLE_ENTITY,
+    });
+  }
+
+  // Parse environnements variables and ensure they are valid
   let environnements = payload.environnements.to_owned();
   let mut envs: Vec<(String, String)> = Vec::new();
   if let Some(environnements) = environnements {
@@ -95,6 +113,7 @@ async fn create_cargo(
       envs.push((splited[0].to_owned(), splited[1].to_owned()));
     }
   }
+
   let item = repositories::cargo::create(nsp, payload, &pool).await?;
   let envs = envs
     .into_iter()
