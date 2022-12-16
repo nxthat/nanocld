@@ -2,7 +2,6 @@
 * Endpoints to manipulate cargo images
 */
 use ntex::rt;
-use ntex::util::BytesMut;
 use ntex::web;
 use ntex::http::StatusCode;
 use ntex::util::Bytes;
