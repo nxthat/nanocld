@@ -1,22 +1,19 @@
 use ntex::web;
+use std::path::Path;
 use ntex::http::StatusCode;
 use std::collections::HashMap;
-use std::path::Path;
-use serde::{Serialize, Deserialize};
 use futures::{StreamExt, stream};
+use serde::{Serialize, Deserialize};
 use futures::stream::FuturesUnordered;
 
 use crate::models::DaemonConfig;
-use crate::utils::render_template;
 use crate::{utils, controllers, repositories};
 use crate::models::{
   Pool, ClusterItem, CargoItem, ClusterNetworkItem, CargoInstancePartial,
-  CargoEnvItem, ProxyTemplateModes, CargoInstanceItem,
+  CargoEnvItem, ProxyTemplateModes, CargoInstanceItem, CreateCargoInstanceOpts,
 };
 
 use crate::errors::{HttpResponseError, IntoHttpResponseError};
-
-use super::cargo::CreateCargoInstanceOpts;
 
 pub struct JoinCargoOptions {
   pub(crate) cargo: CargoItem,
@@ -45,34 +42,9 @@ pub struct CargoTemplateData {
   target_ips: Vec<String>,
 }
 
-pub async fn delete_networks(
-  cluster: ClusterItem,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
-) -> Result<(), HttpResponseError> {
-  let networks =
-    repositories::cluster_network::list_for_cluster(cluster, pool).await?;
-
-  networks
-    .into_iter()
-    .map(|network| async move {
-      let _ = docker_api
-        .remove_network(&network.docker_network_id)
-        .await
-        .map_err(|err| HttpResponseError {
-          msg: format!("unable to remove network {:#?}", err),
-          status: StatusCode::INTERNAL_SERVER_ERROR,
-        });
-      repositories::cluster_network::delete_by_key(network.key, pool).await?;
-      Ok::<_, HttpResponseError>(())
-    })
-    .collect::<FuturesUnordered<_>>()
-    .collect::<Vec<_>>()
-    .await
-    .into_iter()
-    .collect::<Result<Vec<_>, HttpResponseError>>()?;
-
-  Ok(())
+#[derive(Debug, Serialize, Deserialize)]
+pub struct MustacheData {
+  pub vars: HashMap<String, String>,
 }
 
 pub async fn list_containers(
@@ -264,7 +236,8 @@ pub async fn start(
         cargoes: cargoes.to_owned(),
       };
 
-      let config_file = render_template(template.content, &template_data)?;
+      let config_file =
+        utils::render_template(template.content, &template_data)?;
       tokio::fs::write(&file_path, config_file)
         .await
         .map_err(|err| HttpResponseError {
@@ -288,12 +261,13 @@ pub async fn start(
             status: StatusCode::INTERNAL_SERVER_ERROR,
           })?;
 
-        let item: CargoTemplateData =
-          serde_json::from_str(&render_template(item_string, &template_data)?)
-            .map_err(|err| HttpResponseError {
-              msg: format!("{}", err),
-              status: StatusCode::INTERNAL_SERVER_ERROR,
-            })?;
+        let item: CargoTemplateData = serde_json::from_str(
+          &utils::render_template(item_string, &template_data)?,
+        )
+        .map_err(|err| HttpResponseError {
+          msg: format!("{}", err),
+          status: StatusCode::INTERNAL_SERVER_ERROR,
+        })?;
 
         let domain = item.dns_entry.ok_or(HttpResponseError {
           msg: String::from("Unexpected error domain should not be null"),
@@ -325,11 +299,6 @@ pub async fn start(
     }
   }
   Ok(())
-}
-
-#[derive(Debug, Serialize, Deserialize)]
-pub struct MustacheData {
-  pub vars: HashMap<String, String>,
 }
 
 pub async fn join_cargo(

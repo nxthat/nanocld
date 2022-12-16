@@ -2,6 +2,7 @@
 * Endpoints to manipulate cargo images
 */
 use ntex::rt;
+use ntex::util::BytesMut;
 use ntex::web;
 use ntex::http::StatusCode;
 use ntex::util::Bytes;
@@ -12,7 +13,7 @@ use crate::models::GenericDelete;
 use crate::models::CargoImagePartial;
 use crate::errors::HttpResponseError;
 
-/// Endpoint to list installed cargoes images
+/// Endpoint to list installed cargo images
 #[cfg_attr(feature = "dev", utoipa::path(
   get,
   path = "/cargoes/images",
@@ -121,21 +122,14 @@ async fn create_cargo_image(
             }
             Ok(data) => data,
           };
-
-          // Create a buffer of bytes with first 64 bytes as the length of the data and add \n at the end of the buffer
-          let mut data = data.into_bytes();
+          // Add the length of the data to the beginning of the stream
+          // The length is an usize
+          // The stream is terminated by a newline
           let len = data.len();
-          let mut len_bytes = [0; 64];
-          let len_bytes = len_bytes
-            .iter_mut()
-            .zip(len.to_string().as_bytes().iter())
-            .map(|(_, b)| *b)
-            .collect::<Vec<_>>();
-          data.splice(0..0, len_bytes);
-          data.push(b'\n');
+          let response = format!("{}\n{}\n", len, data);
 
           if tx
-            .send(Ok::<_, web::error::Error>(Bytes::from(data)))
+            .send(Ok::<_, web::error::Error>(Bytes::from(response)))
             .is_err()
           {
             break;

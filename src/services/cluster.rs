@@ -118,7 +118,8 @@ async fn delete_cluster_by_name(
       .await?;
   }
 
-  utils::cluster::delete_networks(item.to_owned(), &docker_api, &pool).await?;
+  utils::cluster_network::delete_networks(item.to_owned(), &docker_api, &pool)
+    .await?;
   log::debug!("deleting cluster cargo");
 
   let key = &item.key;

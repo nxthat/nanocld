@@ -1,14 +1,16 @@
 use std::collections::HashMap;
-
-use ntex::web;
 use ntex::http::StatusCode;
+use futures::StreamExt;
+use futures::stream::FuturesUnordered;
 
 use super::key::gen_key;
 use crate::repositories;
-use crate::models::{Pool, ClusterNetworkItem, ClusterNetworkPartial};
 use crate::errors::HttpResponseError;
+use crate::models::{
+  Pool, ClusterItem, ClusterNetworkItem, ClusterNetworkPartial, GenericDelete,
+};
 
-/// ## Create network in given cluster
+/// Create network in given cluster
 /// This function will create a network based on the settings
 ///
 /// ## Arguments
@@ -16,13 +18,14 @@ use crate::errors::HttpResponseError;
 /// - [network_name](str) The name of the network to create
 ///
 /// ## Return
-/// A ClusterNetwork Item
+/// - [Result](ClusterNetworkItem) The created network
+/// - [Result](HttpResponseError) An http response error if something went wrong
 pub async fn create_network(
   nsp: String,
   c_name: String,
   item: ClusterNetworkPartial,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
+  docker_api: &bollard::Docker,
+  pool: &Pool,
 ) -> Result<ClusterNetworkItem, HttpResponseError> {
   let cluster_key = gen_key(&nsp, &c_name);
   let mut labels = HashMap::new();
@@ -108,4 +111,86 @@ pub async fn create_network(
   .await?;
 
   Ok(new_network)
+}
+
+/// Delete network in given cluster
+/// This function will delete a network based on his key
+///
+/// ## Arguments
+/// - [key](str) The key of the network to delete
+/// - [docker_api](bollard::Docker) The docker api to use
+/// - [pool](Pool) The database pool to use
+///
+/// ## Return
+/// - [Result](GenericDelete) The number of deleted networks
+/// - [Result](HttpResponseError) An http response error if something went wrong
+///
+/// ## Example
+/// ```rust,norun
+/// let docker_api = bollard::Docker::connect_with_local_defaults().unwrap();
+/// let pool = db::get_pool();
+/// let key = "network_key";
+/// let result = delete_network(key.to_owned(), &docker_api, &pool).await;
+/// ```
+///
+/// ## Note
+/// This function will not return an error if the network is not found inside docker and will delete it from the database
+pub async fn delete_network_by_key(
+  key: String,
+  docker_api: &bollard::Docker,
+  pool: &Pool,
+) -> Result<GenericDelete, HttpResponseError> {
+  let network = repositories::cluster_network::find_by_key(key, pool).await?;
+  if let Err(err) = docker_api.remove_network(&network.docker_network_id).await
+  {
+    log::warn!("Unable to delete network {} {}", network.name, err);
+  };
+  repositories::cluster_network::delete_by_key(network.key, pool).await?;
+  Ok(GenericDelete { count: 1 })
+}
+
+/// Delete all networks in given cluster
+/// This function will delete all networks in a given cluster
+///
+/// ## Arguments
+/// - [cluster](ClusterItem) The cluster to target
+/// - [docker_api](bollard::Docker) The docker api to use
+/// - [pool](Pool) The database pool to use
+///
+/// ## Return
+/// - [Result](()) If everything went well
+/// - [Result](HttpResponseError) An http response error if something went wrong
+///
+/// ## Example
+/// ```rust,norun
+/// let cluster = repositories::cluster::find_by_key("key".to_owned(), pool).await?;
+/// let docker_api = bollard::Docker::connect_with_local_defaults().unwrap();
+/// let _ = utils::cluster_network::delete_networks(cluster, &docker_api, pool).await?;
+/// ```
+///
+/// ## Note
+/// This function will not return an error if a network is not found
+pub async fn delete_networks(
+  cluster: ClusterItem,
+  docker_api: &bollard::Docker,
+  pool: &Pool,
+) -> Result<GenericDelete, HttpResponseError> {
+  let networks =
+    repositories::cluster_network::list_for_cluster(cluster, pool).await?;
+
+  networks
+    .iter()
+    .map(|network| async move {
+      delete_network_by_key(network.key.to_owned(), docker_api, pool).await?;
+      Ok::<_, HttpResponseError>(())
+    })
+    .collect::<FuturesUnordered<_>>()
+    .collect::<Vec<_>>()
+    .await
+    .into_iter()
+    .collect::<Result<Vec<_>, HttpResponseError>>()?;
+
+  Ok(GenericDelete {
+    count: networks.len(),
+  })
 }

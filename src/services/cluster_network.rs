@@ -1,5 +1,4 @@
 use ntex::web;
-use ntex::http::StatusCode;
 
 use crate::{utils, repositories};
 use crate::models::{
@@ -128,23 +127,16 @@ async fn delete_cluster_network_by_name(
   url_path: web::types::Path<InspectClusterNetworkPath>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let c_name = url_path.c_name.to_owned();
-  let n_name = url_path.n_name.to_owned();
-  let nsp = utils::key::resolve_nsp(&qs.namespace);
-  let gen_key = nsp + "-" + &c_name + "-" + &n_name;
-  let network =
-    repositories::cluster_network::find_by_key(gen_key, &pool).await?;
-
-  if let Err(err) = docker_api.remove_network(&network.docker_network_id).await
-  {
-    return Err(HttpResponseError {
-      status: StatusCode::BAD_REQUEST,
-      msg: format!("Unable to delete network {:?}", err),
-    });
-  }
-
-  let res =
-    repositories::cluster_network::delete_by_key(network.key, &pool).await?;
+  let cluster_name = url_path.c_name.to_owned();
+  let network_name = url_path.n_name.to_owned();
+  let cluster_key = utils::key::gen_key_from_nsp(&qs.namespace, &cluster_name);
+  let network_key = utils::key::gen_key(&cluster_key, &network_name);
+  let res = utils::cluster_network::delete_network_by_key(
+    network_key,
+    &docker_api,
+    &pool,
+  )
+  .await?;
   Ok(web::HttpResponse::Ok().json(&res))
 }
 
@@ -184,6 +176,8 @@ pub fn ntex_config(config: &mut web::ServiceConfig) {
 /// Cluster network unit tests
 #[cfg(test)]
 pub mod tests {
+
+  use ntex::http::StatusCode;
 
   use super::*;
 

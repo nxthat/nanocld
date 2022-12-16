@@ -1,22 +1,48 @@
-use bollard::service::{RestartPolicy, RestartPolicyNameEnum};
-use futures::stream::FuturesUnordered;
 use ntex::web;
 use ntex::http::StatusCode;
 use std::collections::HashMap;
 use futures::{StreamExt, stream};
+use futures::stream::FuturesUnordered;
+use bollard::service::{RestartPolicy, RestartPolicyNameEnum};
 
-use crate::models::{DaemonConfig, CargoInstanceFilterQuery};
 use crate::{repositories, utils};
+use crate::models::{DaemonConfig, CargoInstanceFilterQuery};
 
-use crate::models::{CargoItem, Pool};
+use crate::models::{CreateCargoInstanceOpts, Pool};
 
 use crate::errors::HttpResponseError;
 
 use super::cluster::JoinCargoOptions;
 
+/// List cargo instances
+/// Return a list of container summary filtered by namespace, cluster or cargo name
+/// by calling docker [ContainerList](https://docs.docker.com/engine/api/v1.40/#operation/ContainerList) operation with labels as filter
+///
+/// # Arguments
+/// - [qs](CargoInstanceFilterQuery) - filter query
+/// - [docker_api](bollard::Docker) - docker api client
+///
+/// # Return
+/// - [Result](Vec<bollard::models::ContainerSummary>) - List of container summary
+/// - [Result](HttpResponseError) - An http response error if something went wrong
+///
+/// # Example
+/// ```rust, norun
+/// use crate::utils::cargo::list_instances;
+/// use crate::models::CargoInstanceFilterQuery;
+///
+/// let qs = CargoInstanceFilterQuery {
+///   namespace: None,
+///   cluster: None,
+///   cargo: None,
+/// };
+///
+/// let docker_api = bollard::Docker::connect_with_local_defaults().unwrap();
+/// let containers = list_instances(qs, &docker_api).await.unwrap();
+/// ```
 pub async fn list_instances(
   qs: CargoInstanceFilterQuery,
-  docker_api: &web::types::State<bollard::Docker>,
+  docker_api: &bollard::Docker,
 ) -> Result<Vec<bollard::models::ContainerSummary>, HttpResponseError> {
   let namespace = utils::key::resolve_nsp(&qs.namespace);
   let mut filters = HashMap::new();
@@ -39,15 +65,6 @@ pub async fn list_instances(
   let containers = docker_api.list_containers(options).await?;
 
   Ok(containers)
-}
-
-#[derive(Debug)]
-pub struct CreateCargoInstanceOpts<'a> {
-  pub(crate) cargo: &'a CargoItem,
-  pub(crate) cluster_name: &'a str,
-  pub(crate) network_key: &'a str,
-  pub(crate) environnements: Vec<String>,
-  pub(crate) labels: Option<&'a mut HashMap<String, String>>,
 }
 
 pub async fn create_instances<'a>(
