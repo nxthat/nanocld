@@ -1,14 +1,10 @@
 /*
 * Endpoints to manipulate cargo images
 */
-use ntex::rt;
 use ntex::web;
 use ntex::http::StatusCode;
-use ntex::util::Bytes;
-use ntex::channel::mpsc;
-use futures::StreamExt;
 
-use crate::models::GenericDelete;
+use crate::utils;
 use crate::models::CargoImagePartial;
 use crate::errors::HttpResponseError;
 
@@ -25,12 +21,7 @@ use crate::errors::HttpResponseError;
 async fn list_cargo_image(
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let images = docker_api
-    .list_images(Some(bollard::image::ListImagesOptions::<String> {
-      all: true,
-      ..Default::default()
-    }))
-    .await?;
+  let images = utils::cargo_image::list(&docker_api).await?;
 
   Ok(web::HttpResponse::Ok().json(&images))
 }
@@ -53,7 +44,8 @@ async fn inspect_cargo_image(
   name: web::types::Path<String>,
   docker_api: web::types::State<bollard::Docker>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let image = docker_api.inspect_image(&name.into_inner()).await?;
+  let image =
+    utils::cargo_image::inspect(&name.into_inner(), &docker_api).await?;
 
   Ok(web::HttpResponse::Ok().json(&image))
 }
@@ -83,60 +75,10 @@ async fn create_cargo_image(
     });
   }
 
-  let (tx, rx_body) = mpsc::channel();
-
-  let from_image = image_info[0].to_string();
-  let tag = image_info[1].to_string();
-  rt::spawn(async move {
-    let mut stream = docker_api.create_image(
-      Some(bollard::image::CreateImageOptions {
-        from_image,
-        tag,
-        ..Default::default()
-      }),
-      None,
-      None,
-    );
-
-    while let Some(result) = stream.next().await {
-      match result {
-        Err(err) => {
-          let err = ntex::web::Error::new(web::error::InternalError::default(
-            format!("{:?}", err),
-            StatusCode::INTERNAL_SERVER_ERROR,
-          ));
-          let _ = tx.send(Err::<_, web::error::Error>(err));
-          break;
-        }
-        Ok(result) => {
-          let data = match serde_json::to_string(&result) {
-            Err(err) => {
-              let err =
-                ntex::web::Error::new(web::error::InternalError::default(
-                  format!("{:?}", err),
-                  StatusCode::INTERNAL_SERVER_ERROR,
-                ));
-              let _ = tx.send(Err::<_, web::error::Error>(err));
-              break;
-            }
-            Ok(data) => data,
-          };
-          // Add the length of the data to the beginning of the stream
-          // The length is an usize
-          // The stream is terminated by a newline
-          let len = data.len();
-          let response = format!("{}\n{}\n", len, data);
-
-          if tx
-            .send(Ok::<_, web::error::Error>(Bytes::from(response)))
-            .is_err()
-          {
-            break;
-          }
-        }
-      }
-    }
-  });
+  let from_image = image_info[0];
+  let tag = image_info[1];
+  let rx_body =
+    utils::cargo_image::download(from_image, tag, &docker_api).await?;
 
   Ok(
     web::HttpResponse::Ok()
@@ -165,8 +107,7 @@ async fn delete_cargo_image_by_name(
   id_or_name: web::types::Path<String>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let id_or_name = id_or_name.into_inner();
-  docker_api.remove_image(&id_or_name, None, None).await?;
-  let res = GenericDelete { count: 1 };
+  let res = utils::cargo_image::delete(&id_or_name, &docker_api).await?;
   Ok(web::HttpResponse::Ok().json(&res))
 }
 

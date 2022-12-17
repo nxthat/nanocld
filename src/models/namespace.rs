@@ -8,7 +8,7 @@ use crate::schema::namespaces;
 /// Namespace to encapsulate clusters
 /// this structure ensure read and write in database
 #[derive(
-  Debug, Serialize, Deserialize, Identifiable, Insertable, Queryable,
+  Debug, Clone, Serialize, Deserialize, Identifiable, Insertable, Queryable,
 )]
 #[diesel(primary_key(name))]
 #[diesel(table_name = namespaces)]

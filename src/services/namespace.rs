@@ -1,7 +1,7 @@
 /// Manage nanocl namespace
 use ntex::web;
 
-use crate::repositories::namespace;
+use crate::repositories::{namespace, self};
 use crate::models::{Pool, NamespacePartial};
 
 use crate::errors::HttpResponseError;
@@ -84,6 +84,13 @@ async fn inspect_namespace_by_name(
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();
   let item = namespace::inspect_by_name(name, &pool).await?;
+
+  let _cluster =
+    repositories::cluster::find_by_namespace(item.name.to_owned(), &pool)
+      .await?;
+
+  let _cargoes =
+    repositories::cargo::find_by_namespace(item.to_owned(), &pool).await?;
 
   Ok(web::HttpResponse::Ok().json(&item))
 }

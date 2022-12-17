@@ -138,6 +138,14 @@ pub async fn get_component_state(
   ComponentState::Stopped
 }
 
+/// Get default gateway of a network
+///
+/// ## Arguments
+/// - [docker_network](Network) docker network
+///
+/// ## Return
+/// if success return [default gateway](String)
+/// a [http response error](HttpResponseError) is returned if an error occur
 pub fn get_default_gateway(
   docker_network: &Network,
 ) -> Result<String, HttpResponseError> {
