@@ -5,6 +5,7 @@ pub mod cargo;
 pub mod docker;
 pub mod cluster;
 pub mod cargo_image;
+pub mod cargo_instance;
 pub mod cluster_network;
 pub mod cluster_variable;
 

@@ -210,6 +210,7 @@ mod tests {
     name: String,
     ip_address: String,
   }
+
   /// Test write default dns config file
   #[ntex::test]
   async fn test_write_dns_default_conf() {

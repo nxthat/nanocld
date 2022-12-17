@@ -2,7 +2,6 @@
 * Endpoints to manipulate cargo images
 */
 use ntex::web;
-use ntex::http::StatusCode;
 
 use crate::utils;
 use crate::models::CargoImagePartial;
