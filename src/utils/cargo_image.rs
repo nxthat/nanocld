@@ -135,7 +135,7 @@ pub async fn delete(
   id_or_name: &str,
   docker_api: &Docker,
 ) -> Result<GenericDelete, HttpResponseError> {
-  docker_api.remove_image(&id_or_name, None, None).await?;
+  docker_api.remove_image(id_or_name, None, None).await?;
   let res = GenericDelete { count: 1 };
 
   Ok(res)

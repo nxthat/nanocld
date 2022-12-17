@@ -1,13 +1,7 @@
-use std::collections::HashMap;
-
 use bollard::Docker;
 use bollard::container::StartContainerOptions;
 use bollard::errors::Error as DockerError;
-use bollard::models::Network;
 use bollard::network::InspectNetworkOptions;
-use ntex::http::StatusCode;
-
-use crate::errors::HttpResponseError;
 
 #[derive(Debug, Eq, PartialEq)]
 pub enum ComponentState {
@@ -20,26 +14,6 @@ pub enum ComponentState {
 pub enum NetworkState {
   NotFound,
   Ready,
-}
-
-/// ## Generate labels with a namespace
-///
-/// ## Arguments
-/// - [namespace](str) the name of the namespace
-///
-/// ## Return
-/// [labels](HashMap) a hashmap of strings with namespace key as given value
-///
-/// ## Examples
-/// ```rust,norun
-/// use crate::services;
-///
-/// services::utils::gen_labels_with_namespace("default");
-/// ```
-pub fn gen_labels_with_namespace(namespace: &str) -> HashMap<&str, &str> {
-  let mut labels: HashMap<&str, &str> = HashMap::new();
-  labels.insert("namespace", namespace);
-  labels
 }
 
 /// ## Start a service
@@ -138,91 +112,15 @@ pub async fn get_component_state(
   ComponentState::Stopped
 }
 
-/// Get default gateway of a network
-///
-/// ## Arguments
-/// - [docker_network](Network) docker network
-///
-/// ## Return
-/// if success return [default gateway](String)
-/// a [http response error](HttpResponseError) is returned if an error occur
-pub fn get_default_gateway(
-  docker_network: &Network,
-) -> Result<String, HttpResponseError> {
-  let ipam_config = docker_network
-    .to_owned()
-    .ipam
-    .ok_or(HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: String::from("Unable to get ipam config from network"),
-    })?
-    .config
-    .ok_or(HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: String::from("Unable to get ipam config"),
-    })?;
-
-  let default_gateway = ipam_config
-    .get(0)
-    .ok_or(HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: String::from("Unable to get ipam config"),
-    })?
-    .gateway
-    .as_ref()
-    .ok_or(HttpResponseError {
-      status: StatusCode::INTERNAL_SERVER_ERROR,
-      msg: String::from("Unable to get ipam config gateway"),
-    })?
-    .to_owned();
-
-  Ok(default_gateway)
-}
-
 /// Docker utils unit tests
 #[cfg(test)]
 mod tests {
 
   use super::*;
 
-  use bollard::{network::InspectNetworkOptions, container::StopContainerOptions};
+  use bollard::container::StopContainerOptions;
 
   use crate::utils::tests::*;
-
-  /// Test to get default gateway of system-nano-internal0 network
-  #[ntex::test]
-  async fn get_nanocl_internal_gateway() -> TestRet {
-    let docker = gen_docker_client();
-    let network = docker
-      .inspect_network(
-        "system-nano-internal0",
-        None::<InspectNetworkOptions<String>>,
-      )
-      .await?;
-    let _gateway = get_default_gateway(&network);
-    Ok(())
-  }
-
-  /// Test to get default gateway of host network
-  /// This should fail because host network doesn't have a gateway
-  #[ntex::test]
-  async fn get_host_network_gateway() -> TestRet {
-    let docker = gen_docker_client();
-    let network = docker
-      .inspect_network("host", None::<InspectNetworkOptions<String>>)
-      .await?;
-    let gateway = get_default_gateway(&network);
-    assert!(gateway.is_err(), "Expect get_default_gateway to fail");
-    Ok(())
-  }
-
-  /// Test to generate labels with a namespace gg
-  #[ntex::test]
-  async fn gen_labels_with_namespace_test() -> TestRet {
-    let labels = gen_labels_with_namespace("gg");
-    assert_eq!(labels.get("namespace"), Some(&"gg"));
-    Ok(())
-  }
 
   /// Test to get network state of system-nano-internal0 network
   /// This should return NetworkState::Ready

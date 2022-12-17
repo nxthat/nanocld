@@ -147,7 +147,8 @@ async fn register_system_network(arg: &ArgState) -> Result<(), DaemonError> {
     })
   })?;
 
-  let default_gateway = utils::docker::get_default_gateway(&docker_network)?;
+  let default_gateway =
+    utils::cluster_network::get_default_gateway(&docker_network)?;
 
   repositories::cluster_network::create_for_cluster(
     arg.sys_namespace.to_owned(),

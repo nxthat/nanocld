@@ -47,7 +47,7 @@ fn gen_store_config<'a>(
   config: &DaemonConfig,
 ) -> bollard::container::Config<&'a str> {
   let image = Some("cockroachdb/cockroach:v21.2.17");
-  let mut labels = utils::docker::gen_labels_with_namespace("system");
+  let mut labels = utils::cargo_instance::gen_labels_with_namespace("system");
   labels.insert("namespace", "system");
   labels.insert("cluster", "system-nano");
   labels.insert("cargo", "system-store");
