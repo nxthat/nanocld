@@ -1,10 +1,10 @@
 use std::path::Path;
+use std::collections::HashMap;
 
 use ntex::web;
+use ntex::http::StatusCode;
 use diesel::PgConnection;
 use diesel::r2d2::ConnectionManager;
-
-use ntex::http::StatusCode;
 use bollard::{
   Docker,
   models::HostConfig,
@@ -13,19 +13,19 @@ use bollard::{
   service::{RestartPolicy, RestartPolicyNameEnum},
 };
 
-use crate::{
-  utils, repositories,
-  models::{
-    Pool, DBConn, ArgState, DaemonConfig, CargoPartial, CargoInstancePartial,
-  },
-};
-
+use crate::{utils, repositories};
 use crate::errors::{DaemonError, HttpResponseError};
+use crate::models::{
+  Pool, DBConn, ArgState, DaemonConfig, CargoPartial, CargoInstancePartial,
+};
 
 /// Generate HostConfig struct for container creation
 ///
 /// ## Arguments
 /// [config](DaemonConfig) Daemon config reference
+///
+/// ## Returns
+/// [HostConfig](HostConfig) HostConfig struct for container creation
 fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
   let path = Path::new(&config.state_dir).join("store/data");
 
@@ -42,12 +42,21 @@ fn gen_store_host_conf(config: &DaemonConfig) -> HostConfig {
   }
 }
 
+/// Generate container config for system store
+/// This function will generate a container config for the system store
+///
+/// ## Arguments
+/// [name](str) The name of the container
+/// [config](DaemonConfig) Reference to daemon config
+///
+/// ## Returns
+/// [Config](Config) The container config
 fn gen_store_config<'a>(
   name: &'a str,
   config: &DaemonConfig,
 ) -> bollard::container::Config<&'a str> {
   let image = Some("cockroachdb/cockroach:v21.2.17");
-  let mut labels = utils::cargo_instance::gen_labels_with_namespace("system");
+  let mut labels = HashMap::new();
   labels.insert("namespace", "system");
   labels.insert("cluster", "system-nano");
   labels.insert("cargo", "system-store");
@@ -107,6 +116,10 @@ pub async fn create_pool(host: String) -> Pool {
 ///
 /// ## Arguments
 /// [pool](web::types::State<Pool>) a pool wrapped in ntex State
+///
+/// ## Returns
+/// - [DBConn](DBConn) A connection to the database
+/// - [HttpResponseError](HttpResponseError) Error if unable to get connection
 pub fn get_pool_conn(pool: &Pool) -> Result<DBConn, HttpResponseError> {
   let conn = match pool.get() {
     Ok(conn) => conn,
@@ -124,6 +137,10 @@ pub fn get_pool_conn(pool: &Pool) -> Result<DBConn, HttpResponseError> {
 ///
 /// ## Arguments
 /// [docker_api](Docker) Reference to docker api
+///
+/// ## Returns
+/// - [String](String) Ip address of the store
+/// - [HttpResponseError](HttpResponseError) Error if unable to get ip address
 pub async fn get_store_ip_addr(
   docker_api: &Docker,
 ) -> Result<String, HttpResponseError> {
@@ -159,6 +176,10 @@ pub async fn get_store_ip_addr(
 /// ## Arguments
 /// [config](DaemonConfig) Reference to Daemon config
 /// [docker_api](Docker) Reference to docker
+///
+/// ## Returns
+/// - [Result](Result) Result of the boot process
+/// - [DockerError](DockerError) Error if unable to boot store
 pub async fn boot(
   config: &DaemonConfig,
   docker_api: &Docker,
@@ -184,6 +205,10 @@ pub async fn boot(
 ///
 /// ## Arguments
 /// [arg](ArgState) Reference to argument state
+///
+/// ## Returns
+/// - [Result](Result) Result of the registration process
+/// - [DaemonError](DaemonError) Error if unable to register store
 pub async fn register(arg: &ArgState) -> Result<(), DaemonError> {
   let name = "store";
   let key = utils::key::gen_key(&arg.sys_namespace, name);

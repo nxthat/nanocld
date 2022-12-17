@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use ntex::web;
 use ntex::rt;
 use ntex::http::StatusCode;
@@ -38,6 +36,16 @@ pub async fn create_cargo_instance_exec(
   Ok(exec_instance)
 }
 
+/// Exec cargo instance
+/// This function will exec a command in a container
+///
+/// ## Arguments
+/// - [id](str) The id of the exec instance
+/// - [docker_api](Docker) The docker api
+///
+/// ## Return
+/// - [Result](web::HttpResponse) The response of the exec command
+/// - [Result](HttpResponseError) An http response error if something went wrong
 pub async fn exec_cargo_instance_exec(
   id: &str,
   docker_api: &Docker,
@@ -93,39 +101,5 @@ pub async fn exec_cargo_instance_exec(
       Ok(web::HttpResponse::Ok().streaming(rx_body))
     }
     StartExecResults::Detached => Ok(web::HttpResponse::Ok().into()),
-  }
-}
-
-/// ## Generate labels with a namespace
-///
-/// ## Arguments
-/// - [namespace](str) the name of the namespace
-///
-/// ## Return
-/// [labels](HashMap) a hashmap of strings with namespace key as given value
-///
-/// ## Examples
-/// ```rust,norun
-/// use crate::services;
-///
-/// services::utils::gen_labels_with_namespace("default");
-/// ```
-pub fn gen_labels_with_namespace(namespace: &str) -> HashMap<&str, &str> {
-  let mut labels: HashMap<&str, &str> = HashMap::new();
-  labels.insert("namespace", namespace);
-  labels
-}
-
-#[cfg(test)]
-mod tests {
-  use super::*;
-
-  use crate::utils::tests::*;
-  /// Test to generate labels with a namespace gg
-  #[ntex::test]
-  async fn gen_labels_with_namespace_test() -> TestRet {
-    let labels = gen_labels_with_namespace("gg");
-    assert_eq!(labels.get("namespace"), Some(&"gg"));
-    Ok(())
   }
 }
