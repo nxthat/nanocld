@@ -140,3 +140,29 @@ pub async fn delete(
 
   Ok(res)
 }
+
+/// Parse image info from a string
+///
+/// ## Arguments
+/// - [image_info](str) image info string
+///
+/// ## Return
+/// - [Result](String) - Image name
+/// - [Result](String) - Image tag
+/// - [Result](HttpResponseError) - An http response error if something went wrong
+pub fn parse_image_info(
+  image_info: &str,
+) -> Result<(String, String), HttpResponseError> {
+  let image_info: Vec<&str> = image_info.split(':').collect();
+
+  if image_info.len() != 2 {
+    return Err(HttpResponseError {
+      msg: String::from("missing tag in image name"),
+      status: StatusCode::BAD_REQUEST,
+    });
+  }
+
+  let image_name = image_info[0].to_ascii_lowercase();
+  let image_tag = image_info[1].to_ascii_lowercase();
+  Ok((image_name, image_tag))
+}

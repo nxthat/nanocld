@@ -66,20 +66,9 @@ async fn create_cargo_image(
   docker_api: web::types::State<bollard::Docker>,
   web::types::Json(payload): web::types::Json<CargoImagePartial>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
-  let image_info = payload.name.split(':').collect::<Vec<&str>>();
-
-  if image_info.len() != 2 {
-    return Err(HttpResponseError {
-      msg: String::from("missing tag in image name"),
-      status: StatusCode::BAD_REQUEST,
-    });
-  }
-
-  let from_image = image_info[0];
-  let tag = image_info[1];
+  let (from_image, tag) = utils::cargo_image::parse_image_info(&payload.name)?;
   let rx_body =
-    utils::cargo_image::download(from_image, tag, &docker_api).await?;
-
+    utils::cargo_image::download(&from_image, &tag, &docker_api).await?;
   Ok(
     web::HttpResponse::Ok()
       .keep_alive()
