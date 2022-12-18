@@ -115,7 +115,7 @@ pub async fn create_pool(host: String) -> Pool {
 /// Get connection from the connection pool
 ///
 /// ## Arguments
-/// [pool](web::types::State<Pool>) a pool wrapped in ntex State
+/// [pool](Pool) a pool wrapped in ntex State
 ///
 /// ## Returns
 /// - [DBConn](DBConn) A connection to the database

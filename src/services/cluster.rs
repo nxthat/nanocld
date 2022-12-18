@@ -171,8 +171,8 @@ async fn delete_cluster_by_name(
 ))]
 #[web::get("/clusters/{name}/inspect")]
 async fn inspect_cluster_by_name(
-  pool: web::types::State<Pool>,
   name: web::types::Path<String>,
+  pool: web::types::State<Pool>,
   web::types::Query(qs): web::types::Query<GenericNspQuery>,
 ) -> Result<web::HttpResponse, HttpResponseError> {
   let name = name.into_inner();

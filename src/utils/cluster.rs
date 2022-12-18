@@ -1,4 +1,3 @@
-use ntex::web;
 use std::path::Path;
 use ntex::http::StatusCode;
 use std::collections::HashMap;
@@ -50,7 +49,7 @@ pub struct MustacheData {
 pub async fn list_containers(
   cluster_key: &str,
   cargo_key: &str,
-  docker_api: &web::types::State<bollard::Docker>,
+  docker_api: &bollard::Docker,
 ) -> Result<Vec<bollard::models::ContainerSummary>, HttpResponseError> {
   let target_cluster = &format!("cluster={}", &cluster_key);
   let target_cargo = &format!("cargo={}", &cargo_key);
@@ -72,7 +71,7 @@ pub async fn list_containers(
 async fn start_containers(
   containers: Vec<bollard::models::ContainerSummary>,
   network_key: &str,
-  docker_api: &web::types::State<bollard::Docker>,
+  docker_api: &bollard::Docker,
 ) -> Result<Vec<String>, HttpResponseError> {
   log::info!("Starting cargoes");
   let target_ips = containers
@@ -129,8 +128,8 @@ async fn start_containers(
 
 async fn start_cluster_cargoes(
   cluster_cargoes: Vec<CargoInstanceItem>,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
+  docker_api: &bollard::Docker,
+  pool: &Pool,
 ) -> Result<Vec<CargoTemplateData>, HttpResponseError> {
   cluster_cargoes
     .into_iter()
@@ -172,8 +171,8 @@ async fn start_cluster_cargoes(
 pub async fn start(
   cluster: &ClusterItem,
   config: &DaemonConfig,
-  pool: &web::types::State<Pool>,
-  docker_api: &web::types::State<bollard::Docker>,
+  pool: &Pool,
+  docker_api: &bollard::Docker,
 ) -> Result<(), HttpResponseError> {
   let cluster_cargoes = repositories::cargo_instance::get_by_cluster_key(
     cluster.key.to_owned(),
@@ -299,8 +298,8 @@ pub async fn start(
 
 pub async fn join_cargo(
   opts: &JoinCargoOptions,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
+  docker_api: &bollard::Docker,
+  pool: &Pool,
 ) -> Result<Vec<String>, HttpResponseError> {
   let cluster_cargo = CargoInstancePartial {
     cluster_key: opts.cluster.key.to_owned(),

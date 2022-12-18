@@ -1,4 +1,3 @@
-use ntex::web;
 use ntex::http::StatusCode;
 use std::collections::HashMap;
 use futures::{StreamExt, stream};
@@ -69,7 +68,7 @@ pub async fn list_instances(
 
 pub async fn create_instances<'a>(
   opts: CreateCargoInstanceOpts<'a>,
-  docker_api: &web::types::State<bollard::Docker>,
+  docker_api: &bollard::Docker,
 ) -> Result<Vec<String>, HttpResponseError> {
   log::debug!(
     "creating containers for cargo {:?} with labels {:?}",
@@ -158,7 +157,7 @@ pub async fn create_instances<'a>(
 pub async fn delete_instances(
   namespace: String,
   cargo: String,
-  docker_api: &web::types::State<bollard::Docker>,
+  docker_api: &bollard::Docker,
 ) -> Result<(), HttpResponseError> {
   let qs = CargoInstanceFilterQuery {
     cargo: Some(cargo.to_owned()),
@@ -192,9 +191,9 @@ pub async fn delete_instances(
 /// Regenerate containers for a given cargo
 pub async fn update_instances(
   cargo_key: String,
-  daemon_config: &web::types::State<DaemonConfig>,
-  docker_api: &web::types::State<bollard::Docker>,
-  pool: &web::types::State<Pool>,
+  daemon_config: &DaemonConfig,
+  docker_api: &bollard::Docker,
+  pool: &Pool,
 ) -> Result<(), HttpResponseError> {
   let cluster_cargoes =
     repositories::cargo_instance::find_by_cargo_key(cargo_key, pool).await?;
