@@ -129,16 +129,20 @@ async fn delete_cluster_by_name(
     .proxy_templates
     .iter()
     .map(|name| async move {
-      let template =
+      log::debug!("deleting proxy template {}", &name);
+      let res =
         repositories::proxy_template::get_by_name(name.to_owned(), pool_ptr)
-          .await?;
-      let template_dir = match template.mode {
-        ProxyTemplateModes::Http => state_path.join("nginx/sites-enabled"),
-        ProxyTemplateModes::Stream => state_path.join("nginx/stream-enabled"),
-      };
-      let template_path = template_dir.join(format!("{}.{}.conf", &key, &name));
-      // We ensure file is deleted, if file dont exist we do nothing
-      let _ = fs::remove_file(template_path).await;
+          .await;
+      if let Ok(template) = res {
+        let template_dir = match template.mode {
+          ProxyTemplateModes::Http => state_path.join("nginx/sites-enabled"),
+          ProxyTemplateModes::Stream => state_path.join("nginx/stream-enabled"),
+        };
+        let template_path =
+          template_dir.join(format!("{}.{}.conf", &key, &name));
+        // We ensure file is deleted, if file dont exist we do nothing
+        let _ = fs::remove_file(template_path).await;
+      }
       Ok::<(), HttpResponseError>(())
     })
     .collect::<FuturesUnordered<_>>()
