@@ -20,6 +20,13 @@ pub struct CargoInstanceItem {
   pub(crate) network_key: String,
 }
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum CargoInstanceState {
+  Uninstalled,
+  Running,
+  Stopped,
+}
+
 /// Structure used as body parameter to create a cluster cargo
 #[cfg_attr(feature = "dev", derive(ToSchema))]
 pub struct CargoInstancePartial {

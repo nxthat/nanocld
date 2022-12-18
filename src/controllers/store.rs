@@ -13,7 +13,7 @@ use bollard::{
   service::{RestartPolicy, RestartPolicyNameEnum},
 };
 
-use crate::{utils, repositories};
+use crate::{utils, repositories, models::CargoInstanceState};
 use crate::errors::{DaemonError, HttpResponseError};
 use crate::models::{
   Pool, DBConn, ArgState, DaemonConfig, CargoPartial, CargoInstancePartial,
@@ -186,14 +186,16 @@ pub async fn boot(
 ) -> Result<(), DockerError> {
   let container_name = "store";
   let s_state =
-    utils::docker::get_component_state(container_name, docker_api).await;
+    utils::cargo_instance::get_cargo_instance_state(container_name, docker_api)
+      .await;
 
-  if s_state == utils::docker::ComponentState::Uninstalled {
+  if s_state == CargoInstanceState::Uninstalled {
     create_system_store(container_name, config, docker_api).await?;
   }
-  if s_state != utils::docker::ComponentState::Running {
+  if s_state != CargoInstanceState::Running {
     if let Err(err) =
-      utils::docker::start_component(container_name, docker_api).await
+      utils::cargo_instance::start_cargo_instance(container_name, docker_api)
+        .await
     {
       log::error!("error while starting {} {}", container_name, err);
     }

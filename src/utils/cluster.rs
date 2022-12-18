@@ -82,11 +82,7 @@ async fn start_containers(
       log::info!("starting container {}", &container_id);
       let state = container.state.unwrap_or_default();
       if state != "running" {
-        docker_api
-          .start_container(
-            &container_id,
-            None::<bollard::container::StartContainerOptions<String>>,
-          )
+        utils::cargo_instance::start_cargo_instance(&container_id, docker_api)
           .await?;
       }
       log::info!("successfully started container {}", &container_id);

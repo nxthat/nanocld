@@ -131,7 +131,8 @@ async fn create_ipsec_container(
     "VPN_XAUTH_NET=192.168.85.0/16",
     "VPN_XAUTH_POOL=192.168.85.10-192.168.85.254",
   ]);
-  let labels = Some(gen_labels_with_namespace("nanocl"));
+  let labels = HashMap::new();
+  labels.insert("namespace", "system");
   let host_config = Some(gen_ipsec_host_conf(config));
   let options = Some(CreateContainerOptions { name });
   let config = Config {

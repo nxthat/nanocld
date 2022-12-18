@@ -1,8 +1,11 @@
 use std::collections::HashMap;
+
+use bollard::network::InspectNetworkOptions;
 use ntex::http::StatusCode;
 use futures::StreamExt;
 use futures::stream::FuturesUnordered;
 use bollard::Docker;
+use bollard::errors::Error as DockerError;
 use bollard::models::Network;
 
 use super::key::gen_key;
@@ -10,6 +13,7 @@ use crate::repositories;
 use crate::errors::HttpResponseError;
 use crate::models::{
   Pool, ClusterItem, ClusterNetworkItem, ClusterNetworkPartial, GenericDelete,
+  NetworkState,
 };
 
 /// Create network in given cluster
@@ -213,6 +217,52 @@ pub fn get_default_gateway(
   Ok(default_gateway)
 }
 
+/// ## Get network state
+///
+/// ## Arguments
+/// - [name](str) name of the network
+/// - [docker_api](Docker) bollard docker instance
+///
+/// ## Return
+/// /// if success return [network state](NetworkState)
+/// a [docker error](DockerError) is returned if an error occur
+///
+/// ## Examples
+/// ```rust,norun
+/// use crate::services;
+///
+/// services::utils::get_network_state(&docker, "network-name").await;
+/// ```
+pub async fn get_network_state(
+  network_name: &str,
+  docker_api: &Docker,
+) -> Result<NetworkState, DockerError> {
+  let config = InspectNetworkOptions {
+    verbose: true,
+    scope: "local",
+  };
+
+  let res = docker_api.inspect_network(network_name, Some(config)).await;
+  if let Err(err) = res {
+    match err {
+      DockerError::DockerResponseServerError {
+        status_code,
+        message,
+      } => {
+        if status_code == 404 {
+          return Ok(NetworkState::NotFound);
+        }
+        return Err(DockerError::DockerResponseServerError {
+          status_code,
+          message,
+        });
+      }
+      _ => return Err(err),
+    }
+  }
+  Ok(NetworkState::Ready)
+}
+
 #[cfg(test)]
 pub mod tests {
   use super::*;
@@ -245,6 +295,26 @@ pub mod tests {
       .await?;
     let gateway = get_default_gateway(&network);
     assert!(gateway.is_err(), "Expect get_default_gateway to fail");
+    Ok(())
+  }
+
+  /// Test to get network state of system-nano-internal0 network
+  /// This should return NetworkState::Ready
+  #[ntex::test]
+  async fn get_network_state_test() -> TestRet {
+    let docker = gen_docker_client();
+    let state = get_network_state("system-nano-internal0", &docker).await?;
+    assert_eq!(state, NetworkState::Ready);
+    Ok(())
+  }
+
+  /// Test to get network state of a non existing network
+  /// This should return NetworkState::NotFound
+  #[ntex::test]
+  async fn get_network_state_not_found_test() -> TestRet {
+    let docker = gen_docker_client();
+    let state = get_network_state("non-existing-network", &docker).await?;
+    assert_eq!(state, NetworkState::NotFound);
     Ok(())
   }
 }

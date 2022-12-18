@@ -1,18 +1,17 @@
-pub mod errors;
+use serde::Serialize;
+use ntex::http::StatusCode;
+
+use crate::errors::HttpResponseError;
 
 pub mod key;
 pub mod cargo;
-pub mod docker;
 pub mod cluster;
 pub mod cargo_image;
 pub mod cargo_instance;
 pub mod cluster_network;
 pub mod cluster_variable;
 
-use serde::Serialize;
-use ntex::http::StatusCode;
-
-use crate::errors::HttpResponseError;
+pub mod errors;
 
 /// Render a mustache template to string
 pub fn render_template<T, D>(

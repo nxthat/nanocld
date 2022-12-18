@@ -14,7 +14,7 @@ use crate::cli::Cli;
 use crate::{utils, controllers, repositories};
 use crate::models::{
   Pool, NamespacePartial, ClusterPartial, CargoPartial, ClusterNetworkPartial,
-  CargoInstancePartial, DaemonConfig, ArgState, DaemonState,
+  CargoInstancePartial, DaemonConfig, ArgState, DaemonState, NetworkState,
 };
 
 use crate::errors::{DaemonError, HttpResponseError};
@@ -30,8 +30,9 @@ async fn ensure_system_network(docker_api: &Docker) -> Result<(), DaemonError> {
   const SYSTEM_NETWORK_KEY: &str = "system-nano-internal0";
   const SYSTEM_NETWORK: &str = "nanoclinternal0";
   let network_state =
-    utils::docker::get_network_state(SYSTEM_NETWORK_KEY, docker_api).await?;
-  if network_state == utils::docker::NetworkState::Ready {
+    utils::cluster_network::get_network_state(SYSTEM_NETWORK_KEY, docker_api)
+      .await?;
+  if network_state == NetworkState::Ready {
     return Ok(());
   }
   let mut options: HashMap<String, String> = HashMap::new();

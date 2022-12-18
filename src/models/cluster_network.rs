@@ -7,6 +7,13 @@ use crate::schema::cluster_networks;
 
 use super::cluster::ClusterItem;
 
+/// Enum used to represent network state
+#[derive(Debug, Eq, PartialEq)]
+pub enum NetworkState {
+  NotFound,
+  Ready,
+}
+
 /// Cluster network partial
 /// this structure ensure write in database
 #[derive(Debug, Serialize, Deserialize)]
